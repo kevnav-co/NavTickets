@@ -32,7 +32,7 @@ async function sendSpecificTest() {
       <div style="padding: 35px; line-height: 1.7;">
         <p style="font-size: 18px;">Estimado/a <strong>${clientName}</strong>,</p>
         
-        <p>En <strong>Navas Máquinas</strong> nos preocupamos por la salud de su equipamiento. Nuestro sistema indica que su equipo ha alcanzado la fecha recomendada para su revisión técnica.</p>
+        <p>En <strong>nuestro sistema</strong> nos preocupamos por la salud de su equipamiento. Nuestro sistema indica que su equipo ha alcanzado la fecha recomendada para su revisión técnica.</p>
         
         <div style="background-color: #fafafa; border: 1px solid #f0f0f0; border-left: 6px solid #d32f2f; padding: 20px; margin: 30px 0; border-radius: 4px;">
           <h3 style="margin-top: 0; color: #d32f2f; font-size: 16px; text-transform: uppercase;">Detalles del Equipo</h3>
@@ -61,7 +61,7 @@ async function sendSpecificTest() {
         
         <div style="text-align: center;">
           <p style="font-size: 13px; color: #999; margin: 5px 0;">
-            Navas Máquinas - Soluciones Gastronómicas Profesionales
+            Sistema de Gestión - Soluciones Profesionales
           </p>
           <p style="font-size: 12px; color: #aaa; margin: 5px 0;">
             Montería, Córdoba | Cel: 311 7142337

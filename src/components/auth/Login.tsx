@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { User as UserIcon, Lock, AlertCircle, Smartphone, ArrowRight, Zap, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 
 const NavasLogo = ({ variant = 'default', size = "large", center = false }: { variant?: 'default' | 'white', size?: "small" | "large" | "xl", center?: boolean }) => {
   const isXl = size === "xl";
@@ -13,7 +14,7 @@ const NavasLogo = ({ variant = 'default', size = "large", center = false }: { va
     <div className={`flex flex-col ${center ? 'items-center' : 'items-start'} gap-2`}>
       <img 
         src="https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f"
-        alt="Navas Logo"
+        alt="Logo de la empresa"
         className={`${heightClass} w-auto object-contain transition-all duration-300 ${variant === 'white' ? 'brightness-0 invert drop-shadow-md' : ''}`}
       />
     </div>
@@ -22,6 +23,7 @@ const NavasLogo = ({ variant = 'default', size = "large", center = false }: { va
 
 const Login: React.FC = () => {
   const { login } = useAuth();
+  const { company } = useCompany();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -60,20 +62,20 @@ const Login: React.FC = () => {
 
   return (
     <div className="h-[100dvh] w-full flex bg-white overflow-hidden font-sans">
-      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-[#7b1113]">
+      <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0">
           <img 
             src="https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&q=80"
             alt="Fondo Industrial" 
             className="w-full h-full object-cover opacity-40 mix-blend-luminosity"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#7b1113] via-[#7b1113]/90 to-[#7b1113]/40 mix-blend-multiply"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/90 to-primary/40 mix-blend-multiply"></div>
         </div>
 
         <div className="relative z-10">
             <img 
               src="https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Blanco.png?alt=media&token=f6170240-c993-476d-bb00-8a98ffa4ef13" 
-              alt="Navas Logo" 
+              alt="Logo de la empresa" 
               className="w-full h-auto object-contain"
             />
         </div>
@@ -99,7 +101,7 @@ const Login: React.FC = () => {
         </div>
 
         <div className="relative z-10 text-[10px] text-white/50 font-bold uppercase tracking-[0.2em]">
-          Navas Platform v2.5.0
+          {company?.name || 'Plataforma'} v2.5.0
         </div>
       </div>
 
@@ -119,11 +121,11 @@ const Login: React.FC = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Usuario</label>
-                <div className="flex items-center border-b-2 border-gray-100 focus-within:border-[#7b1113] transition-colors">
+                <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
                   <UserIcon size={20} className="ml-2 text-gray-400" />
                   <input 
                     type="text" 
-                    placeholder="Ej: knavas"
+                    placeholder="Ej: usuario"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full bg-transparent py-3 pl-3 pr-4 text-base text-gray-900 placeholder:text-gray-300 focus:outline-none rounded-none"
@@ -137,7 +139,7 @@ const Login: React.FC = () => {
                 <div className="flex justify-between items-center">
                    <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Contraseña</label>
                 </div>
-                <div className="flex items-center border-b-2 border-gray-100 focus-within:border-[#7b1113] transition-colors">
+                <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
                   <Lock size={20} className="ml-2 text-gray-400" />
                   <input 
                     type={showPassword ? "text" : "password"}
@@ -171,7 +173,7 @@ const Login: React.FC = () => {
               <button 
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-[#7b1113] text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed mt-8"
+                className="w-full bg-primary text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed mt-8"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">

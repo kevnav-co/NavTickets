@@ -12,6 +12,12 @@ import { useAuth } from '../context/AuthContext';
  */
 export const useDataFetching = (isAuthReady: boolean) => {
   const { currentUser } = useAuth();
+  const companyId = currentUser?.companyId || 'default';
+
+  // Base companyId constraint for multi-tenant isolation
+  const companyConstraint = useMemo((): QueryConstraint[] => {
+    return [where('companyId', '==', companyId)];
+  }, [companyId]);
 
   // Determina si las colecciones deben ser fetcheadas.
   const canFetch = isAuthReady && !!currentUser;
@@ -20,31 +26,35 @@ export const useDataFetching = (isAuthReady: boolean) => {
 
   const orderConstraints = useMemo((): QueryConstraint[] => {
     if (!currentUser) return []; // Si no hay usuario, no hay constraints.
-    
-    // Si el usuario tiene permiso para ver todas las órdenes, no se aplica ningún filtro.
+
+    const constraints: QueryConstraint[] = [where('companyId', '==', companyId)];
+
+    // Si el usuario tiene permiso para ver todas las órdenes, no se aplica filtro de técnico.
     if (hasPermission(currentUser.role, PERMISSIONS.VIEW_ALL_ORDERS)) {
-      return [];
+      return constraints;
     }
 
     // Por defecto, un usuario (ej. técnico) solo ve sus órdenes asignadas.
     // Se incluye '' y null para casos donde la asignación puede no estar definida.
-    return [where('technicianId', 'in', [currentUser.id, '', null])];
-  }, [currentUser]);
+    constraints.push(where('technicianId', 'in', [currentUser.id, '', null]));
+    return constraints;
+  }, [currentUser, companyId]);
 
   const notificationConstraints = useMemo((): QueryConstraint[] => {
     if (!currentUser) return [];
-    // Solo se buscan notificaciones para el usuario actual, ordenadas por fecha.
+    // Notificaciones filtradas por empresa y usuario actual, ordenadas por fecha.
     return [
+      where('companyId', '==', companyId),
       where('userId', '==', currentUser.id),
       orderBy('timestamp', 'desc')
     ];
-  }, [currentUser]);
+  }, [currentUser, companyId]);
 
   // --- Obtención de Datos con el Hook `useCollection` Refactorizado ---
 
-  const { data: clients, loading: loadingClients, isRefreshing: isRefreshingClients, forceRefresh: forceRefreshClients, error: errorClients } = useCollection<Client>(canFetch ? 'clients' : '');
-  const { data: equipment, loading: loadingEquipment, isRefreshing: isRefreshingEquipment, forceRefresh: forceRefreshEquipment, error: errorEquipment } = useCollection<Equipment>(canFetch ? 'equipment' : '');
-  const { data: users, loading: loadingUsers, isRefreshing: isRefreshingUsers, forceRefresh: forceRefreshUsers, error: errorUsers } = useCollection<User>(canFetch ? 'users' : '');
+  const { data: clients, loading: loadingClients, isRefreshing: isRefreshingClients, forceRefresh: forceRefreshClients, error: errorClients } = useCollection<Client>(canFetch ? 'clients' : '', { constraints: companyConstraint });
+  const { data: equipment, loading: loadingEquipment, isRefreshing: isRefreshingEquipment, forceRefresh: forceRefreshEquipment, error: errorEquipment } = useCollection<Equipment>(canFetch ? 'equipment' : '', { constraints: companyConstraint });
+  const { data: users, loading: loadingUsers, isRefreshing: isRefreshingUsers, forceRefresh: forceRefreshUsers, error: errorUsers } = useCollection<User>(canFetch ? 'users' : '', { constraints: companyConstraint });
   const { data: orders, loading: loadingOrders, isRefreshing: isRefreshingOrders, forceRefresh: forceRefreshOrders, error: errorOrders } = useCollection<ServiceOrder>(canFetch ? 'orders' : '', { constraints: orderConstraints });
   const { data: notifications, loading: loadingNotifications, isRefreshing: isRefreshingNotifications, forceRefresh: forceRefreshNotifications, error: errorNotifications } = useCollection<AppNotification>(canFetch ? 'notifications' : '', { constraints: notificationConstraints });
 

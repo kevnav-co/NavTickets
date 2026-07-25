@@ -260,6 +260,8 @@ export const useOrderForm = () => {
     try {
         const currentOrder = id ? orders.find(o => o.id === id) : null;
         const orderData: Omit<ServiceOrder, 'id' | 'createdAt' | 'updatedAt'> = {
+            name: formData.serviceName?.toUpperCase() || '',
+            companyId: currentUser?.companyId || 'default', // ← NUEVO
             orderNumber: nextOrderNumber,
             equipmentIds: formData.selectedEquipmentIds,
             technicianId: formData.technicianId,

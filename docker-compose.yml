@@ -1,0 +1,34 @@
+# ─── Docker Compose for Dokploy ───────────────────────────────────
+# Frontend: Nginx serving the built SPA
+#
+# NOTE: Cloud Functions are deployed separately via Firebase CLI.
+# This compose file handles the frontend hosting layer only.
+# For local development, you can run the Firebase emulator separately.
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # These are build-time ARGs that get embedded into the Vite bundle
+        - VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY:-your-api-key}
+        - VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN:-your-project.firebaseapp.com}
+        - VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID:-your-project-id}
+        - VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET:-your-project.firebasestorage.app}
+        - VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID:-000000000000}
+        - VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID:-1:000000000000:web:xxxxxx}
+        - VITE_FIREBASE_DATABASE_URL=${VITE_FIREBASE_DATABASE_URL:-https://your-project.firebaseio.com}
+        - VITE_VAPID_KEY=${VITE_VAPID_KEY:-your-vapid-key}
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "app=navtickets-frontend"
+      - "type=spa"

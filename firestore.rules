@@ -8,55 +8,96 @@ service cloud.firestore {
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
+    function getUserCompanyId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId;
+    }
+    function sameCompany(resourceCompanyId) {
+      return resourceCompanyId == getUserCompanyId();
+    }
+    function newDocInCompany() {
+      return request.resource.data.companyId == getUserCompanyId();
+    }
+    function isSuperAdmin() {
+      return isAuthed() && getUserRole() == 'super_admin';
+    }
 
     match /{document=**} {
       allow read, write: if false;
     }
 
-    match /users/{userId} {
-      allow get: if isAuthed() && (request.auth.uid == userId || getUserRole() in ['admin', 'developer']);
-      // Allow any authenticated user to list users, required for many app features.
-      allow list: if isAuthed();
+    // Companies collection — own company read, super_admin full access
+    match /companies/{companyId} {
+      allow read: if isAuthed() && (companyId == getUserCompanyId() || isSuperAdmin());
+      allow list: if isAuthed() && isSuperAdmin();
+      allow create: if isAuthed() && getUserRole() in ['super_admin', 'developer'];
+      allow update: if isAuthed() && getUserRole() in ['super_admin', 'developer'] && (companyId == getUserCompanyId() || isSuperAdmin());
+      allow delete: if isAuthed() && isSuperAdmin();
+    }
 
-      allow create, delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
-      allow update: if isAuthed() && (getUserRole() in ['admin', 'developer'] || (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password', 'signatureUrl'])));
+    match /users/{userId} {
+      allow get: if isAuthed() && (
+        request.auth.uid == userId ||
+        (getUserRole() in ['admin', 'developer', 'super_admin'] && sameCompany(resource.data.companyId))
+      );
+      allow list: if isAuthed();
+      allow create: if isAuthed() && getUserRole() in ['admin', 'developer', 'super_admin'] && newDocInCompany();
+      allow update: if isAuthed() && (
+        (getUserRole() in ['admin', 'developer', 'super_admin'] && sameCompany(resource.data.companyId)) ||
+        (request.auth.uid == userId &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password', 'signatureUrl', 'fcmToken']))
+      );
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer', 'super_admin'] && sameCompany(resource.data.companyId);
     }
 
     match /tasks/{taskId} {
-      allow read: if isAuthed() && (
-                    getUserRole() in ['admin', 'developer', 'supervisor'] ||
-                    request.auth.uid == resource.data.assignedTo
-                  );
-      allow create, delete: if isAuthed() && getUserRole() in ['admin', 'developer', 'supervisor'];
-      allow update: if isAuthed() && (
-                      getUserRole() in ['admin', 'developer', 'supervisor'] ||
-                      (request.auth.uid == resource.data.assignedTo &&
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'comments']))
-                    );
+      allow read: if isAuthed() && sameCompany(resource.data.companyId) && (
+        getUserRole() in ['admin', 'developer', 'supervisor'] ||
+        request.auth.uid == resource.data.assignedTo
+      );
+      allow create: if isAuthed() && getUserRole() in ['admin', 'developer', 'supervisor'] && newDocInCompany();
+      allow update: if isAuthed() && sameCompany(resource.data.companyId) && (
+        getUserRole() in ['admin', 'developer', 'supervisor'] ||
+        (request.auth.uid == resource.data.assignedTo &&
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'comments']))
+      );
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer', 'supervisor'] && sameCompany(resource.data.companyId);
     }
 
     match /orders/{orderId} {
-      allow read: if isAuthed() && (getUserRole() in ['admin', 'developer', 'supervisor'] || (getUserRole() == 'technician' && resource.data.technicianId == request.auth.uid));
-      allow create, delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
-      allow update: if isAuthed() && (getUserRole() in ['admin', 'developer', 'supervisor'] || (getUserRole() == 'technician' && resource.data.technicianId == request.auth.uid && request.resource.data.technicianId == resource.data.technicianId));
+      allow read: if isAuthed() && sameCompany(resource.data.companyId) && (
+        getUserRole() in ['admin', 'developer', 'supervisor'] ||
+        (getUserRole() == 'technician' && resource.data.technicianId == request.auth.uid)
+      );
+      allow create: if isAuthed() && getUserRole() in ['admin', 'developer'] && newDocInCompany();
+      allow update: if isAuthed() && sameCompany(resource.data.companyId) && (
+        getUserRole() in ['admin', 'developer', 'supervisor'] ||
+        (getUserRole() == 'technician' && resource.data.technicianId == request.auth.uid &&
+         request.resource.data.technicianId == resource.data.technicianId)
+      );
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'] && sameCompany(resource.data.companyId);
     }
 
     match /clients/{clientId} {
-      allow read, create, update: if isAuthed();
-      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
+      allow read: if isAuthed() && sameCompany(resource.data.companyId);
+      allow create: if isAuthed() && newDocInCompany();
+      allow update: if isAuthed() && sameCompany(resource.data.companyId);
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'] && sameCompany(resource.data.companyId);
     }
 
-    match /equipment/{equipmentId} { 
-      allow read, create, update: if isAuthed();
-      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
+    match /equipment/{equipmentId} {
+      allow read: if isAuthed() && sameCompany(resource.data.companyId);
+      allow create: if isAuthed() && newDocInCompany();
+      allow update: if isAuthed() && sameCompany(resource.data.companyId);
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'] && sameCompany(resource.data.companyId);
     }
 
     match /user_locations/{userId} {
       allow read: if isAuthed() && (
-                    getUserRole() in ['admin', 'developer'] ||
-                    (getUserRole() == 'supervisor' && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(userId)).data.role == 'technician')) ||
-                    (getUserRole() == 'technician' && request.auth.uid == userId)
-                  );
+        getUserRole() in ['admin', 'developer', 'super_admin'] ||
+        (getUserRole() == 'supervisor' && (request.auth.uid == userId ||
+          get(/databases/$(database)/documents/users/$(userId)).data.role == 'technician')) ||
+        (getUserRole() == 'technician' && request.auth.uid == userId)
+      );
     }
 
     match /notifications/{notificationId} {

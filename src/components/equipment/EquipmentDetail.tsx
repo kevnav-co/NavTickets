@@ -192,7 +192,7 @@ const EquipmentDetail: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-2 text-red-500 text-xs font-bold uppercase mb-1">
-                    <Cog size={14} /> {item?.brand || 'Hardware Navas'}
+                    <Cog size={14} /> {item?.brand || 'Equipo'}
                   </div>
                   <h1 className="text-3xl font-black text-gray-800">{item?.name}</h1>
                 </div>
@@ -223,7 +223,7 @@ const EquipmentDetail: React.FC = () => {
                 <p className="text-[10px] font-black uppercase mb-3">Cliente</p>
                 <button onClick={() => client && navigate(`/clients/${client.id}`)} className="w-full flex justify-between items-center p-4 bg-gray-50 rounded-2xl" disabled={!client}>
                     <div className="flex items-center gap-3 font-bold text-sm">
-                        <div className="bg-white p-2 rounded-xl"><Building2 size={20} className="text-[#7b1113]" /></div>
+                        <div className="bg-white p-2 rounded-xl"><Building2 size={20} className="text-primary" /></div>
                         {client?.name || 'N/A'}
                     </div>
                     <ChevronRight size={20} className="text-gray-400" />
@@ -233,7 +233,7 @@ const EquipmentDetail: React.FC = () => {
           </section>
 
           <section className="bg-white p-6 rounded-3xl shadow-sm border border-gray-200 space-y-4">
-            <div className="flex justify-between border-b border-gray-200 pb-4"><h3 className="font-bold flex items-center gap-2"><Calendar size={18} className="text-[#7b1113]" />Mantenimiento</h3>{nextMaintenanceInfo ? <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${nextMaintenanceInfo.isOverdue ? 'bg-red-100 text-red-600' : nextMaintenanceInfo.isWarning ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>{nextMaintenanceInfo.isOverdue ? 'Vencido' : 'Programado'}</div> : <span className="text-[10px] font-bold uppercase">No Programado</span>}</div>
+            <div className="flex justify-between border-b border-gray-200 pb-4"><h3 className="font-bold flex items-center gap-2"><Calendar size={18} className="text-primary" />Mantenimiento</h3>{nextMaintenanceInfo ? <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase ${nextMaintenanceInfo.isOverdue ? 'bg-red-100 text-red-600' : nextMaintenanceInfo.isWarning ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>{nextMaintenanceInfo.isOverdue ? 'Vencido' : 'Programado'}</div> : <span className="text-[10px] font-bold uppercase">No Programado</span>}</div>
             <div className="grid grid-cols-2 gap-4"><div className="bg-gray-50 p-3 rounded-2xl border border-gray-200"><p className="text-[9px] font-black uppercase mb-1">Frecuencia</p><p className="font-bold text-sm">Cada {item?.maintenanceFrequency || 6} Meses</p></div><div className="bg-gray-50 p-3 rounded-2xl border border-gray-200"><p className="text-[9px] font-black uppercase mb-1">Próxima Fecha</p><p className={`font-bold text-sm ${nextMaintenanceInfo?.isOverdue ? 'text-red-600' : nextMaintenanceInfo?.isWarning ? 'text-orange-600' : ''}`}>{nextMaintenanceInfo ? nextMaintenanceInfo.date : '--/--/----'}</p></div></div>
             {nextMaintenanceInfo && <div className={`flex items-center gap-2 text-sm justify-center p-2 rounded-xl ${nextMaintenanceInfo.isOverdue ? 'bg-red-50 text-red-600' : ''}`}><Clock size={14} /><span className="font-medium">{nextMaintenanceInfo.isOverdue ? `Vencido hace ${Math.abs(nextMaintenanceInfo.days)} días` : `Faltan ${nextMaintenanceInfo.days} días`}</span></div>}
           </section>

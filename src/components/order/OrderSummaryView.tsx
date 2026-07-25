@@ -298,7 +298,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
         <div className="p-4 space-y-6 max-w-2xl mx-auto w-full animate-in fade-in duration-500">
           <div className="bg-white p-4 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-3">
             <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2"><PanelTop size={16}/> Panel de Acciones</h3>
-            <button onClick={() => generatePDF('download')} disabled={isGeneratingPdf || isDeleting || isEditMode} className="w-full bg-[#7b1113] text-white py-5 rounded-[1.8rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 relative overflow-hidden disabled:opacity-50">
+            <button onClick={() => generatePDF('download')} disabled={isGeneratingPdf || isDeleting || isEditMode} className="w-full bg-primary text-white py-5 rounded-[1.8rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 relative overflow-hidden disabled:opacity-50">
               {isGeneratingPdf && (<div className="absolute left-0 top-0 bottom-0 bg-white/20 transition-all duration-300" style={{ width: `${pdfProgress}%` }}></div>)}
               <div className="relative z-10 flex items-center gap-3">
                 {isGeneratingPdf ? <Loader2 className="animate-spin" /> : <FileDown size={20} />}
@@ -341,7 +341,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
                         className="text-5xl font-mono font-black text-gray-500 bg-gray-100 border-2 rounded-2xl text-center w-full max-w-xs mx-auto tracking-tighter"
                     />
                 ) : (
-                    <p className="text-5xl font-mono font-black text-[#7b1113] tracking-tighter">{formatDuration(totalDuration)}</p>
+                    <p className="text-5xl font-mono font-black text-primary tracking-tighter">{formatDuration(totalDuration)}</p>
                 )}
                 <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Duración Total</p>
               </div>
@@ -395,7 +395,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
           </div>
 
           <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-6">
-            <h3 className={sectionTitleClass}><div className="w-1.5 h-4 bg-[#7b1113] rounded-full"></div> Acta de Ejecución</h3>
+            <h3 className={sectionTitleClass}><div className="w-1.5 h-4 bg-primary rounded-full"></div> Acta de Ejecución</h3>
             <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div><label className={infoLabelClass}>Cliente</label><p className={infoValueClass}>{client?.name}</p></div>

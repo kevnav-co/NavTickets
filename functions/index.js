@@ -80,7 +80,8 @@ exports.dailyExpirationCheck = expirationCheck.dailyExpirationCheck;
 exports.triggerExpirationCheck = expirationCheck.triggerExpirationCheck;
 
 exports.updateUserPassword = onCall({ cors: true }, async (request) => {
-  if (request.auth?.token?.role !== 'admin') {
+  const callerRole = request.auth?.token?.role;
+  if (callerRole !== 'admin' && callerRole !== 'super_admin') {
     throw new HttpsError('permission-denied', 'Admins only.');
   }
   const { userId, newPassword } = request.data;
@@ -129,8 +130,23 @@ exports.sendTestNotification = onCall({ cors: true }, async (request) => {
       };
     }
 
+    // Resolve company branding for the user
+    const companyId = userData?.companyId || 'default';
+    let companyName = 'Empresa';
+    let companyLogo = "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.appspot.com/o/public%2FIcon-app.png?alt=media&token=1d2f3a47-3949-41b8-a727-4659b5f5410c";
+    try {
+      const companySnap = await db.collection("companies").doc(companyId).get();
+      if (companySnap.exists) {
+        const compData = companySnap.data();
+        companyName = compData.name || 'Empresa';
+        companyLogo = compData.theme?.logoUrl || companyLogo;
+      }
+    } catch (e) {
+      console.warn(`[sendTestNotification] Could not load company ${companyId}:`, e.message);
+    }
+
     const appUrl = "https://navas-33818730-80986.web.app/#";
-    const testTitle = "🔔 Test Push - Navas";
+    const testTitle = `🔔 Test Push - ${companyName}`;
     const testBody = `Notificación de prueba enviada a ${userData?.name || 'usuario'}. Si ves esto, ¡las notificaciones funcionan correctamente!`;
     const testUrl = `${appUrl}/`;
 
@@ -141,8 +157,8 @@ exports.sendTestNotification = onCall({ cors: true }, async (request) => {
       webpush: {
         fcm_options: { link: testUrl },
         notification: {
-          icon: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.appspot.com/o/public%2FIcon-app.png?alt=media&token=1d2f3a47-3949-41b8-a727-4659b5f5410c",
-          badge: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.appspot.com/o/public%2FIcon-app.png?alt=media&token=1d2f3a47-3949-41b8-a727-4659b5f5410c",
+          icon: companyLogo,
+          badge: companyLogo,
         },
       },
       apns: {

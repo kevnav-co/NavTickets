@@ -5,7 +5,31 @@ const { v4: uuidv4 } = require("uuid");
 const db = admin.firestore();
 const messaging = admin.messaging();
 
-const appUrl = "https://navas-33818730-80986.web.app/#";
+const DEFAULT_APP_URL = "https://navas-33818730-80986.web.app/#";
+const DEFAULT_ICON = "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f";
+
+/**
+ * Obtiene la configuración de una empresa por su ID.
+ * @param {string} companyId
+ * @returns {Promise<{name: string, logoUrl: string, theme: {primaryColor: string}}>}
+ */
+async function getCompanyConfig(companyId) {
+  if (!companyId || companyId === 'default') return { name: 'NavTickets', logoUrl: DEFAULT_ICON, theme: { primaryColor: '#7b1113' } };
+  try {
+    const snap = await db.collection("companies").doc(companyId).get();
+    if (snap.exists) {
+      const data = snap.data();
+      return {
+        name: data.name || 'Empresa',
+        logoUrl: data.theme?.logoUrl || DEFAULT_ICON,
+        theme: { primaryColor: data.theme?.primaryColor || '#7b1113' },
+      };
+    }
+  } catch (e) {
+    console.warn(`[getCompanyConfig] Error reading company ${companyId}:`, e.message);
+  }
+  return { name: 'Empresa', logoUrl: DEFAULT_ICON, theme: { primaryColor: '#7b1113' } };
+}
 
 /**
  * Creates a notification document in Firestore and sends a push notification via FCM.
@@ -13,17 +37,36 @@ const appUrl = "https://navas-33818730-80986.web.app/#";
  * @param {string} title - The title of the notification.
  * @param {string} body - The main content of the notification.
  * @param {string} path - The deep link path for the notification.
+ * @param {string|null} forcedId - Optional forced notification ID.
+ * @param {string|null} companyId - Optional companyId (auto-looked up from user if not provided).
  */
-const sendAndCreateNotification = async (userId, title, body, path, forcedId = null) => {
+const sendAndCreateNotification = async (userId, title, body, path, forcedId = null, companyId = null) => {
   if (!userId) {
     console.error("sendAndCreateNotification failed: userId is missing.");
     return;
   }
 
+  // Resolve companyId from user if not provided
+  if (!companyId) {
+    try {
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (userDoc.exists) {
+        companyId = userDoc.data().companyId || 'default';
+      }
+    } catch (e) {
+      console.warn(`[notificationManager] Could not resolve companyId for user ${userId}:`, e.message);
+      companyId = 'default';
+    }
+  }
+
+  // Get company config for branding
+  const company = await getCompanyConfig(companyId);
+
   const notificationId = forcedId || uuidv4();
   const notificationPayload = {
     id: notificationId,
     userId: userId,
+    companyId: companyId,
     title,
     body,
     timestamp: admin.firestore.FieldValue.serverTimestamp(),
@@ -34,7 +77,7 @@ const sendAndCreateNotification = async (userId, title, body, path, forcedId = n
 
   try {
     await db.collection("notifications").doc(notificationId).set(notificationPayload);
-    console.log(`Internal notification '''${title}''' created for user ${userId}.`);
+    console.log(`Internal notification '${title}' created for user ${userId} (company: ${companyId}).`);
   } catch (error) {
     console.error(`Failed to create internal notification for user ${userId}:`, error);
   }
@@ -45,6 +88,9 @@ const sendAndCreateNotification = async (userId, title, body, path, forcedId = n
     return;
   }
 
+  const appUrl = company.name ? `https://navas-33818730-80986.web.app/#` : DEFAULT_APP_URL;
+  const iconUrl = company.logoUrl || DEFAULT_ICON;
+
   const fcmToken = userDoc.data()?.fcmToken;
   if (fcmToken) {
     const fullUrl = path.startsWith('http') ? path : `${appUrl}${path}`;
@@ -52,7 +98,7 @@ const sendAndCreateNotification = async (userId, title, body, path, forcedId = n
     const message = {
       token: fcmToken,
       notification: { title, body },
-      data: { 
+      data: {
         url: fullUrl,
         path: path,
         type: 'assignment'
@@ -62,8 +108,8 @@ const sendAndCreateNotification = async (userId, title, body, path, forcedId = n
           link: fullUrl
         },
         notification: {
-          icon: 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f',
-          badge: 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f'
+          icon: iconUrl,
+          badge: iconUrl
         }
       },
       apns: {
@@ -89,18 +135,18 @@ const sendAndCreateNotification = async (userId, title, body, path, forcedId = n
       console.error(`Failed to send FCM message to user ${userId} (code: ${errorCode}):`, error.message);
 
       // Auto-clean invalid/expired tokens
-      if (errorCode === 'messaging/registration-token-not-registered' || 
+      if (errorCode === 'messaging/registration-token-not-registered' ||
           errorCode === 'messaging/invalid-registration-token') {
         console.warn(`[FCM] Token inválido para usuario ${userId}. Limpiando token de Firestore.`);
         try {
-          await db.collection("users").doc(userId).update({ 
-            fcmToken: admin.firestore.FieldValue.delete() 
+          await db.collection("users").doc(userId).update({
+            fcmToken: admin.firestore.FieldValue.delete()
           });
         } catch (cleanupError) {
           console.error(`[FCM] Error al limpiar token de usuario ${userId}:`, cleanupError);
         }
       }
-    } 
+    }
   } else {
     console.log(`User ${userId} does not have an FCM token. Skipping push notification.`);
   }
@@ -210,16 +256,17 @@ const { sendWhatsAppMessage, sendEmailMessage } = require("./communicationChanne
  * @param {string} clientId - ID del cliente.
  * @param {Object} options - { title, body, subject, htmlBody }
  */
-const notifyClientWithFallback = async (clientId, { title, body, subject, htmlBody }) => {
+const notifyClientWithFallback = async (clientId, { title, body, subject, htmlBody }, companyId = null) => {
   const db = admin.firestore();
   const clientDoc = await db.collection("clients").doc(clientId).get();
-  
+
   if (!clientDoc.exists) {
     console.error(`Cliente ${clientId} no existe. No se puede notificar.`);
     return;
   }
 
   const client = clientDoc.data();
+  const resolvedCompanyId = companyId || client.companyId || 'default';
   let notified = false;
 
   // 1. Intentar WhatsApp
@@ -234,15 +281,18 @@ const notifyClientWithFallback = async (clientId, { title, body, subject, htmlBo
     if (success) notified = true;
   }
 
-  // 3. Si ambos fallan, alertar a los administradores
+  // 3. Si ambos fallan, alertar a los administradores de la misma empresa
   if (!notified) {
     console.warn(`No se pudo notificar al cliente ${client.name} (${clientId}). Enviando alerta a admins.`);
-    const adminsSnapshot = await db.collection("users").where("role", "==", "admin").get();
+    const adminsSnapshot = await db.collection("users")
+      .where("role", "==", "admin")
+      .where("companyId", "==", resolvedCompanyId)
+      .get();
     const adminAlertTitle = "⚠️ Fallo de Notificación";
     const adminAlertBody = `No se pudo enviar el aviso de vencimiento a ${client.name} por falta de teléfono o email registrados.`;
-    
+
     for (const adminDoc of adminsSnapshot.docs) {
-      await sendAndCreateNotification(adminDoc.id, adminAlertTitle, adminAlertBody, `/clients/${clientId}`);
+      await sendAndCreateNotification(adminDoc.id, adminAlertTitle, adminAlertBody, `/clients/${clientId}`, null, resolvedCompanyId);
     }
   }
 };

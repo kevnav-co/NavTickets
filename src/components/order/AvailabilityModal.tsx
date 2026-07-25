@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight, Check, HardHat, X } from 'lucide-react';
 
 const getUserColor = (name: string, isPending: boolean) => {
   const n = name.toLowerCase();
-  let baseColor = { bg: '#7b1113', border: '#5a0c0e' };
+  let baseColor = { bg: 'var(--color-primary)', border: 'var(--color-primary-dark)' };
 
-  if (n.includes('gerardo navas')) baseColor = { bg: '#7b1113', border: '#5a0c0e' };
+  if (n.includes('gerardo navas')) baseColor = { bg: 'var(--color-primary)', border: 'var(--color-primary-dark)' };
   else if (n.includes('yoel')) baseColor = { bg: '#1e40af', border: '#172554' };
   else if (n.includes('gabriel')) baseColor = { bg: '#a16207', border: '#713f12' };
   else if (n.includes('jose madera') || n.includes('josé madera')) baseColor = { bg: '#166534', border: '#14532d' };
@@ -201,7 +201,7 @@ const AvailabilityModal: React.FC<AvailabilityModalProps> = ({ technician, order
               {weekDays.map((d, i) => (
                 <div key={i} className={`flex flex-col items-center justify-center py-2 border-r border-gray-100 ${i === currentDayIndex ? 'bg-red-50' : ''}`}>
                   <span className="text-[8px] font-black uppercase text-gray-400">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
-                  <span className={`text-sm font-black ${i === currentDayIndex ? 'text-[#7b1113]' : 'text-gray-800'}`}>{d.getDate()}</span>
+                  <span className={`text-sm font-black ${i === currentDayIndex ? 'text-primary' : 'text-gray-800'}`}>{d.getDate()}</span>
                 </div>
               ))}
             </div>

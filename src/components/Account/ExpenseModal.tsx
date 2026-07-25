@@ -162,8 +162,8 @@ export const ExpenseModal: React.FC = () => {
                 <div>
                     <label className="block text-sm font-bold text-gray-600 mb-2">Origen del Dinero</label>
                     <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => setOrigin('Efectivo')} className={`py-3 px-4 rounded-lg text-sm font-bold transition ${origin === 'Efectivo' ? 'bg-[#7b1113] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Efectivo</button>
-                        <button type="button" onClick={() => setOrigin('Transferencia')} className={`py-3 px-4 rounded-lg text-sm font-bold transition ${origin === 'Transferencia' ? 'bg-[#7b1113] text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Transferencia</button>
+                        <button type="button" onClick={() => setOrigin('Efectivo')} className={`py-3 px-4 rounded-lg text-sm font-bold transition ${origin === 'Efectivo' ? 'bg-primary text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Efectivo</button>
+                        <button type="button" onClick={() => setOrigin('Transferencia')} className={`py-3 px-4 rounded-lg text-sm font-bold transition ${origin === 'Transferencia' ? 'bg-primary text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Transferencia</button>
                     </div>
                 </div>
               )}
@@ -177,7 +177,7 @@ export const ExpenseModal: React.FC = () => {
               {error && <p className="text-red-500 text-sm text-center font-semibold">{error}</p>}
 
               <div className="pt-4">
-                <button type="submit" disabled={isSaveDisabled} className="w-full bg-[#7b1113] text-white font-bold py-4 rounded-lg hover:bg-[#6a0f11] transition-all shadow-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                <button type="submit" disabled={isSaveDisabled} className="w-full bg-primary text-white font-bold py-4 rounded-lg hover:bg-primary-dark transition-all shadow-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                   {submitting ? <Loader className="animate-spin"/> : buttonLabel}
                 </button>
               </div>

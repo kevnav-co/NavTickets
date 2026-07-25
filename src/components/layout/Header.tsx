@@ -193,7 +193,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
           <button onClick={handleOpenNotifications} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
             <Bell size={22} />
             {unreadCount > 0 &&
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#7b1113] border-2 border-white animate-pulse"></div>
+              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-white animate-pulse"></div>
             }
           </button>
         ) : notifPermission !== 'unsupported' && notifPermission !== 'denied' ? (
@@ -209,13 +209,13 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
           <button onClick={handleOpenNotifications} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
             <Bell size={22} />
             {unreadCount > 0 &&
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#7b1113] border-2 border-white animate-pulse"></div>
+              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-white animate-pulse"></div>
             }
           </button>
         )}
          {currentUser && (
             <div className="relative md:hidden" ref={userMenuRef}>
-               <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#7b1113] text-white font-bold text-sm shadow-md border-2 border-white active:scale-95 transition-transform">{currentUser.name?.charAt(0) || 'U'}</button>
+               <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white font-bold text-sm shadow-md border-2 border-white active:scale-95 transition-transform">{currentUser.name?.charAt(0) || 'U'}</button>
                {showUserMenu && (
                  <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
                     <div className="p-4 border-b border-gray-50 bg-gray-50/50">

@@ -276,7 +276,7 @@ const OrderPendingView: React.FC<Props> = ({
         </main>
 
         {canStart && <footer className="fixed bottom-16 md:bottom-0 left-0 md:left-64 right-0 bg-white/90 backdrop-blur-sm p-4 border-t border-gray-100 z-10">
-          <button onClick={onStartOrder} disabled={isDeleting} className="w-full bg-[#7b1113] text-white font-bold py-4 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-red-900/40 active:scale-95 transition-transform disabled:opacity-50">
+          <button onClick={onStartOrder} disabled={isDeleting} className="w-full bg-primary text-white font-bold py-4 rounded-2xl text-base flex items-center justify-center gap-2 shadow-lg shadow-red-900/40 active:scale-95 transition-transform disabled:opacity-50">
             {isDeleting ? 'Procesando...': 'INICIAR EJECUCIÓN'} <ArrowRight size={20} />
           </button>
         </footer>}

@@ -32,7 +32,7 @@ const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
         }
       </p>
       <div className="w-full space-y-3">
-        <button onClick={onConfirm} disabled={isDeleting} className="w-full py-4 bg-[#7b1113] text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-900/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+        <button onClick={onConfirm} disabled={isDeleting} className="w-full py-4 bg-primary text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-900/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
           {isDeleting ? 'Procesando...' : 'Sí, Destruir'}
         </button>
         <button onClick={onCancel} disabled={isDeleting} className="w-full py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-xs uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50">

@@ -159,12 +159,12 @@ const SignatureModal: React.FC<SignatureModalProps> = ({ isOpen, onClose, onSave
         <div className="flex-1 bg-white relative touch-none cursor-crosshair">
           <canvas ref={canvasRef} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} className="w-full h-full min-h-[350px] bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:24px_24px]"/>
           {!hasSignature && (<div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center text-gray-200 select-none"> <PenTool size={64} className="mb-4 opacity-10" /> <span className="text-xs font-black uppercase tracking-[0.3em] opacity-20">Dibujar Firma Aquí</span> </div>)}
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-6 right-6 bg-white/90 backdrop-blur-sm border border-gray-200 p-4 rounded-2xl shadow-xl text-gray-500 hover:text-[#7b1113] transition-all active:scale-90"> <Upload size={24} /> </button>
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="absolute bottom-6 right-6 bg-white/90 backdrop-blur-sm border border-gray-200 p-4 rounded-2xl shadow-xl text-gray-500 hover:text-primary transition-all active:scale-90"> <Upload size={24} /> </button>
           <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*" />
         </div>
         <footer className="p-6 grid grid-cols-2 gap-4 bg-gray-50/50 border-t border-gray-100">
           <button type="button" onClick={clear} className="flex items-center justify-center gap-2 py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"> <Eraser size={16} /> Limpiar </button>
-          <button type="button" onClick={handleSave} disabled={!hasSignature} className={`flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${hasSignature ? 'bg-[#7b1113] text-white active:scale-95' : 'bg-gray-100 text-gray-300 cursor-not-allowed'}`}> <CheckCircle2 size={16} /> Guardar Firma </button>
+          <button type="button" onClick={handleSave} disabled={!hasSignature} className={`flex items-center justify-center gap-2 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${hasSignature ? 'bg-primary text-white active:scale-95' : 'bg-gray-100 text-gray-300 cursor-not-allowed'}`}> <CheckCircle2 size={16} /> Guardar Firma </button>
         </footer>
       </div>
     </div>

@@ -146,7 +146,7 @@ const OrderList: React.FC = () => {
             <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
               <Search className="text-gray-400" size={18} />
             </div>
-            <input type="text" placeholder="Buscar..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20" />
+            <input type="text" placeholder="Buscar..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
           
           {hasPermission(currentUser?.role, PERMISSIONS.VIEW_ALL_ORDERS) && (
@@ -159,7 +159,7 @@ const OrderList: React.FC = () => {
              </div>
           )}
 
-          <div className={`relative h-12 w-12 flex-shrink-0 border rounded-xl shadow-sm flex items-center justify-center ${dateFilter !== 'all' ? 'bg-[#7b1113] text-white border-[#7b1113]' : 'bg-white text-green-500 border-gray-200'}`}>
+          <div className={`relative h-12 w-12 flex-shrink-0 border rounded-xl shadow-sm flex items-center justify-center ${dateFilter !== 'all' ? 'bg-primary text-white border-primary' : 'bg-white text-green-500 border-gray-200'}`}>
             <Calendar size={20} />
             <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value as DateFilterType)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
               <option value="all">Todas</option><option value="today">Hoy</option><option value="week">Semana</option><option value="month">Mes</option>
@@ -171,14 +171,14 @@ const OrderList: React.FC = () => {
         </div>
 
         {hasPermission(currentUser?.role, PERMISSIONS.CREATE_ORDER) && (
-          <button onClick={() => navigate('/orders/new')} className="w-full h-12 mb-4 bg-[#7b1113] text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-[#7b1113]/20">
+          <button onClick={() => navigate('/orders/new')} className="w-full h-12 mb-4 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20">
             <Plus size={18} /> Crear Nueva Orden
           </button>
         )}
 
         <div className="flex bg-gray-200/80 p-1 rounded-lg text-center">
           {['All', OrderStatus.PENDING, OrderStatus.OPEN, OrderStatus.CLOSED, 'Warranty'].map((tab) => (
-            <button key={tab} onClick={() => handleTabChange(tab as any)} className={`flex-1 py-2 px-2 text-[10px] font-bold uppercase rounded-md transition-all ${activeTab === tab ? 'bg-white text-[#7b1113] shadow-sm' : 'text-gray-500'}`}>
+            <button key={tab} onClick={() => handleTabChange(tab as any)} className={`flex-1 py-2 px-2 text-[10px] font-bold uppercase rounded-md transition-all ${activeTab === tab ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>
               {tab === 'All' ? 'Todos' : tab === 'Warranty' ? 'Garantía' : tab === OrderStatus.OPEN ? 'En Progreso' : tab}
             </button>
           ))}

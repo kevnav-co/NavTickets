@@ -18,7 +18,7 @@ async function testPremiumFlow() {
 
   // Mock de datos del cliente
   const clientData = {
-    name: "Navas Test User",
+    name: "Test User",
     email: testEmail,
     contact: "+573117142337" 
   };
@@ -76,7 +76,7 @@ admin.firestore().collection("clients").doc = (id) => {
             get: async () => ({
                 exists: true,
                 data: () => ({
-                    name: "Navas Test User",
+                    name: "Test User",
                     email: process.argv[2] || "pnavas@gmail.com"
                 })
             })

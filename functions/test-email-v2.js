@@ -19,12 +19,12 @@ async function testEmail() {
   console.log(`Destinatario: ${recipient}`);
   console.log(`Remitente (GMAIL_USER): ${process.env.GMAIL_USER}`);
   
-  const subject = "Prueba de Notificación - Navas Máquinas";
+  const subject = "Prueba de Notificación - Sistema de Gestión";
   const body = "Este es un correo de prueba para validar la integración con Gmail.\nSi estás viendo esto, el servicio de mensajería está configurado correctamente.";
   
   const htmlBody = `
     <h2 style="color: #1a1a1a;">¡Hola!</h2>
-    <p>Este es un correo de <strong>prueba</strong> enviado desde el sistema de Navas Máquinas.</p>
+    <p>Este es un correo de <strong>prueba</strong> enviado desde el sistema de gestión.</p>
     <p>Estamos verificando que el diseño de las notificaciones se vea bien en tu bandeja de entrada.</p>
     <div style="margin: 20px 0;">
       <p><strong>Detalles del Test:</strong></p>

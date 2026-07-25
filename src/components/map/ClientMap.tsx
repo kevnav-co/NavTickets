@@ -191,7 +191,7 @@ const ClientMap: React.FC = () => {
           <div class="flex flex-col items-center">
             <h3 class="font-bold text-gray-900 text-sm mb-1 line-clamp-1">${client.name}</h3>
             <p class="text-[10px] text-gray-500 mb-3 line-clamp-2">${client.address}</p>
-            <button id="view-client-${client.id}" class="w-full bg-[#7b1113] text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform">Ver Expediente</button>
+            <button id="view-client-${client.id}" class="w-full bg-primary text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform">Ver Expediente</button>
           </div>
         `;
 
@@ -222,7 +222,7 @@ const ClientMap: React.FC = () => {
             <div style="position: relative; cursor: pointer;">
               <div style="
                 width: 38px; height: 38px; border-radius: 50%; 
-                background-color: ${isMe ? '#7b1113' : '#1f2937'}; 
+                background-color: ${isMe ? 'var(--color-primary)' : '#1f2937'}; 
                 color: white; display: flex; align-items: center; justify-content: center; 
                 font-size: 11px; font-weight: 900; 
                 border: 3px solid ${borderColor}; 
@@ -371,7 +371,7 @@ const ClientMap: React.FC = () => {
     <div className="relative w-full h-[calc(100vh-140px)] md:h-[calc(100vh-80px)] rounded-t-[2.5rem] shadow-inner bg-gray-100 overflow-hidden border-t border-gray-200">
       {!isMapReady && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 z-10">
-          <Loader2 size={32} className="animate-spin text-[#7b1113]" />
+          <Loader2 size={32} className="animate-spin text-primary" />
           <p className="mt-4 text-sm font-bold text-gray-500">Cargando mapa...</p>
         </div>
       )}
@@ -385,18 +385,18 @@ const ClientMap: React.FC = () => {
       )}
 
       <div className={`absolute left-4 z-[1000] flex flex-col gap-2 ${!isInternetAvailable ? 'top-12' : 'top-4'}`}>
-        <button onClick={handleLocate} className="w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-[#7b1113] active:scale-90 transition-transform border border-gray-100">
+        <button onClick={handleLocate} className="w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary active:scale-90 transition-transform border border-gray-100">
           {isLocating ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
         </button>
         <div className="relative">
-            <button onClick={() => setShowLayerMenu(!showLayerMenu)} className={`w-11 h-11 rounded-2xl shadow-xl flex items-center justify-center active:scale-90 transition-transform border border-gray-100 ${showLayerMenu ? 'bg-[#7b1113] text-white' : 'bg-white text-gray-700'}`}>
+            <button onClick={() => setShowLayerMenu(!showLayerMenu)} className={`w-11 h-11 rounded-2xl shadow-xl flex items-center justify-center active:scale-90 transition-transform border border-gray-100 ${showLayerMenu ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}>
                 <Layers size={20} />
             </button>
             {showLayerMenu && (
                 <div className="absolute top-0 left-14 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 w-48 animate-in fade-in slide-in-from-left-2 overflow-hidden">
                     <div className="flex flex-col gap-1">
                         {layers.map(layer => (
-                            <button key={layer.id} onClick={() => { setMapStyle(layer.id as any); setShowLayerMenu(false); }} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${mapStyle === layer.id ? 'bg-gray-100 text-[#7b1113]' : 'text-gray-600 hover:bg-gray-50'}`}>
+                            <button key={layer.id} onClick={() => { setMapStyle(layer.id as any); setShowLayerMenu(false); }} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${mapStyle === layer.id ? 'bg-gray-100 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}>
                                 <span>{layer.label}</span>
                                 {mapStyle === layer.id && <Check size={14} />}
                             </button>
@@ -437,7 +437,7 @@ const ClientMap: React.FC = () => {
               <button 
                 onClick={() => setShowUsers(!showUsers)}
                 className={`flex items-center gap-1.5 border-l border-gray-200 pl-1 sm:pl-2 active:scale-95 transition-all text-[9px] font-black uppercase ${showUsers ? 'text-gray-700 opacity-100' : 'text-gray-400 opacity-50 grayscale'}`}>
-                <div className="w-2.5 h-2.5 bg-[#7b1113] rounded-full border border-white shadow-sm"></div>
+                <div className="w-2.5 h-2.5 bg-primary rounded-full border border-white shadow-sm"></div>
                 <span>Técnicos</span>
               </button>
             )}

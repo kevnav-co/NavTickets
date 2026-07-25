@@ -3,7 +3,8 @@ import { Client, Equipment, ServiceOrder, User } from './types';
 
 export const MOCK_USERS: User[] = [
   { 
-    id: 'u001', 
+    id: 'u001',
+    companyId: 'default', // ← NUEVO
     name: 'Kevin Navas', 
     role: 'admin', 
     username: 'knavas', 

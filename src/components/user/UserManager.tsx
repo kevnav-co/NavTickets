@@ -36,14 +36,14 @@ const UserManager: React.FC = () => {
                 placeholder="Buscar usuarios..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20"
+                className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
         </div>
 
         {canCreate && (
             <button 
                 onClick={() => navigate('/users/new')}
-                className="w-full h-12 bg-[#7b1113] text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-[#7b1113]/20"
+                className="w-full h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20"
             >
                 <UserPlus size={18} />
                 Añadir Usuario
@@ -70,7 +70,7 @@ const UserManager: React.FC = () => {
                 onClick={() => navigate(`/users/${user.id}`)}
                 className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer group"
               >
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 bg-red-50 text-[#7b1113]">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 bg-red-50 text-primary">
                   {getInitials(user.name)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -78,7 +78,7 @@ const UserManager: React.FC = () => {
                   <p className="text-xs text-gray-500 truncate">@{user.username}</p>
                 </div>
                 <div className="flex items-center gap-2 pl-2">
-                    {user.role === 'admin' ? <span title="Admin" className="bg-red-100/80 text-[#7b1113] p-1.5 rounded-full"><Shield size={16} /></span>
+                    {user.role === 'admin' ? <span title="Admin" className="bg-red-100/80 text-primary p-1.5 rounded-full"><Shield size={16} /></span>
                     : user.role === 'supervisor' ? <span title="Supervisor" className="bg-blue-100/80 text-blue-600 p-1.5 rounded-full"><Shield size={16} /></span>
                     : user.role === 'developer' ? <span title="Developer" className="bg-purple-100/80 text-purple-600 p-1.5 rounded-full"><Code size={16} /></span>
                     : <span title="Técnico" className="bg-gray-100 text-gray-600 p-1.5 rounded-full"><HardHat size={16} /></span>}

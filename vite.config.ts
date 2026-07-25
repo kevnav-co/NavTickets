@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: "NavTickets Gestión Industrial",
           short_name: "NavTickets",
-          description: "Sistema profesional de gestión de mantenimiento industrial Navas.",
+          description: "Sistema profesional de gestión de mantenimiento industrial.",
           theme_color: "#7b1113",
           background_color: "#ffffff",
           display: "standalone",
@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => {
               sizes: "512x512",
               type: "image/png",
               form_factor: "wide",
-              label: "Pantalla de Inicio Navas"
+              label: "Pantalla de Inicio"
             },
             {
               src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",

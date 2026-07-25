@@ -5,22 +5,29 @@ import {
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { deleteOrderWithEvidence } from '../services/data';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Hook que proporciona funciones para realizar operaciones CRUD en Firestore.
+ * Inyecta automáticamente `companyId` en los documentos creados para aislamiento multi-tenant.
  *
  * NOTA: Se ha rediseñado para simplificar el manejo de tipos y eliminar la complejidad
  * de los conversores genéricos que causaban errores persistentes en `updateDoc`.
  */
 export const useFirestoreActions = () => {
+  const { currentUser } = useAuth();
 
   const addItem = useCallback(async <T extends DocumentData>(collectionName: string, data: WithFieldValue<T>): Promise<string> => {
     if (!db) throw new Error("Firestore no está inicializado.");
-    
+
+    // Inyectar companyId para aislamiento multi-tenant
+    const companyId = currentUser?.companyId || 'default';
+    const dataWithCompany = { ...data, companyId } as WithFieldValue<T>;
+
     const collectionRef = collection(db, collectionName);
-    const docRef = await addDoc(collectionRef, data);
+    const docRef = await addDoc(collectionRef, dataWithCompany);
     return docRef.id;
-  }, []);
+  }, [currentUser]);
 
   const updateItem = useCallback(async <T extends DocumentData>(collectionName: string, id: string, data: Partial<T>): Promise<void> => {
     if (!db) throw new Error("Firestore no está inicializado.");

@@ -68,7 +68,7 @@ const ClientManager: React.FC = () => {
                 placeholder="Buscar clientes..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20"
+                className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <button 
@@ -83,7 +83,7 @@ const ClientManager: React.FC = () => {
             {canCreate && (
               <button 
                 onClick={() => navigate('/clients/new')}
-                className="flex-grow h-12 bg-[#7b1113] text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-[#7b1113]/20"
+                className="flex-grow h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20"
               >
                 <UserPlus size={18} />
                 Añadir Cliente
@@ -100,7 +100,7 @@ const ClientManager: React.FC = () => {
             )}
           </div>
           <div className="flex bg-gray-200/80 p-1 rounded-lg">
-            <button onClick={() => setFilterType('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md ${filterType === 'all' ? 'bg-white text-[#7b1113] shadow-sm' : 'text-gray-500'}`}>
+            <button onClick={() => setFilterType('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md ${filterType === 'all' ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>
               Todos
             </button>
             <button onClick={() => setFilterType('active')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md ${filterType === 'active' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500'}`}>

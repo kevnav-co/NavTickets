@@ -104,7 +104,7 @@ const LiveTimer: React.FC<LiveTimerProps> = ({ order, isWarranty }) => {
   return (
     <div className="w-full">
       <div className="text-center mb-3">
-        <p className={`text-4xl font-mono font-black ${isWarranty ? 'text-blue-600' : 'text-[#7b1113]'} tracking-tighter`}>
+        <p className={`text-4xl font-mono font-black ${isWarranty ? 'text-blue-600' : 'text-primary'} tracking-tighter`}>
           {formatDuration(elapsed)}
         </p>
         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tiempo Transcurrido</p>

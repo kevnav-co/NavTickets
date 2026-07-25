@@ -130,7 +130,7 @@ const Tasks: React.FC = () => {
 
     return (
         <div key={task.id} onClick={() => setSelectedTask(task)} className={`group bg-white p-4 rounded-2xl shadow-sm border transition-all cursor-pointer flex items-start gap-4 active:scale-[0.99] ${selectedTask?.id === task.id ? 'border-red-100 ring-1 ring-red-100' : 'border-gray-100 hover:shadow-md'} ${viewMode === 'grid' ? 'masonry-item' : ''}`}>
-            <button onClick={(e) => { e.stopPropagation(); handleUpdateTask(task.id, { completed: !task.completed }); }} className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${task.completed ? 'bg-[#7b1113] border-[#7b1113] text-white' : 'border-gray-300 hover:border-[#7b1113] text-transparent hover:bg-red-50'}`}>
+            <button onClick={(e) => { e.stopPropagation(); handleUpdateTask(task.id, { completed: !task.completed }); }} className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all flex-shrink-0 ${task.completed ? 'bg-primary border-primary text-white' : 'border-gray-300 hover:border-primary text-transparent hover:bg-red-50'}`}>
                 {task.completed && <Check size={14} strokeWidth={3} />}
             </button>
             <div className="flex-1 min-w-0">
@@ -203,7 +203,7 @@ const Tasks: React.FC = () => {
             </div>
             {!isSearchActive && (
               <div className="px-4 md:px-6 pb-4 pt-2">
-                  <form onSubmit={handleAddTask} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1 flex items-start group transition-all focus-within:ring-2 focus-within:ring-[#7b1113]/20 focus-within:border-[#7b1113]/40 relative">
+                  <form onSubmit={handleAddTask} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-1 flex items-start group transition-all focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/40 relative">
                       <textarea 
                           ref={textareaRef}
                           rows={1}
@@ -218,11 +218,11 @@ const Tasks: React.FC = () => {
                             }
                           }}
                        />
-                      <button type="button" onClick={toggleListening} className={`p-2.5 rounded-xl mx-1 mt-1.5 transition-all text-white ${isListening ? 'bg-[#7b1113] animate-pulse' : 'bg-[#7b1113]'}`} title={isListening ? "Detener" : "Grabar por voz"}>
+                      <button type="button" onClick={toggleListening} className={`p-2.5 rounded-xl mx-1 mt-1.5 transition-all text-white ${isListening ? 'bg-primary animate-pulse' : 'bg-primary'}`} title={isListening ? "Detener" : "Grabar por voz"}>
                           {isListening ? <MicOff size={20} /> : <Mic size={20} />}
                       </button>
                       {newTaskTitle.trim() && !isListening && (
-                          <button type="submit" className="mr-1 mt-1.5 bg-[#7b1113] text-white p-2.5 rounded-xl shadow-md hover:scale-105 active:scale-95 transition-all animate-in zoom-in duration-200" title="Guardar">
+                          <button type="submit" className="mr-1 mt-1.5 bg-primary text-white p-2.5 rounded-xl shadow-md hover:scale-105 active:scale-95 transition-all animate-in zoom-in duration-200" title="Guardar">
                               <Plus size={20} />
                           </button>
                       )}

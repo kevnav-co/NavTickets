@@ -6,6 +6,7 @@ export enum OrderStatus {
 
 export interface Client {
   id: string;
+  companyId: string;      // ← NUEVO
   name: string;
   address: string;
   contact: string;
@@ -33,6 +34,7 @@ export type EquipmentStatus = 'Activa' | 'Inactiva' | 'En Mantenimiento' | 'Reti
 
 export interface Equipment {
   id: string;
+  companyId: string;      // ← NUEVO
   clientId: string;
   name: string;
   brand?: string;
@@ -64,6 +66,7 @@ export interface WarrantyJob {
 
 export interface ServiceOrder {
   id:string;
+  companyId: string;      // ← NUEVO
   orderNumber: number;
   name: string;
   clientId?: string;
@@ -112,8 +115,9 @@ export interface ServiceOrder {
 
 export interface User {
   id: string;
+  companyId: string;      // ← NUEVO
   name: string;
-  role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin';
+  role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin' | 'super_admin';
   username: string;
   password?: string;
   identification?: string;
@@ -127,6 +131,7 @@ export interface User {
 
 export interface AppNotification {
   id: string;
+  companyId: string;      // ← NUEVO
   title: string;
   body: string;
   timestamp: string;
@@ -148,6 +153,7 @@ export interface TaskNote {
 
 export interface Task {
   id: string;
+  companyId: string;      // ← NUEVO
   title: string;
   completed: boolean;
   important: boolean;

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 interface ChangePasswordModalProps {
@@ -11,6 +12,7 @@ interface ChangePasswordModalProps {
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose }) => {
   const { currentUser } = useAuth();
+  const { company } = useCompany();
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -51,7 +53,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     const user = auth.currentUser;
 
     if (user) {
-        const userEmail = `${currentUser.username}@navas.com`;
+        const domain = company?.auth?.emailDomain || '@navas.com';
+        const userEmail = `${currentUser.username}${domain}`;
         const credential = EmailAuthProvider.credential(userEmail, oldPass);
         
         try {
@@ -109,13 +112,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
                   type="password" 
                   value={field.value} 
                   onChange={e => field.setter(e.target.value)} 
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#7b1113] transition-colors" 
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors" 
                   required 
                 />
               </div>
             ))}
             {error && <div className="bg-red-50 text-red-600 p-3 rounded-xl text-xs font-bold flex items-center gap-2"><AlertCircle size={16} /> {error}</div>}
-            <button type="submit" disabled={isSaving} className="w-full bg-[#7b1113] text-white py-3.5 rounded-xl font-bold text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all mt-2 disabled:opacity-50">
+            <button type="submit" disabled={isSaving} className="w-full bg-primary text-white py-3.5 rounded-xl font-bold text-sm uppercase tracking-widest shadow-lg active:scale-95 transition-all mt-2 disabled:opacity-50">
               {isSaving ? 'Actualizando...' : 'Actualizar Clave'}
             </button>
           </form>

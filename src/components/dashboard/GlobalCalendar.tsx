@@ -10,7 +10,7 @@ import { QueryConstraint, where } from 'firebase/firestore';
 
 const getUserColor = (name: string, isPending: boolean) => {
   const n = name.toLowerCase();
-  let baseColor = { bg: '#7b1113', border: '#5a0c0e' };
+  let baseColor = { bg: 'var(--color-primary)', border: 'var(--color-primary-dark)' };
   if (n.includes('yoel')) baseColor = { bg: '#1e40af', border: '#172554' };
   if (n.includes('gabriel')) baseColor = { bg: '#a16207', border: '#713f12' };
   if (n.includes('jose madera') || n.includes('josé madera')) baseColor = { bg: '#166534', border: '#14532d' };
@@ -261,7 +261,7 @@ const GlobalCalendar: React.FC = () => {
     <div className="relative z-10 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
       <header className="p-5 flex items-center justify-between border-b border-gray-50 flex-wrap gap-y-3">
          <div className="flex items-center gap-3">
-           <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-[#7b1113]"><CalendarDays size={22} /></div>
+           <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-primary"><CalendarDays size={22} /></div>
            <div>
              <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Agenda Semanal</h3>
              {canViewAll && (
@@ -340,24 +340,24 @@ const GlobalCalendar: React.FC = () => {
               ))}
 
               {draftSlot && newOrderState && (
-                 <div className="absolute bg-[#7b1113]/10 border-l-[4px] border-[#7b1113] rounded-r-lg shadow-xl z-30 flex flex-col justify-center box-border px-1 select-none" 
+                 <div className="absolute bg-primary/10 border-l-[4px] border-primary rounded-r-lg shadow-xl z-30 flex flex-col justify-center box-border px-1 select-none" 
                     style={{ top: `${((draftSlot.hour - 6) * rowHeight) + draftSlot.minute * (rowHeight/60)}px`, height: `${draftSlot.durationMinutes * (rowHeight / 60)}px`, left: `calc(60px + (100% - 60px) * ${weeklyLayout.weekData.slice(0, draftSlot.dayIndex).reduce((p, c) => p + c.dayMaxCols, 0)} / ${weeklyLayout.totalFr})`, width: `calc((100% - 60px) * ${weeklyLayout.weekData[draftSlot.dayIndex].dayMaxCols} / ${weeklyLayout.totalFr})`}}
                     onMouseDown={(e) => handleDragStart(e, 'move')} onTouchStart={(e) => handleDragStart(e, 'move')}>
                     <div className="flex flex-col items-center justify-center pointer-events-none text-center">
-                        <span className="text-[7px] font-black text-[#7b1113] uppercase leading-none opacity-70">Nueva Orden</span>
+                        <span className="text-[7px] font-black text-primary uppercase leading-none opacity-70">Nueva Orden</span>
                         <span className="text-[9px] font-black text-gray-800 mt-1">{formatMinutes(draftSlot.hour * 60 + draftSlot.minute)} - {formatMinutes((draftSlot.hour * 60 + draftSlot.minute) + draftSlot.durationMinutes)}</span>
-                        <span className="text-[8px] font-black text-[#7b1113] mt-0.5 bg-[#7b1113]/10 px-1.5 py-0.5 rounded">{getDurationLabel(draftSlot.durationMinutes)}</span>
+                        <span className="text-[8px] font-black text-primary mt-0.5 bg-primary/10 px-1.5 py-0.5 rounded">{getDurationLabel(draftSlot.durationMinutes)}</span>
                     </div>
                     <div className="absolute right-1 top-1/2 -translate-y-1/2">
                       <Link 
                         to="/orders/new" 
                         state={newOrderState}
-                        className="bg-[#7b1113] text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform"
+                        className="bg-primary text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-transform"
                       >
                         <Plus size={14} strokeWidth={3} />
                       </Link>
                     </div>
-                    <div className="w-full h-3 absolute bottom-0 cursor-ns-resize flex items-end justify-center pb-0.5" onMouseDown={(e)=>handleDragStart(e,'resize-bottom')} onTouchStart={(e)=>handleDragStart(e,'resize-bottom')}><div className="w-6 h-1 bg-[#7b1113]/30 rounded-full"></div></div>
+                    <div className="w-full h-3 absolute bottom-0 cursor-ns-resize flex items-end justify-center pb-0.5" onMouseDown={(e)=>handleDragStart(e,'resize-bottom')} onTouchStart={(e)=>handleDragStart(e,'resize-bottom')}><div className="w-6 h-1 bg-primary/30 rounded-full"></div></div>
                  </div>
               )}
               {weeklyLayout.weekData.map((dayLayout, dayIndex) => (

@@ -213,16 +213,16 @@ const UserForm: React.FC<Props> = ({ users }) => {
 
       <form onSubmit={handleSubmit} className="p-5 space-y-6 max-w-sm mx-auto">
         <div className="flex flex-col items-center mb-6 pt-4">
-          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-[#7b1113] mb-3 shadow-inner">
+          <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-primary mb-3 shadow-inner">
             {isEditMode ? <UserIcon size={40} /> : <UserPlus size={40} />}
           </div>
-          { !isEditMode ? <GpsIndicator /> : <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Modificar Perfil Navas</p> }
+          { !isEditMode ? <GpsIndicator /> : <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Modificar Perfil</p> }
         </div>
 
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Nombre Completo</label>
-            <input type="text" name="name" placeholder="Ej: Kevin Navas" value={formData.name || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20 text-sm font-medium transition-all`} />
+            <input type="text" name="name" placeholder="Ej: Nombre Completo" value={formData.name || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             {validationErrors.name && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.name}</p>}
           </div>
 
@@ -232,7 +232,7 @@ const UserForm: React.FC<Props> = ({ users }) => {
               <div className="absolute left-0 pl-4 pointer-events-none">
                 <IdCard size={18} className="text-gray-400" />
               </div>
-              <input type="text" name="identification" placeholder="CC o NIT" value={formData.identification || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.identification ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20 text-sm font-medium transition-all`} />
+              <input type="text" name="identification" placeholder="CC o NIT" value={formData.identification || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.identification ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             </div>
             {validationErrors.identification && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.identification}</p>}
           </div>
@@ -246,7 +246,7 @@ const UserForm: React.FC<Props> = ({ users }) => {
                     type="button" 
                     key={role as React.Key}
                     onClick={() => setFormData({...formData, role: role as User['role']})}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm capitalize ${formData.role === role ? 'border-[#7b1113] bg-red-50 text-[#7b1113]' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm capitalize ${formData.role === role ? 'border-primary bg-red-50 text-primary' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
                       {role === 'technician' ? <HardHat size={16} /> : <Shield size={16} />} 
                       {role as React.ReactNode}
                   </button>
@@ -269,7 +269,7 @@ const UserForm: React.FC<Props> = ({ users }) => {
                 <div className="absolute left-0 pl-4 pointer-events-none">
                     <AtSign size={18} className="text-gray-400" />
                 </div>
-              <input type="text" name="username" value={formData.username || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.username ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20 text-sm font-medium transition-all`} />
+              <input type="text" name="username" value={formData.username || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.username ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             </div>
             {validationErrors.username && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.username}</p>}
           </div>
@@ -280,7 +280,7 @@ const UserForm: React.FC<Props> = ({ users }) => {
                 <div className="absolute left-0 pl-4 pointer-events-none">
                     <Lock size={18} className="text-gray-400" />
                 </div>
-              <input type={showPassword ? "text" : "password"} name="password" placeholder={isEditMode ? "Dejar en blanco para no cambiar" : "••••••••"} value={formData.password || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.password ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20 text-sm font-medium transition-all`} />
+              <input type={showPassword ? "text" : "password"} name="password" placeholder={isEditMode ? "Dejar en blanco para no cambiar" : "••••••••"} value={formData.password || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.password ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 pr-4 text-gray-400 hover:text-gray-600 transition-colors">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
@@ -289,7 +289,7 @@ const UserForm: React.FC<Props> = ({ users }) => {
           </div>
         </div>
 
-       <button type="submit" disabled={isLoading} className="w-full bg-[#7b1113] text-white py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 mt-4 flex items-center justify-center gap-3 group">
+       <button type="submit" disabled={isLoading} className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 mt-4 flex items-center justify-center gap-3 group">
           {isLoading ? (
             <>
               <Loader2 size={18} className="animate-spin" />

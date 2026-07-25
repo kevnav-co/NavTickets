@@ -277,7 +277,7 @@ const EquipmentForm: React.FC = () => {
               <div className="flex items-center mb-5"><div className="w-1 h-5 bg-red-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Identidad Visual</h2></div>
               <div className="space-y-4">
                 <div className="h-48 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center relative group">
-                    {isUploading && <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl z-10"><Loader2 className="animate-spin text-[#7b1113]"/></div>}
+                    {isUploading && <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl z-10"><Loader2 className="animate-spin text-primary"/></div>}
                     
                     {formData.imageUrl ? (
                       <>
@@ -329,7 +329,7 @@ const EquipmentForm: React.FC = () => {
                           <button
                               type="button"
                               onClick={() => setShowClientSearch(true)}
-                              className="w-full text-left pl-12 pr-10 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-bold text-sm focus:ring-2 focus:ring-[#7b1113]/20 h-[58px] flex items-center"
+                              className="w-full text-left pl-12 pr-10 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 h-[58px] flex items-center"
                           >
                               {selectedClient ? (
                                   <span className="text-gray-800 truncate">{selectedClient.name}</span>
@@ -356,7 +356,7 @@ const EquipmentForm: React.FC = () => {
                       <Label>Nombre Comercial / Modelo</Label>
                       <div className="relative mt-1">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Cog className="text-gray-400" size={16}/></div>
-                          <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} onFocus={() => setShowNameSuggestions(true)} onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)} placeholder="Ej: Licuadora Industrial Lar 15L" className={`w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} outline-none font-bold text-sm focus:ring-2 focus:ring-[#7b1113]/20 uppercase`} />
+                          <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} onFocus={() => setShowNameSuggestions(true)} onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)} placeholder="Ej: Licuadora Industrial Lar 15L" className={`w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase`} />
                       </div>
                       {validationErrors.name && <p className="text-xs text-red-500 ml-4 mt-1">{validationErrors.name}</p>}
                       {showNameSuggestions && nameSuggestions.length > 0 && (
@@ -459,7 +459,7 @@ const EquipmentForm: React.FC = () => {
               </div>
             </div>
              <div className="pt-6">
-                <button form="equipment-form" type="submit" disabled={isSubmitting || isUploading} className="w-full bg-[#7b1113] text-white py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 group">
+                <button form="equipment-form" type="submit" disabled={isSubmitting || isUploading} className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 group">
                     {isSubmitting || isUploading ? (
                     <Loader2 size={20} className="animate-spin" />
                     ) : (

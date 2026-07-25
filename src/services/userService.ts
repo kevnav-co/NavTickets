@@ -19,6 +19,7 @@ export const getUserDataById = async (uid: string): Promise<User | null> => {
     // Construye el objeto de usuario a partir del documento de Firestore
     const userData: User = {
       id: userDoc.id,
+      companyId: userDoc.data().companyId || 'default', // ← NUEVO
       name: userDoc.data().name || '',
       role: userDoc.data().role || 'technician', // Asigna 'technician' por defecto si no hay rol
       username: userDoc.data().username || '',

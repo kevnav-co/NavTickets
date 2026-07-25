@@ -233,7 +233,7 @@ const EquipmentManager: React.FC = () => {
                     placeholder="Buscar máquinas..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full h-12 bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7b1113]/20 transition-all"
+                    className="w-full h-12 bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
             </div>
             <button 
@@ -247,7 +247,7 @@ const EquipmentManager: React.FC = () => {
 
         {canCreate && (
             <div className="flex gap-2 mb-3">
-                <button onClick={handleRegisterNew} className="flex-1 h-12 bg-[#7b1113] text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-[#7b1113]/20 active:scale-95 transition-transform">
+                <button onClick={handleRegisterNew} className="flex-1 h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 active:scale-95 transition-transform">
                     <Plus size={18} />Registrar
                 </button>
                 <button onClick={() => setShowCloneModal(true)} disabled={equipment.length === 0} className="flex-1 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-transform">
@@ -256,7 +256,7 @@ const EquipmentManager: React.FC = () => {
             </div>
         )}
         <div className="flex bg-gray-200/80 p-1 rounded-lg text-center">
-          <button onClick={() => setFilter('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'all' ? 'bg-white text-[#7b1113] shadow-sm' : 'text-gray-500'}`}>Todas</button>
+          <button onClick={() => setFilter('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>Todas</button>
           <button onClick={() => setFilter('operational')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'operational' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500'}`}>Operativas</button>
           <button onClick={() => setFilter('review')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'review' ? 'bg-white text-orange-500 shadow-sm' : 'text-gray-500'}`}>Revisión</button>
           <button onClick={() => setFilter('expired')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'expired' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500'}`}>Vencidas</button>
@@ -277,8 +277,8 @@ const EquipmentManager: React.FC = () => {
                             <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${maintenance.statusBarColor}`} />
                             <div className="p-3 pl-4 flex-grow flex flex-col">
                                 <div className="flex items-start gap-3 mb-2">
-                                    <div className="w-7 h-7 rounded-lg bg-[#7b1113]/10 flex-shrink-0 flex items-center justify-center">
-                                        <Settings className="text-[#7b1113]" size={16} />
+                                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center">
+                                        <Settings className="text-primary" size={16} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <h3 className="font-bold text-sm text-gray-800 uppercase leading-snug truncate">{item.name}</h3>

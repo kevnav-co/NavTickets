@@ -17,6 +17,16 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 
 const ICON_URL = 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d';
 
+// --- Company name cache (set from main thread via postMessage) ---
+let companyName: string | null = null;
+
+self.addEventListener('message', (event: ExtendableMessageEvent) => {
+  if (event.data?.type === 'SET_COMPANY_NAME') {
+    companyName = event.data.name;
+    console.log(`[SW] Company name updated: ${companyName}`);
+  }
+});
+
 // --- Primary push handler (works on ALL platforms: Android, iOS, Desktop) ---
 // This is the SINGLE source of truth for displaying notifications.
 // We do NOT use Firebase's onBackgroundMessage because:
@@ -28,7 +38,7 @@ const ICON_URL = 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-809
 self.addEventListener('push', (event: PushEvent) => {
   console.log('[SW] Push event received.');
 
-  let title = 'Navas';
+  let title = companyName || 'Notificación';
   let body = 'Tienes una nueva notificación.';
   let path = '/';
   let url = '/';

@@ -64,7 +64,7 @@ export const InstallPWA: React.FC<Props> = ({ deferredPrompt, onInstall, forceSh
           </button>
           
           <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-[#7b1113] rounded-2xl flex items-center justify-center text-white shadow-lg mb-5 transform rotate-3">
+            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white shadow-lg mb-5 transform rotate-3">
               <Smartphone size={32} />
             </div>
 
@@ -94,7 +94,7 @@ export const InstallPWA: React.FC<Props> = ({ deferredPrompt, onInstall, forceSh
                     {deferredPrompt ? (
                        <button 
                         onClick={handleInstallClick} 
-                        className="w-full bg-[#7b1113] text-white py-3.5 rounded-xl text-sm font-bold uppercase tracking-wide flex items-center justify-center gap-2 shadow-lg hover:bg-[#5a0c0e] active:scale-95 transition-all ring-offset-2 focus:ring-2 ring-[#7b1113]"
+                        className="w-full bg-primary text-white py-3.5 rounded-xl text-sm font-bold uppercase tracking-wide flex items-center justify-center gap-2 shadow-lg hover:bg-primary-dark active:scale-95 transition-all ring-offset-2 focus:ring-2 ring-primary"
                        >
                          <Download size={18} /> Instalar Ahora
                        </button>

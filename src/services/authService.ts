@@ -39,6 +39,7 @@ export const loginUser = async (username: string, password?: string): Promise<Us
       // Se elimina la propiedad `uid` que no pertenece al tipo.
       const user: User = {
         id: userDoc.id,
+        companyId: userData.companyId || 'default', // ← NUEVO
         name: userData.name || '',
         role: userData.role || 'technician',
         username: userData.username || '',

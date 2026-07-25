@@ -147,7 +147,7 @@ const NewOrder: React.FC = () => {
                     key={t} 
                     type="button" 
                     onClick={() => setFormData(prev => ({ ...prev, orderType: t }))}
-                    className={`flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${formData.orderType === t ? 'bg-[#7b1113] text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${formData.orderType === t ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
                 >
                     {t}
                 </button>
@@ -174,9 +174,9 @@ const NewOrder: React.FC = () => {
               <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Información del Cliente</label>
               <div className="flex gap-2 items-center">
                   {selectedClient ? (
-                      <div className="flex-1 bg-gray-50 border border-gray-100 rounded-[1.25rem] py-3.5 px-4 flex items-center justify-between shadow-sm ring-1 ring-[#7b1113]/20">
+                      <div className="flex-1 bg-gray-50 border border-gray-100 rounded-[1.25rem] py-3.5 px-4 flex items-center justify-between shadow-sm ring-1 ring-primary/20">
                           <div className="min-w-0" onClick={() => setShowClientSearch(true)}>
-                              <p className="text-[8px] font-black text-[#7b1113] uppercase tracking-widest leading-none mb-1">Empresa / Propietario</p>
+                              <p className="text-[8px] font-black text-primary uppercase tracking-widest leading-none mb-1">Empresa / Propietario</p>
                               <p className="text-sm font-black text-gray-800 truncate">{selectedClient.name}</p>
                           </div>
                           <button
@@ -195,11 +195,11 @@ const NewOrder: React.FC = () => {
                           className="flex-1 bg-gray-50 border border-gray-100 rounded-[1.25rem] py-3.5 px-4 text-left flex items-center justify-between shadow-sm active:scale-[0.98] transition-all group"
                       >
                           <span className="text-sm font-bold text-gray-300">Seleccionar Cliente... (Opcional)</span>
-                          <Search size={20} className="text-gray-300 group-hover:text-[#7b1113] transition-colors" />
+                          <Search size={20} className="text-gray-300 group-hover:text-primary transition-colors" />
                       </button>
                   )}
                   {currentUser && hasPermission(currentUser.role, PERMISSIONS.CREATE_CLIENT) && (
-                      <button type="button" onClick={() => navigate('/clients/new')} className="bg-[#7b1113] text-white w-14 h-14 rounded-[1.25rem] shadow-lg flex items-center justify-center active:scale-90 transition-all flex-shrink-0"><UserPlus size={22} /></button>
+                      <button type="button" onClick={() => navigate('/clients/new')} className="bg-primary text-white w-14 h-14 rounded-[1.25rem] shadow-lg flex items-center justify-center active:scale-90 transition-all flex-shrink-0"><UserPlus size={22} /></button>
                   )}
               </div>
           </div>
@@ -240,9 +240,9 @@ const NewOrder: React.FC = () => {
                               key={equip.id} 
                               type="button" 
                               onClick={() => toggleEquipment(equip.id)} 
-                              className={`flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition-all ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-red-50 border-[#7b1113] text-[#7b1113] shadow-md' : 'bg-gray-50/50 border-gray-100 text-gray-400 hover:bg-gray-50'}`}
+                              className={`flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition-all ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-red-50 border-primary text-primary shadow-md' : 'bg-gray-50/50 border-gray-100 text-gray-400 hover:bg-gray-50'}`}
                           >
-                              <div className={`mt-0.5 w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-[#7b1113]' : 'bg-white border-2 border-gray-200'}`}>
+                              <div className={`mt-0.5 w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-primary' : 'bg-white border-2 border-gray-200'}`}>
                                   {formData.selectedEquipmentIds.includes(equip.id) && <Check size={10} className="text-white" strokeWidth={4} />}
                               </div>
                               <div className="flex-1">
@@ -268,7 +268,7 @@ const NewOrder: React.FC = () => {
                         ref={serviceNameRef}
                         value={formData.serviceName} 
                         onChange={(e) => handleServiceNameChange(e.target.value)} 
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 pl-12 text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/10 transition-all uppercase resize-none overflow-hidden"
+                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 pl-12 text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all uppercase resize-none overflow-hidden"
                         placeholder="Nombre del Servicio"
                         rows={1}
                         required 
@@ -286,7 +286,7 @@ const NewOrder: React.FC = () => {
                         <select 
                             value={formData.technicianId} 
                             onChange={(e) => setFormData(prev => ({...prev, technicianId: e.target.value}))}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 pl-12 appearance-none text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/10 transition-all"
+                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 pl-12 appearance-none text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                             required
                         >
                             <option value="" className="text-gray-300">Asignar Personal...</option>
@@ -317,7 +317,7 @@ const NewOrder: React.FC = () => {
                     <textarea 
                         value={formData.description} 
                         onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))} 
-                        className="w-full bg-gray-50 border border-gray-100 rounded-[1.5rem] p-4 pr-12 min-h-[120px] text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#7b1113]/10 transition-all no-scrollbar" 
+                        className="w-full bg-gray-50 border border-gray-100 rounded-[1.5rem] p-4 pr-12 min-h-[120px] text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all no-scrollbar" 
                         placeholder="Detalles de la falla, solicitud del cliente o notas internas..." 
                         required 
                     />
@@ -391,7 +391,7 @@ const NewOrder: React.FC = () => {
         <div className="bg-white rounded-[2.2rem] p-6 shadow-sm border border-gray-100 space-y-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <ImageIcon size={18} className="text-[#7b1113]" />
+              <ImageIcon size={18} className="text-primary" />
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest"> Fotos Iniciales </h3>
             </div>
             
@@ -464,7 +464,7 @@ const NewOrder: React.FC = () => {
             </div>
           </div>
 
-          <button type="submit" disabled={!!loadingMessage || !formData.description.trim() || !formData.technicianId} className="w-full bg-[#7b1113] text-white py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 mt-4 flex items-center justify-center gap-3 group">
+          <button type="submit" disabled={!!loadingMessage || !formData.description.trim() || !formData.technicianId} className="w-full bg-primary text-white py-5 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.2em] shadow-2xl shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 mt-4 flex items-center justify-center gap-3 group">
             {loadingMessage ? (<><Loader2 size={20} className="animate-spin" /><span>{loadingMessage}</span></>) : (<><span>{isEditMode ? 'Guardar Cambios' : 'Crear Orden'}</span><ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" /></>)}
           </button>
       </form>

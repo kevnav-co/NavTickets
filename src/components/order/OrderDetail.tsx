@@ -22,7 +22,7 @@ const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string, 
       <h3 className="text-xl font-black uppercase">Confirmar Acción</h3>
       <p className="text-xs text-gray-500 mb-8 font-medium">{message}</p>
       <div className="w-full space-y-3">
-        <button onClick={onConfirm} className="w-full py-5 bg-[#7b1113] text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2"><Play size={16} fill="currentColor" />Confirmar</button>
+        <button onClick={onConfirm} className="w-full py-5 bg-primary text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2"><Play size={16} fill="currentColor" />Confirmar</button>
         <button onClick={onCancel} className="w-full py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-[10px] uppercase">Volver</button>
       </div>
     </div>

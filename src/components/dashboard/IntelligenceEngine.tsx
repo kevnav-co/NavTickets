@@ -255,7 +255,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessing}
               >
-                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <FileSpreadsheet size={20} className="text-[#7b1113] group-hover:scale-110 transition-transform" />}
+                {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <FileSpreadsheet size={20} className="text-primary group-hover:scale-110 transition-transform" />}
                 <span className="font-bold text-sm uppercase tracking-wide">{isProcessing ? 'Procesando...' : 'Subida de datos (Excel)'}</span>
               </button>
               <input type="file" ref={fileInputRef} onChange={handleExcelUpload} className="hidden" accept=".xlsx, .xls" />
@@ -275,7 +275,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
     <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col animate-in fade-in duration-300">
         <div className="bg-white px-6 py-4 shadow-sm z-20 flex items-center justify-between">
             <div>
-                <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2"><Sparkles className="text-[#7b1113] fill-[#7b1113]" /> Inteligencia Navas</h2>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2"><Sparkles className="text-primary fill-primary" /> Inteligencia App</h2>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Reporte de {isProduct ? 'Inventario' : 'Base de Clientes'}</p>
             </div>
             <button onClick={closeAnalysis} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-bold uppercase hover:bg-gray-200 transition-colors flex items-center gap-2"><XCircle size={16} /> Cerrar</button>
@@ -342,7 +342,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                         <thead>
                             <tr className="text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-white">
                                 <th className="p-4 w-12 text-center">
-                                    <button onClick={toggleSelectAll} className="text-gray-300 hover:text-[#7b1113] transition-colors">{allSelected ? <CheckSquare size={18} className="text-[#7b1113]" /> : <Square size={18} />}</button>
+                                    <button onClick={toggleSelectAll} className="text-gray-300 hover:text-primary transition-colors">{allSelected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}</button>
                                 </th>
                                 <th className="p-4">{isProduct ? 'Referencia' : 'Identificación'}</th>
                                 <th className="p-4">{isProduct ? 'Descripción' : 'Nombre'}</th>
@@ -375,7 +375,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                                 return (
                                     <tr key={item.id} onClick={() => toggleSelection(item.id)} className={`border-b border-gray-50 transition-colors cursor-pointer group ${isSelected ? 'bg-red-50/30' : 'hover:bg-gray-50'}`}>
                                         <td className="p-4 text-center">
-                                            <div className={`${isSelected ? 'text-[#7b1113]' : 'text-gray-200 group-hover:text-gray-300'}`}>{isSelected ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                                            <div className={`${isSelected ? 'text-primary' : 'text-gray-200 group-hover:text-gray-300'}`}>{isSelected ? <CheckSquare size={18} /> : <Square size={18} />}</div>
                                         </td>
                                         <td className="p-4 font-bold text-gray-900">
                                             <div className="flex items-center gap-2">
@@ -413,7 +413,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                 </div>
             </div>
         </div>
-        {selectedIds.size > 0 && (<div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in"><button onClick={handleUploadSelected} disabled={isUploadingFirebase} className="bg-[#7b1113] text-white pl-6 pr-8 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-4">{(isUploadingFirebase ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={18} />)}<span>Sincronizar {selectedIds.size}</span></button></div>)}
+        {selectedIds.size > 0 && (<div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in"><button onClick={handleUploadSelected} disabled={isUploadingFirebase} className="bg-primary text-white pl-6 pr-8 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-4">{(isUploadingFirebase ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={18} />)}<span>Sincronizar {selectedIds.size}</span></button></div>)}
     </div>
   );
 }

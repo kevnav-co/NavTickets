@@ -57,7 +57,7 @@ const EquipmentSelectorModal: React.FC<EquipmentSelectorModalProps> = ({
                     placeholder="Buscar por nombre o serial..." 
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="w-full bg-white border border-gray-200 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-[#7b1113]/10 transition-all"
+                    className="w-full bg-white border border-gray-200 rounded-2xl py-3.5 pl-11 pr-4 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                 />
             </div>
         </div>
@@ -71,21 +71,21 @@ const EquipmentSelectorModal: React.FC<EquipmentSelectorModalProps> = ({
                   key={eq.id}
                   onClick={() => toggle(eq.id)}
                   className={`w-full flex items-center gap-3 p-4 rounded-2xl border-2 transition-all text-left group cursor-pointer ${
-                    isSelected ? 'bg-red-50 border-[#7b1113] shadow-md' : 'bg-white border-gray-100 hover:bg-gray-50'
+                    isSelected ? 'bg-red-50 border-primary shadow-md' : 'bg-white border-gray-100 hover:bg-gray-50'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-[#7b1113] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary text-white' : 'bg-gray-100 text-gray-400'}`}>
                     {eq.imageUrl ? <img src={eq.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Cog size={20} />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`font-bold text-sm truncate ${isSelected ? 'text-[#7b1113]' : 'text-gray-900'}`}>{eq.name}</p>
+                    <p className={`font-bold text-sm truncate ${isSelected ? 'text-primary' : 'text-gray-900'}`}>{eq.name}</p>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">S/N: {eq.serialNumber}</p>
                   </div>
                   <input 
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => {}} // La lógica ya está en el div contenedor
-                    className="form-checkbox h-5 w-5 text-[#7b1113] rounded border-gray-300 focus:ring-0 cursor-pointer"
+                    className="form-checkbox h-5 w-5 text-primary rounded border-gray-300 focus:ring-0 cursor-pointer"
                   />
                 </div>
               );
@@ -107,7 +107,7 @@ const EquipmentSelectorModal: React.FC<EquipmentSelectorModalProps> = ({
           </button>
           <button 
             onClick={() => onSelect(selectedIds)}
-            className="flex-1 bg-[#7b1113] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-red-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="flex-1 bg-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-xl shadow-red-900/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             Actualizar Selección
           </button>

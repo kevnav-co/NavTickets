@@ -150,7 +150,7 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
   const handleBulkSync = async () => {
     if (filteredClients.length === 0 || isSyncingBulk) return;
     
-    const confirmMsg = `¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos de Navas?`;
+    const confirmMsg = `¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos del sistema?`;
     if (!window.confirm(confirmMsg)) return;
 
     setIsSyncingBulk(true);
@@ -370,7 +370,7 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
                   </div>
                   <button
                     onClick={() => handleSingleSync(client)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#7b1113]/10 text-[#7b1113] rounded-lg font-bold text-sm hover:bg-[#7b1113]/20 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg font-bold text-sm hover:bg-primary/20 transition-colors"
                   >
                     <UserPlus size={16} />
                     {client.needsUpdate ? 'Actualizar' : 'Importar'}
@@ -415,14 +415,14 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
                 placeholder="Buscar por nombre o identificación..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-11 bg-white border border-gray-300 rounded-xl pl-11 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#7b1113]/50 text-sm"
+                className="w-full h-11 bg-white border border-gray-300 rounded-xl pl-11 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
               />
             </div>
             {(filterVIPOnly || filterNotAddedOnly || filterNeedsUpdateOnly) && filteredClients.length > 0 && (
               <button
                 onClick={handleBulkSync}
                 disabled={isSyncingBulk}
-                className="flex items-center gap-2 px-4 bg-[#7b1113] text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#7b1113]/20 hover:bg-[#8b2123] transition-all disabled:opacity-50 disabled:cursor-wait active:scale-95 whitespace-nowrap"
+                className="flex items-center gap-2 px-4 bg-primary text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg shadow-primary/20 hover:bg-primary-dark transition-all disabled:opacity-50 disabled:cursor-wait active:scale-95 whitespace-nowrap"
               >
                 {isSyncingBulk ? <Loader2 size={16} className="animate-spin" /> : <UploadCloud size={16} />}
                 <span className="hidden sm:inline">Sincronizar Todo</span>

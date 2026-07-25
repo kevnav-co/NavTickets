@@ -66,7 +66,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
-            <Bell size={20} className="text-[#7b1113]" />
+            <Bell size={20} className="text-primary" />
             <h2 className="text-lg font-bold text-gray-800">Notificaciones</h2>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full">
@@ -86,7 +86,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                   className="flex-grow flex items-start gap-3 cursor-pointer"
                   onClick={() => handleItemClick(notif)}
                 >
-                  {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-[#7b1113] mt-1.5 flex-shrink-0"></div>}
+                  {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>}
                   <div className={notif.read ? 'pl-5' : ''}>
                     <p className="text-sm text-gray-700 break-words">{notif.body}</p>
                     <span className="text-xs text-gray-400 font-medium">{formatTimestamp(notif.timestamp)}</span>

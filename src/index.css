@@ -1,40 +1,66 @@
 @import "tailwindcss";
 
-/* Estilos para el diseño de mampostería (Masonry) */
+/* ===== THEME VARIABLES (Tailwind v4 @theme) ===== */
+@theme {
+  --color-primary: #7b1113;
+  --color-primary-light: #9f3a3c;
+  --color-primary-dark: #5a0c0e;
+  --color-primary-lighter: #c46a6b;
+  --color-primary-darker: #3d0708;
+  --color-primary-rgb: 123 17 19;
+}
+
+/* Fallback :root variables for dynamic runtime updates */
+:root {
+  --color-primary: #7b1113;
+  --color-primary-rgb: 123, 17, 19;
+  --color-primary-light: #9f3a3c;
+  --color-primary-dark: #5a0c0e;
+  --color-primary-lighter: #c46a6b;
+  --color-primary-darker: #3d0708;
+}
+
+/* ===== MASONRY ===== */
 .masonry-grid {
-  column-gap: 0.75rem; /* Corresponde a `gap-3` en Tailwind */
+  column-gap: 0.75rem;
   column-count: 1;
 }
 
-@media (min-width: 640px) { /* sm */
+@media (min-width: 640px) {
   .masonry-grid {
     column-count: 2;
   }
 }
 
-@media (min-width: 1024px) { /* lg */
+@media (min-width: 1024px) {
   .masonry-grid {
     column-count: 3;
   }
 }
 
-@media (min-width: 1280px) { /* xl */
+@media (min-width: 1280px) {
   .masonry-grid {
     column-count: 4;
   }
 }
 
 .masonry-item {
-  break-inside: avoid; /* Evita que las tarjetas se partan entre columnas */
-  padding-bottom: 0.75rem; /* Añade espacio en la parte inferior de cada tarjeta */
+  break-inside: avoid;
+  padding-bottom: 0.75rem;
 }
 
-/* Oculta la barra de desplazamiento en elementos que la usen */
+/* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
 
 .no-scrollbar {
-    -ms-overflow-style: none; 
-    scrollbar-width: none; 
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Selected text color */
+::selection {
+  background-color: var(--color-primary);
+  color: white;
 }

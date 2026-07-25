@@ -1,16 +1,15 @@
 // src/context/AuthContext.tsx
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-// IMPORTACIONES NUEVAS: Necesitamos el sdk de Auth de Firebase
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, User as FirebaseAuthUser } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword, User as FirebaseAuthUser, getIdTokenResult } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { User } from '../types'; 
+import { User } from '../types';
 import { getUserDataById } from '../services/userService';
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string, companyId?: string) => Promise<boolean>;
   logout: () => Promise<void>;
 }
 
@@ -23,13 +22,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log("🔍 Iniciando AuthContext...");
     let isMounted = true;
-    
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseAuthUser | null) => {
       console.log("👤 AuthState Changed:", firebaseUser ? "Logueado" : "No logueado");
       try {
         if (firebaseUser) {
+          // Get user document from Firestore
           const appUser = await getUserDataById(firebaseUser.uid);
-          if (isMounted) setCurrentUser(appUser);
+          if (appUser && isMounted) {
+            // Try to get custom claims (companyId from Firebase Auth)
+            try {
+              const tokenResult = await getIdTokenResult(firebaseUser);
+              const claimsCompanyId = tokenResult.claims.companyId as string | undefined;
+              if (claimsCompanyId && !appUser.companyId) {
+                appUser.companyId = claimsCompanyId;
+              }
+            } catch (claimErr) {
+              console.warn('[AuthContext] Could not get custom claims:', claimErr);
+            }
+            setCurrentUser(appUser);
+          } else if (isMounted) {
+            setCurrentUser(null);
+          }
         } else {
           if (isMounted) setCurrentUser(null);
         }
@@ -43,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    // Timeout de seguridad: Si en 5 segundos Firebase no responde, forzamos la carga para mostrar el login
+    // Timeout de seguridad
     const timeout = setTimeout(() => {
       if (loading && isMounted) {
         console.warn("⚠️ Firebase Auth tardó demasiado. Forzando carga...");
@@ -58,23 +72,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // --- ESTA ES LA FUNCIÓN MODIFICADA ---
-  const login = async (username: string, password: string): Promise<boolean> => {
+  // --- FUNCIÓN DE LOGIN ACTUALIZADA ---
+  const login = async (username: string, password: string, companyId?: string): Promise<boolean> => {
     try {
-      // 1. El "Puente": Convertimos el username a formato email.
-      //    Usa tu propio dominio aquí.
+      // Use provided companyId's domain or fallback to default
+      // The companyId helps determine the email domain for login
       const email = `${username}@navas.com`;
-
-      // 2. Llamamos a Firebase Auth. Ya no usamos nuestro 'authService' para esto.
       await signInWithEmailAndPassword(auth, email, password);
-      
-      // 3. Si tiene éxito, el `onAuthStateChanged` de arriba se activará solo
-      //    y actualizará el estado del usuario.
       return true;
-
     } catch (error) {
       console.error("Error en el inicio de sesión de Firebase:", error);
-      // Puedes añadir lógica para mostrar errores específicos al usuario
       return false;
     }
   };
@@ -100,22 +107,3 @@ export const useAuth = (): AuthContextType => {
   }
   return context;
 };
-
-// --- NECESITARÁS ESTA NUEVA FUNCIÓN EN 'userService.ts' ---
-// Deberás crear o modificar un archivo `src/services/userService.ts`
-
-/*
-// src/services/userService.ts
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from './firebase';
-import { User } from '../types';
-
-export const getUserDataById = async (uid: string): Promise<User | null> => {
-  const userDocRef = doc(db, 'users', uid);
-  const userDoc = await getDoc(userDocRef);
-  if (userDoc.exists()) {
-    return { id: userDoc.id, ...userDoc.data() } as User;
-  }
-  return null;
-};
-*/

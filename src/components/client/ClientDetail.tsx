@@ -93,8 +93,8 @@ const ClientDetail: React.FC = () => {
 
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-lg font-bold flex items-center gap-2"><ClipboardList size={20} className="text-[#7b1113]" />Historial de Servicios</h3>
-            {permissions.canCreateOrder && <button onClick={handleCreateOrder} className="bg-[#7b1113] text-white p-2 rounded-xl"><Plus size={20} /></button>}
+            <h3 className="text-lg font-bold flex items-center gap-2"><ClipboardList size={20} className="text-primary" />Historial de Servicios</h3>
+            {permissions.canCreateOrder && <button onClick={handleCreateOrder} className="bg-primary text-white p-2 rounded-xl"><Plus size={20} /></button>}
           </div>
           <div className={`space-y-3 ${clientOrders.length > 5 ? 'max-h-[450px] overflow-y-auto pr-2' : ''}`}>
             {clientOrders.length > 0 ? (clientOrders.map(order => (
@@ -102,7 +102,7 @@ const ClientDetail: React.FC = () => {
                 <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${order.status === OrderStatus.PENDING ? 'bg-orange-400' : order.status === OrderStatus.OPEN ? 'bg-red-500' : 'bg-green-500'}`}></div>
                 <div className="text-center w-14 flex-shrink-0 pl-2">
                   <p className="text-xs font-black uppercase text-gray-400">{order.orderType === 'Preventivo' ? 'MP' : 'MC'}</p>
-                  <p className="text-lg font-black text-[#7b1113]">{order.orderNumber}</p>
+                  <p className="text-lg font-black text-primary">{order.orderNumber}</p>
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="font-bold text-sm text-gray-800 leading-tight mb-1.5">{order.serviceName}</h4>
@@ -111,7 +111,7 @@ const ClientDetail: React.FC = () => {
                       <Calendar size={12} className="text-gray-400" />
                       {order.scheduledDate}
                     </div>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${order.status === OrderStatus.PENDING ? 'bg-orange-50 text-orange-600' : order.status === OrderStatus.OPEN ? 'bg-red-50 text-[#7b1113]' : 'bg-green-50 text-green-600'}`}>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${order.status === OrderStatus.PENDING ? 'bg-orange-50 text-orange-600' : order.status === OrderStatus.OPEN ? 'bg-red-50 text-primary' : 'bg-green-50 text-green-600'}`}>
                       {order.status}
                     </span>
                   </div>

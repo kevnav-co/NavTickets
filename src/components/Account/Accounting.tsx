@@ -469,7 +469,7 @@ const Accounting: React.FC = () => {
         <button 
             onClick={handleOpenTransferModal} 
             disabled={!canSpend}
-            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-white text-[#7b1113] border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-white text-primary border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
             title={canSpend ? "Transferir Dinero" : "No tienes saldo para transferir"}
         >
             <ArrowRightLeft size={24} />
@@ -477,7 +477,7 @@ const Accounting: React.FC = () => {
         <button 
             onClick={handleOpenExpenseModal} 
             disabled={!isAdminOrDev && !canSpend}
-            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-[#7b1113] text-white hover:bg-[#6a0f11] focus:ring-4 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-primary text-white hover:bg-primary-dark focus:ring-4 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
             title={isAdminOrDev || canSpend ? (isAdminOrDev ? 'Registrar Movimiento' : 'Agregar Gasto') : "No tienes saldo para registrar gastos"}
         >
             <Plus size={28} strokeWidth={3} />

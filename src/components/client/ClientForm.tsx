@@ -413,7 +413,7 @@ const ClientForm: React.FC = () => {
       </div>
       <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm p-4 z-40 border-t border-gray-100 shadow-[0_-5px_25px_rgba(0,0,0,0.07)]">
         <div className="max-w-3xl mx-auto">
-            <button form="client-form" type="submit" disabled={isProcessing} className="w-full bg-[#7b1113] text-white py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-lg shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 group">
+            <button form="client-form" type="submit" disabled={isProcessing} className="w-full bg-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-lg shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 group">
                 {isProcessing ? (
                     <Loader2 size={20} className="animate-spin" />
                 ) : (

@@ -8,6 +8,7 @@ export const ROLES = {
   ADMIN: 'admin' as const,
   AUX_ADMIN: 'aux_admin' as const, // AÑADIDO
   DEVELOPER: 'developer' as const,
+  SUPER_ADMIN: 'super_admin' as const,
 };
 
 // 2. Definir los permisos de la aplicación
@@ -63,6 +64,11 @@ const PERMISSIONS = {
   VIEW_MAP: 'view_map',
   VIEW_TEAM_LOCATIONS_MAP: 'view_team_locations_map',
   VIEW_ALL_LOCATIONS_MAP: 'view_all_locations_map',
+
+  // Permisos de Admin (Super Admin)
+  VIEW_ADMIN_PANEL: 'view_admin_panel',
+  MANAGE_COMPANIES: 'manage_companies',
+  MANAGE_ALL_USERS: 'manage_all_users',
 };
 
 // 3. Asignar permisos a cada rol
@@ -115,6 +121,7 @@ const ROLES_PERMISSIONS: Record<User['role'], string[]> = {
   aux_admin: supervisorPermissions, // AÑADIDO
   admin: Object.values(PERMISSIONS),
   developer: Object.values(PERMISSIONS),
+  super_admin: Object.values(PERMISSIONS),
 };
 
 // 4. Función para verificar permisos

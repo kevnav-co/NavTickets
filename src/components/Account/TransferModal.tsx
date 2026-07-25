@@ -260,7 +260,7 @@ useEffect(() => {
                     <label className="block text-sm font-bold text-gray-600 mb-2">Método</label>
                     <div className="flex gap-2">{
                         (['Efectivo', 'Transferencia'] as AccountType[]).map(m => 
-                            <button type="button" key={m} onClick={() => setMethod(m)} className={`flex-1 py-3 rounded-lg font-bold ${method === m ? 'bg-[#7b1113] text-white' : 'bg-gray-100'}`}>{m}</button>
+                            <button type="button" key={m} onClick={() => setMethod(m)} className={`flex-1 py-3 rounded-lg font-bold ${method === m ? 'bg-primary text-white' : 'bg-gray-100'}`}>{m}</button>
                         )
                     }</div>
                 </div>
@@ -281,7 +281,7 @@ useEffect(() => {
             
             <div className="pt-4 flex items-center gap-3">
                  {!isSelfTransferInEdit && (
-                    <button type="submit" disabled={isSaveDisabled} className="flex-grow bg-[#7b1113] text-white font-bold py-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                    <button type="submit" disabled={isSaveDisabled} className="flex-grow bg-primary text-white font-bold py-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
                         {submitting ? <Loader className="animate-spin"/> : (isEditMode ? 'Actualizar' : 'Confirmar')}
                     </button>
                  )}

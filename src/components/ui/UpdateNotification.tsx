@@ -37,7 +37,7 @@ function UpdateNotification() {
         <div className="mt-4 flex gap-2">
           <button
             onClick={() => updateServiceWorker(true)}
-            className="flex-1 h-10 bg-[#7b1113] text-white rounded-lg font-bold text-sm"
+            className="flex-1 h-10 bg-primary text-white rounded-lg font-bold text-sm"
           >
             Actualizar Ahora
           </button>
