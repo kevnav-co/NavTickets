@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() {
+      return request.auth.uid != null;
+    }
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow get: if isAuthed() && (request.auth.uid == userId || getUserRole() in ['admin', 'developer']);
+      // Allow any authenticated user to list users, required for many app features.
+      allow list: if isAuthed();
+
+      allow create, delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
+      allow update: if isAuthed() && (getUserRole() in ['admin', 'developer'] || (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['password', 'signatureUrl'])));
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthed() && (
+                    getUserRole() in ['admin', 'developer', 'supervisor'] ||
+                    request.auth.uid == resource.data.assignedTo
+                  );
+      allow create, delete: if isAuthed() && getUserRole() in ['admin', 'developer', 'supervisor'];
+      allow update: if isAuthed() && (
+                      getUserRole() in ['admin', 'developer', 'supervisor'] ||
+                      (request.auth.uid == resource.data.assignedTo &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'comments']))
+                    );
+    }
+
+    match /orders/{orderId} {
+      allow read: if isAuthed() && (getUserRole() in ['admin', 'developer', 'supervisor'] || (getUserRole() == 'technician' && resource.data.technicianId == request.auth.uid));
+      allow create, delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
+      allow update: if isAuthed() && (getUserRole() in ['admin', 'developer', 'supervisor'] || (getUserRole() == 'technician' && resource.data.technicianId == request.auth.uid && request.resource.data.technicianId == resource.data.technicianId));
+    }
+
+    match /clients/{clientId} {
+      allow read, create, update: if isAuthed();
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
+    }
+
+    match /equipment/{equipmentId} { 
+      allow read, create, update: if isAuthed();
+      allow delete: if isAuthed() && getUserRole() in ['admin', 'developer'];
+    }
+
+    match /user_locations/{userId} {
+      allow read: if isAuthed() && (
+                    getUserRole() in ['admin', 'developer'] ||
+                    (getUserRole() == 'supervisor' && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(userId)).data.role == 'technician')) ||
+                    (getUserRole() == 'technician' && request.auth.uid == userId)
+                  );
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isAuthed() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthed() && request.resource.data.userId == request.auth.uid;
+    }
+  }
+}

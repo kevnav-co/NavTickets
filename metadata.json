@@ -1,0 +1,40 @@
+{
+  "name": "Navas",
+  "short_name": "Navas",
+  "description": "Sistema profesional de gestión de mantenimiento industrial Navas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7b1113",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ],
+  "nativePermissions": [
+    {
+      "name": "camera",
+      "reason": "Necesitamos acceso a la cámara para capturar evidencias de los mantenimientos."
+    },
+    {
+      "name": "geolocation",
+      "reason": "Utilizamos tu ubicación para mostrarte los clientes cercanos y registrar la ruta del técnico."
+    }
+  ]
+}

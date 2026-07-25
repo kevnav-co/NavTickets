@@ -1,0 +1,85 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "storage.rules"
+  },
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "hosting": {
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/api/**",
+        "function": "api"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|png|gif|jpg|jpeg|svg|webp|woff|woff2|ttf|eot|otf|ico|json|webmanifest)",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "https://navas-app.web.app"
+          },
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
+          }
+        ]
+      },
+      {
+        "source": "/manifest.webmanifest",
+        "headers": [
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "https://navas-app.web.app"
+          }
+        ]
+      },
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "script-src 'self' 'unsafe-inline' https://maps.googleapis.com https://firebasestorage.googleapis.com https://firestore.googleapis.com https://esm.sh; object-src 'none'; base-uri 'self';"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "geolocation=*"
+          },
+          {
+            "key": "Access-Control-Allow-Origin",
+            "value": "https://navas-app.web.app"
+          }
+        ]
+      }
+    ]
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "runtime": "nodejs20"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/* Estilos para el diseño de mampostería (Masonry) */
+.masonry-grid {
+  column-gap: 0.75rem; /* Corresponde a `gap-3` en Tailwind */
+  column-count: 1;
+}
+
+@media (min-width: 640px) { /* sm */
+  .masonry-grid {
+    column-count: 2;
+  }
+}
+
+@media (min-width: 1024px) { /* lg */
+  .masonry-grid {
+    column-count: 3;
+  }
+}
+
+@media (min-width: 1280px) { /* xl */
+  .masonry-grid {
+    column-count: 4;
+  }
+}
+
+.masonry-item {
+  break-inside: avoid; /* Evita que las tarjetas se partan entre columnas */
+  padding-bottom: 0.75rem; /* Añade espacio en la parte inferior de cada tarjeta */
+}
+
+/* Oculta la barra de desplazamiento en elementos que la usen */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none; 
+    scrollbar-width: none; 
+}
