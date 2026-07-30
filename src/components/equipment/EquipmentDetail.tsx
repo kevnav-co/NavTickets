@@ -4,6 +4,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { EquipmentStatus } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { EquipmentSchema } from '../../schemas/equipment.schema';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import EquipmentForm from './EquipmentForm';
 import ImageModal from '../ui/ImageModal';
@@ -17,7 +19,8 @@ import PERMISSIONS, { hasPermission } from '../../permissions';
 import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
 
 const EquipmentDetail: React.FC = () => {
-  const { equipment, clients, updateItem, deleteItem } = useData();
+  const { equipment, clients, deleteItem } = useData();
+  const { updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -46,7 +49,7 @@ const EquipmentDetail: React.FC = () => {
     doc: item!,
     updateDoc: async (updates) => {
       if (item) {
-        await updateItem('equipment', item.id, updates);
+        await updateValidated('equipment', item.id, updates, EquipmentSchema);
       }
     },
     storagePath: 'equipment_photos',

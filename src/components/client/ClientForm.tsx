@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Client, CuentiClient } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { ClientSchema } from '../../schemas/client.schema';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import {
   Phone, Crosshair, Search, Loader2, IdCard, 
@@ -23,7 +25,8 @@ const initialFormData: Partial<Client> = {
 };
 
 const ClientForm: React.FC = () => {
-  const { clients, addItem, updateItem } = useData();
+  const { clients } = useData();
+  const { addValidated, updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -296,13 +299,13 @@ const ClientForm: React.FC = () => {
         }, {} as Partial<Client>);
 
         if (Object.keys(changedData).length > 0) {
-           await updateItem('clients', id, changedData);
+           await updateValidated('clients', id, changedData, ClientSchema);
         }
         alert(`Cliente actualizado con éxito`);
         window.localStorage.removeItem(localStorageKey);
         navigate(`/clients/${id}`);
       } else {
-        await addItem('clients', formData);
+        await addValidated('clients', formData, ClientSchema.omit({ id: true, companyId: true }));
         alert(`Cliente creado con éxito`);
         window.localStorage.removeItem(localStorageKey);
         navigate('/clients');

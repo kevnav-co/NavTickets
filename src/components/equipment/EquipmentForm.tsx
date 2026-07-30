@@ -4,6 +4,8 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { Equipment, EquipmentStatus, OrderStatus } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { EquipmentSchema } from '../../schemas/equipment.schema';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import {
   X, Save, ChevronDown, Camera, 
@@ -30,7 +32,8 @@ const initialFormData: Partial<Equipment> = {
 };
 
 const EquipmentForm: React.FC = () => {
-  const { clients, equipment, orders, addItem, updateItem } = useData();
+  const { clients, equipment, orders } = useData();
+  const { addValidated, updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -62,7 +65,7 @@ const EquipmentForm: React.FC = () => {
     doc: formData as Equipment,
     updateDoc: async (updates) => {
       if (isEditMode && id) {
-        await updateItem('equipment', id, updates);
+        await updateValidated('equipment', id, updates, EquipmentSchema);
       }
       setFormData(prev => ({...prev, ...updates}));
     },
@@ -184,7 +187,7 @@ const EquipmentForm: React.FC = () => {
         const { id: formId, ...dataToSave } = formData;
 
         if (isEditMode && id) {
-            await updateItem('equipment', id, dataToSave);
+            await updateValidated('equipment', id, dataToSave, EquipmentSchema);
             alert('Máquina actualizada con éxito');
             window.localStorage.removeItem(localStorageKey);
             const returnTo = (location.state as any)?.returnTo;
@@ -194,7 +197,7 @@ const EquipmentForm: React.FC = () => {
                 navigate(`/equipment/${id}`);
             }
         } else {
-            await addItem('equipment', dataToSave as Omit<Equipment, 'id'>);
+            await addValidated('equipment', dataToSave, EquipmentSchema.omit({ id: true, companyId: true }));
             alert('Máquina registrada con éxito');
             window.localStorage.removeItem(localStorageKey);
             navigate('/equipment');

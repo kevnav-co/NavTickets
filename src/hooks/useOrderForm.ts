@@ -4,6 +4,8 @@ import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ServiceOrder, OrderStatus, User } from '../types';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useValidatedActions } from './useValidatedActions';
+import { ServiceOrderSchema } from '../schemas/order.schema';
 import { storage } from '../services/firebase';
 import { ref, getDownloadURL, deleteObject, uploadBytes } from 'firebase/storage';
 import { compressImage } from '../utils/index';
@@ -27,7 +29,8 @@ const initialFormData = {
 };
 
 export const useOrderForm = () => {
-  const { clients, equipment, users, orders, addItem, updateItem } = useData();
+  const { clients, equipment, users, orders } = useData();
+  const { addValidated, updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -284,13 +287,13 @@ export const useOrderForm = () => {
 
         if (id) {
             if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.UPDATE_ORDER)) throw new Error('Permiso denegado.');
-            await updateItem('orders', id, { ...orderData, updatedAt: new Date().toISOString() });
+            await updateValidated('orders', id, { ...orderData, updatedAt: new Date().toISOString() }, ServiceOrderSchema);
             localStorage.removeItem(`order-form-${id}`); // Clean up on successful submission
             alert("Orden actualizada");
             navigate(`/orders/${id}`);
         } else {
             if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.CREATE_ORDER)) throw new Error('Permiso denegado.');
-            const newOrderId = await addItem('orders', orderData as Omit<ServiceOrder, 'id'>);
+            const newOrderId = await addValidated('orders', orderData, ServiceOrderSchema.omit({ id: true, companyId: true }));
             alert(`Orden ${nextOrderNumber} creada`);
             navigate(`/orders/${newOrderId}`);
         }

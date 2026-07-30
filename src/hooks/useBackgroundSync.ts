@@ -1,5 +1,8 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useData } from '../context/DataContext';
+import { useValidatedActions } from './useValidatedActions';
+import { ServiceOrderSchema } from '../schemas/order.schema';
+import { EquipmentSchema } from '../schemas/equipment.schema';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { storage } from '../services/firebase';
@@ -54,7 +57,8 @@ const setNestedValue = (obj: any, path: string[], value: any): any => {
 
 export const useBackgroundSync = () => {
   const { text: connectionText } = useConnectivityStatus();
-  const { orders, equipment, updateItem } = useData();
+  const { orders, equipment } = useData();
+  const { updateValidated } = useValidatedActions();
   const [isSyncing, setIsSyncing] = useState(false);
 
   const syncBase64ToStorage = useCallback(async () => {
@@ -99,7 +103,7 @@ export const useBackgroundSync = () => {
               updates[rootKey] = updatedOrder[rootKey as keyof typeof updatedOrder];
             });
             
-            await updateItem('orders', order.id, updates);
+            await updateValidated('orders', order.id, updates, ServiceOrderSchema);
             console.log(`Successfully synced order ${order.id} to cloud storage.`);
           }
         }
@@ -137,7 +141,7 @@ export const useBackgroundSync = () => {
               updates[rootKey] = updatedEquip[rootKey as keyof typeof updatedEquip];
             });
             
-            await updateItem('equipment', equip.id, updates);
+            await updateValidated('equipment', equip.id, updates, EquipmentSchema);
             console.log(`Successfully synced equipment ${equip.id} to cloud storage.`);
           }
         }
@@ -147,7 +151,7 @@ export const useBackgroundSync = () => {
     } finally {
       setIsSyncing(false);
     }
-  }, [orders, equipment, connectionText, isSyncing, updateItem]);
+  }, [orders, equipment, connectionText, isSyncing, updateValidated]);
 
   // Run the sync when online, but debounce/throttle it
   useEffect(() => {

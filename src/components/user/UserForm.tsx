@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { User } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { UserSchema } from '../../schemas/user.schema';
 import PERMISSIONS, { hasPermission, ROLES } from '../../permissions';
 import SignatureField from '../ui/SignatureField';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -31,7 +33,7 @@ const initialFormData: Partial<User> = {
 const UserForm: React.FC<Props> = ({ users }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { updateItem, addItem } = useData();
+  const { addValidated, updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const isEditMode = !!id;
 
@@ -167,19 +169,19 @@ const UserForm: React.FC<Props> = ({ users }) => {
             }
 
             const { password, ...restOfData } = formData;
-            await updateItem('users', id, restOfData);
+            await updateValidated('users', id, restOfData, UserSchema);
             alert('Usuario actualizado con éxito');
             window.localStorage.removeItem(localStorageKey);
             navigate(`/users/${id}`);
-            
+
         } else {
             const {id: formId, ...restOfData} = formData;
-            await addItem('users', {
+            await addValidated('users', {
                 ...restOfData,
                 latitude: formData.latitude !== 0 ? formData.latitude : undefined,
                 longitude: formData.longitude !== 0 ? formData.longitude : undefined,
                 locationUpdatedAt: new Date().toISOString()
-            });
+            }, UserSchema.omit({ id: true, companyId: true }));
             alert('Usuario registrado con éxito');
             window.localStorage.removeItem(localStorageKey);
             navigate('/users');

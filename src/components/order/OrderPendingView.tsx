@@ -5,6 +5,8 @@ import { ServiceOrder, Client, User, Equipment } from '../../types';
 import { Clock, Building2, User as UserIcon, Wrench, FileText, Camera, Plus, ArrowRight, ChevronRight, ShieldCheck, MapPin, Image as ImageIcon, X, PenLine, Mic, MicOff, Trash2, Calendar, Loader2 } from 'lucide-react';
 import { format, parseISO, addHours, addMinutes } from 'date-fns';
 import { useData } from '../../context/DataContext';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { ServiceOrderSchema } from '../../schemas/order.schema';
 import { serverTimestamp } from 'firebase/firestore';
 import AvailabilityModal from './AvailabilityModal';
 import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
@@ -53,7 +55,8 @@ const OrderPendingView: React.FC<Props> = ({
   canUploadInitialEvidence
 }) => {
   const navigate = useNavigate();
-  const { updateItem, orders } = useData();
+  const { orders } = useData();
+  const { updateValidated } = useValidatedActions();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -83,7 +86,7 @@ const OrderPendingView: React.FC<Props> = ({
         lastUpdatedBy: currentUser.id,
       };
 
-      await updateItem('orders', order.id, updateData);
+      await updateValidated('orders', order.id, updateData, ServiceOrderSchema);
       setIsScheduling(false);
     } catch (error) {
       console.error("Error al reprogramar la orden:", error);

@@ -1,0 +1,32 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/task-reminders",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/expiration-check",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "functions": {
+    "api/cron/*.ts": {
+      "maxDuration": 60
+    }
+  }
+}

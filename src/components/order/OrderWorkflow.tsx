@@ -4,6 +4,8 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ServiceOrder, OrderStatus, Client, User } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { ServiceOrderSchema } from '../../schemas/order.schema';
 import { useOrderActions } from '../../hooks/useOrderActions';
 import { getWarrantyInfo } from '../../utils/warranty';
 import OrderDetail from './OrderDetail';
@@ -24,7 +26,8 @@ const OrderWorkflow: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { clients, equipment, users, loading: dataLoading, error: dataError, updateItem, deleteItem } = useData();
+  const { clients, equipment, users, loading: dataLoading, error: dataError, deleteItem } = useData();
+  const { updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const { completeOrderAndUpdateEquipment } = useOrderActions();
 
@@ -55,9 +58,9 @@ const OrderWorkflow: React.FC = () => {
 
   const handleUpdateOrder = useCallback(async (updatedData: Partial<ServiceOrder>) => {
     if (!order) return;
-    await updateItem('orders', order.id, updatedData);
+    await updateValidated('orders', order.id, updatedData, ServiceOrderSchema);
     sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
-  }, [order, updateItem]);
+  }, [order, updateValidated]);
 
   const { selectedImage, handleSelectImage, handleCloseModal, isUploading, error: fileError, getFileUrl, handleUpload, handleRemove } = useFileHandler({
     doc: order!,
@@ -67,10 +70,10 @@ const OrderWorkflow: React.FC = () => {
 
   const handleStartOrder = useCallback(async () => {
     if (order) {
-      await updateItem('orders', order.id, { status: OrderStatus.OPEN, startTime: new Date().toISOString() });
+      await updateValidated('orders', order.id, { status: OrderStatus.OPEN, startTime: new Date().toISOString() }, ServiceOrderSchema);
       sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
     }
-  }, [order, updateItem]);
+  }, [order, updateValidated]);
 
   const handleCompleteOrder = useCallback(async (closingData: Partial<ServiceOrder>) => {
     if (!order) return;
@@ -105,39 +108,39 @@ const OrderWorkflow: React.FC = () => {
   
   const handleClientUpdate = useCallback(async (selectedClient: Client) => {
     if (order) {
-        await updateItem('orders', order.id, { 
-            clientId: selectedClient.id, 
+        await updateValidated('orders', order.id, {
+            clientId: selectedClient.id,
             clientName: selectedClient.name, // Add clientName on update
-            equipmentIds: [] 
-        });
+            equipmentIds: []
+        }, ServiceOrderSchema);
         sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
     }
     setShowClientSearch(false);
-  }, [order, updateItem]);
+  }, [order, updateValidated]);
 
   const handleUserUpdate = useCallback(async (selectedUser: User) => {
     if (order) {
-        await updateItem('orders', order.id, { technicianId: selectedUser.id });
+        await updateValidated('orders', order.id, { technicianId: selectedUser.id }, ServiceOrderSchema);
         sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
     }
     setShowUserSearch(false);
-  }, [order, updateItem]);
+  }, [order, updateValidated]);
 
   const handleEquipmentUpdate = useCallback(async (ids: string[]) => {
     if(order) {
-        await updateItem('orders', order.id, { equipmentIds: ids });
+        await updateValidated('orders', order.id, { equipmentIds: ids }, ServiceOrderSchema);
         sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
     }
     setShowEquipmentSelector(false);
-  }, [order, updateItem]);
+  }, [order, updateValidated]);
   
   const handleRemoveEquipment = useCallback(async (equipmentId: string) => {
     if (order) {
       const updatedEquipmentIds = order.equipmentIds?.filter(id => id !== equipmentId) || [];
-      await updateItem('orders', order.id, { equipmentIds: updatedEquipmentIds });
+      await updateValidated('orders', order.id, { equipmentIds: updatedEquipmentIds }, ServiceOrderSchema);
       sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
     }
-  }, [order, updateItem]);
+  }, [order, updateValidated]);
 
   const handleAddNewEquipment = useCallback(() => {
     if (!order) return;

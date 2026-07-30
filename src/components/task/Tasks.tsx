@@ -14,6 +14,8 @@ import { Task } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { TaskDetailModal } from './TaskDetailModal';
+import { TaskSchema } from '../../schemas/task.schema';
+import { z } from 'zod';
 
 const Tasks: React.FC = () => {
   const { currentUser } = useAuth();
@@ -59,11 +61,16 @@ const Tasks: React.FC = () => {
           important: false,
           createdAt: new Date().toISOString(),
           createdBy: currentUser.id,
-          assignedTo: currentUser.id, 
+          assignedTo: currentUser.id,
           participants: [currentUser.id]
       };
+      const result = TaskSchema.omit({ id: true, companyId: true }).safeParse(newTask);
+      if (!result.success) {
+          console.error("[Validation] Error al crear tarea:", result.error.issues);
+          return;
+      }
       try {
-          await addDoc(collection(db, "tasks"), newTask);
+          await addDoc(collection(db, "tasks"), result.data);
           setNewTaskTitle('');
       } catch (error) {
           console.error("Error adding task: ", error);
@@ -97,8 +104,14 @@ const Tasks: React.FC = () => {
   };
 
   const handleUpdateTask = async (id: string, data: Partial<Task>) => {
+      const partialSchema = TaskSchema.partial();
+      const result = partialSchema.safeParse(data);
+      if (!result.success) {
+          console.error("[Validation] Error al actualizar tarea:", result.error.issues);
+          return;
+      }
       try {
-          await updateDoc(doc(db, "tasks", id), data);
+          await updateDoc(doc(db, "tasks", id), result.data);
       } catch (error) {
           console.error("Error updating task: ", error);
       }

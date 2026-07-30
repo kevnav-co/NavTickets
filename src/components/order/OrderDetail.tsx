@@ -7,7 +7,8 @@ import OrderPendingView from './OrderPendingView';
 import OrderInProgressView from './OrderInProgressView';
 import OrderSummaryView from './OrderSummaryView';
 import { getUserPermissions } from '../../permissions';
-import { useFirestoreActions } from '../../hooks/useFirestoreActions';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { ServiceOrderSchema } from '../../schemas/order.schema';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { storage } from '../../services/firebase';
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
@@ -72,7 +73,7 @@ const OrderDetail: React.FC<Props> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { updateItem } = useFirestoreActions();
+  const { updateValidated } = useValidatedActions();
   const connectivityStatus = useConnectivityStatus();
   const initialLoad = useRef(true);
 
@@ -386,7 +387,7 @@ const OrderDetail: React.FC<Props> = ({
     const currentJobIndex = order.warrantyJobs.length - 1;
     const updatedJobs = [...order.warrantyJobs];
     updatedJobs[currentJobIndex] = { ...updatedJobs[currentJobIndex], endTime: new Date().toISOString(), tasksPerformed: tasks, additionalComments: additionalObservations, evidenceImages: currentWarrantyEvidence.filter(e => typeof e === 'string') as string[], technicianSignature: techSignature || null, clientSignature: clientSignature || null };
-    await updateItem('orders', order.id, { status: OrderStatus.CLOSED, isUnderWarrantyReview: false, warrantyJobs: updatedJobs, warrantyStartTime: null, warrantyEndTime: null });
+    await updateValidated('orders', order.id, { status: OrderStatus.CLOSED, isUnderWarrantyReview: false, warrantyJobs: updatedJobs, warrantyStartTime: null, warrantyEndTime: null }, ServiceOrderSchema);
     cleanupLocalStorage();
     navigate(`/orders/${order.id}`);
   };

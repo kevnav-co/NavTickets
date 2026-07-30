@@ -5,7 +5,8 @@ import { ServiceOrder, Client, Equipment, User, OrderStatus, WarrantyJob } from 
 import { CheckCircle2, X, FileDown, Share2, FileText as FileTextIcon, Loader2, History, Cog, Trash2, ShieldCheck, Maximize2, FilePenLine, Eye, Save, PlusCircle, ImageUp, PanelTop, AlertTriangle } from 'lucide-react';
 import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
 import PERMISSIONS, { hasPermission } from '../../permissions';
-import { useFirestoreActions } from '../../hooks/useFirestoreActions';
+import { useValidatedActions } from '../../hooks/useValidatedActions';
+import { ServiceOrderSchema } from '../../schemas/order.schema';
 
 const ConfirmationModal = ({ isOpen, onConfirm, onCancel, title, message }: { isOpen: boolean, onConfirm: () => void, onCancel: () => void, title: string, message: string }) => {
   if (!isOpen) return null;
@@ -114,7 +115,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
   onUpdateOrder, onUpload, onRemove, isUploading, getWarrantyInfo
 }) => {
   const navigate = useNavigate();
-  const { updateItem } = useFirestoreActions();
+  const { updateValidated } = useValidatedActions();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReopenModal, setShowReopenModal] = useState(false);
   const [isReopening, setIsReopening] = useState(false);
@@ -253,14 +254,14 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
         const localDate = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
         const localTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
 
-        await updateItem('orders', order.id, {
+        await updateValidated('orders', order.id, {
             status: OrderStatus.OPEN,
             isUnderWarrantyReview: true,
             warrantyStartTime: warrantyStartTime, // Keep for overall tracking if needed
             scheduledDate: localDate,
             timeSlot: localTime,
             warrantyJobs: updatedWarrantyJobs,
-        });
+        }, ServiceOrderSchema);
 
       const keysToClear = [`tasks-${order.id}`, `addObs-${order.id}`, `clientSig-${order.id}`, `warrantyEv-${order.id}`];
       keysToClear.forEach(key => window.localStorage.removeItem(key));
