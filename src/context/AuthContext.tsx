@@ -1,10 +1,12 @@
 // src/context/AuthContext.tsx
+//
+// Migrado a Supabase Auth — reemplaza Firebase Auth.
+// El login usa el formato {username}@navas.com (compatible con usuarios existentes).
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, User as FirebaseAuthUser, getIdTokenResult } from 'firebase/auth';
-import { auth } from '../services/firebase';
-import { User } from '../types';
-import { getUserDataById } from '../services/userService';
+import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
+import type { User } from '../types';
+import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -15,80 +17,143 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * Busca el perfil del usuario en la tabla `users` usando supabase_auth_id.
+ * Convierte snake_case de PostgreSQL a camelCase (modelo User).
+ */
+async function fetchUserProfile(authUserId: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('supabase_auth_id', authUserId)
+      .single();
+
+    if (error || !data) {
+      console.error('[AuthContext] Error fetching profile:', error?.message);
+      return null;
+    }
+
+    return {
+      id: data.id,
+      companyId: data.company_id,
+      name: data.name,
+      role: data.role,
+      username: data.username,
+      identification: data.identification || undefined,
+      address: data.address || undefined,
+      latitude: data.latitude || undefined,
+      longitude: data.longitude || undefined,
+      locationUpdatedAt: data.location_updated_at || undefined,
+      fcmToken: data.fcm_token || undefined,
+      signature: data.signature || undefined,
+    };
+  } catch (err) {
+    console.error('[AuthContext] fetchUserProfile error:', err);
+    return null;
+  }
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log("🔍 Iniciando AuthContext...");
+    console.log("🔍 Iniciando AuthContext (Supabase)...");
+
+    if (!isSupabaseConfigured()) {
+      console.warn('⚠️ Supabase no configurado — Auth deshabilitado');
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseAuthUser | null) => {
-      console.log("👤 AuthState Changed:", firebaseUser ? "Logueado" : "No logueado");
+    // 1. Obtener sesión actual
+    const initAuth = async () => {
       try {
-        if (firebaseUser) {
-          // Get user document from Firestore
-          const appUser = await getUserDataById(firebaseUser.uid);
-          if (appUser && isMounted) {
-            // Try to get custom claims (companyId from Firebase Auth)
-            try {
-              const tokenResult = await getIdTokenResult(firebaseUser);
-              const claimsCompanyId = tokenResult.claims.companyId as string | undefined;
-              if (claimsCompanyId && !appUser.companyId) {
-                appUser.companyId = claimsCompanyId;
-              }
-            } catch (claimErr) {
-              console.warn('[AuthContext] Could not get custom claims:', claimErr);
-            }
-            setCurrentUser(appUser);
-          } else if (isMounted) {
-            setCurrentUser(null);
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!isMounted) return;
+
+        if (session?.user) {
+          console.log("👤 Sesión activa detectada, cargando perfil...");
+          const userProfile = await fetchUserProfile(session.user.id);
+          if (isMounted) {
+            setCurrentUser(userProfile);
           }
         } else {
-          if (isMounted) setCurrentUser(null);
+          console.log("👤 Sin sesión activa");
         }
       } catch (e) {
-        console.error("❌ Error en AuthState Change:", e);
+        console.error("❌ Error iniciando auth:", e);
       } finally {
         if (isMounted) {
           console.log("✅ Auth Loading Finalizado");
           setLoading(false);
         }
       }
-    });
+    };
+
+    initAuth();
+
+    // 2. Suscripción a cambios de auth en tiempo real
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("👤 Auth Event:", event, session ? "Sesión presente" : "Sin sesión");
+
+        if (!isMounted) return;
+
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+          const userProfile = await fetchUserProfile(session.user.id);
+          if (isMounted) {
+            setCurrentUser(userProfile);
+            setLoading(false);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          if (isMounted) {
+            setCurrentUser(null);
+            setLoading(false);
+          }
+        }
+      }
+    );
 
     // Timeout de seguridad
     const timeout = setTimeout(() => {
       if (loading && isMounted) {
-        console.warn("⚠️ Firebase Auth tardó demasiado. Forzando carga...");
+        console.warn("⚠️ Auth tardó demasiado. Forzando carga...");
         setLoading(false);
       }
     }, 5000);
 
     return () => {
       isMounted = false;
-      unsubscribe();
+      subscription.unsubscribe();
       clearTimeout(timeout);
     };
   }, []);
 
-  // --- FUNCIÓN DE LOGIN ACTUALIZADA ---
-  const login = async (username: string, password: string, companyId?: string): Promise<boolean> => {
+  const login = useCallback(async (username: string, password: string, _companyId?: string): Promise<boolean> => {
     try {
-      // Use provided companyId's domain or fallback to default
-      // The companyId helps determine the email domain for login
       const email = `${username}@navas.com`;
-      await signInWithEmailAndPassword(auth, email, password);
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+      if (error) {
+        console.error("❌ Error en login:", error.message);
+        return false;
+      }
+
       return true;
     } catch (error) {
-      console.error("Error en el inicio de sesión de Firebase:", error);
+      console.error("❌ Error en login:", error);
       return false;
     }
-  };
+  }, []);
 
-  const logout = async (): Promise<void> => {
-    await signOut(auth);
-  };
+  const logout = useCallback(async (): Promise<void> => {
+    await supabase.auth.signOut();
+  }, []);
 
   const value = {
     currentUser,

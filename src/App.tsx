@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+// NOTA: Firebase Messaging se reemplazará por OneSignal en Fase 5.
+// Por ahora se mantiene para compatibilidad con notificaciones existentes.
 import { getToken, onMessage } from "firebase/messaging";
-import { auth, getMessagingInstance } from './services/firebase';
+import { getMessagingInstance } from './services/firebase';
 import { ChangePasswordModal } from './components/layout/ChangePasswordModal';
 import SignatureModal from './components/ui/SignatureModal';
 import { TransferModal } from './components/Account/TransferModal'; 
@@ -91,7 +93,9 @@ function App() {
   // If not, we defer the permission request to a button click in Header.tsx.
   useEffect(() => {
     const configPush = async () => {
-      if (!currentUser || !isInternetAvailable || !auth.currentUser) return;
+      // Verificar sesión con Supabase en lugar de Firebase auth
+      const { data: { session } } = await import('./services/supabase').then(m => m.supabase.auth.getSession());
+      if (!currentUser || !isInternetAvailable || !session?.user) return;
       if (typeof Notification === 'undefined') return;
 
       try {
@@ -169,9 +173,8 @@ function App() {
 
   useEffect(() => {
     if (!currentUser || !navigator.geolocation) return;
-    
+
     const trackLocation = () => {
-        if (!auth.currentUser) return;
         try {
           navigator.geolocation.getCurrentPosition(
               async (position) => {
@@ -182,7 +185,7 @@ function App() {
                           await updateItem('users', currentUser.id, { latitude, longitude, locationUpdatedAt });
                       } catch (e) { console.warn("GPS Sync Error:", e); }
                   }
-              }, 
+              },
               () => { },
               { enableHighAccuracy: true }
           );
