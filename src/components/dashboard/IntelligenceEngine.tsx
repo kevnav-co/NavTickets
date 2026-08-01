@@ -1,8 +1,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import { writeBatch, doc, collection } from 'firebase/firestore';
-import { db } from '../../services/firebase';
 import { Client } from '../../types';
+import { useData } from '../../context/DataContext';
 import { 
   Sparkles, XCircle, TrendingDown, Crown, ListFilter, UploadCloud, 
   Loader2, CheckSquare, Square, FileSpreadsheet, UserPlus, RefreshCw
@@ -18,6 +17,7 @@ interface IntelligenceEngineProps {
 }
 
 const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
+  const { addItem, updateItem } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [analysisData, setAnalysisData] = useState<{ type: AnalysisType, items: any[] } | null>(null);
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'reading' | 'analyzing'>('idle');
@@ -188,16 +188,13 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
     if (!analysisData || selectedIds.size === 0) return;
     setIsUploadingFirebase(true);
     const itemsToUpload = analysisData.items.filter(item => selectedIds.has(item.id));
-    const batch = writeBatch(db);
     let newClientsCount = 0;
     let updatedClientsCount = 0;
 
     try {
         if (analysisData.type === 'clients') {
-            const coll = collection(db, 'clients');
-            itemsToUpload.forEach((client: AnalyzedClient) => {
+            for (const client of itemsToUpload as AnalyzedClient[]) {
                 if (client.needsUpdate && client.dbClient?.id) {
-                    const ref = doc(db, 'clients', client.dbClient.id);
                     const updatedFields: { [key: string]: any } = {};
                     if (client.diff?.telefono) updatedFields.contact = client.telefono;
                     if (client.diff?.email) updatedFields.email = client.email;
@@ -208,24 +205,34 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                     }
 
                     if (Object.keys(updatedFields).length > 0) {
-                        batch.update(ref, updatedFields);
+                        await updateItem('clients', client.dbClient.id, updatedFields);
                         updatedClientsCount++;
                     }
                 } else if (!client.existsInDB) {
-                    const ref = doc(coll);
-                    batch.set(ref, { id: ref.id, name: client.nombre, identification: client.identificacion, contact: client.telefono, email: client.email, address: client.direccion ? `${client.direccion}, ${client.ciudad}` : client.ciudad, createdAt: new Date().toISOString() });
+                    await addItem('clients', {
+                        name: client.nombre,
+                        identification: client.identificacion,
+                        contact: client.telefono,
+                        email: client.email,
+                        address: client.direccion ? `${client.direccion}, ${client.ciudad}` : client.ciudad,
+                    });
                     newClientsCount++;
                 }
-            });
+            }
         } else {
-            const coll = collection(db, 'equipment');
-            itemsToUpload.forEach((prod: AnalyzedProduct) => {
-                const ref = doc(coll);
-                batch.set(ref, { id: ref.id, name: prod.descripcion, serialNumber: prod.codigo, description: `Categoría: ${prod.categoria}`, clientId: '', status: 'Activa', voltage: '110V', location: 'Bodega', createdAt: new Date().toISOString(), maintenanceFrequency: 6 });
-            });
+            for (const prod of itemsToUpload as AnalyzedProduct[]) {
+                await addItem('equipment', {
+                    name: prod.descripcion,
+                    serialNumber: prod.codigo,
+                    description: `Categoría: ${prod.categoria}`,
+                    clientId: '',
+                    status: 'Activa',
+                    voltage: '110V',
+                    location: 'Bodega',
+                    maintenanceFrequency: 6,
+                });
+            }
         }
-        
-        await batch.commit();
 
         let successMessage = "Sincronización exitosa.\n";
         if (newClientsCount > 0) successMessage += `${newClientsCount} nuevos clientes agregados.\n`;
@@ -234,14 +241,13 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
              successMessage = "No se realizaron cambios. Los clientes seleccionados ya estaban sincronizados o no requerían actualización.";
         }
 
-
         alert(successMessage);
         closeAnalysis();
-    } catch (error) { 
+    } catch (error) {
         console.error("Error al guardar en la base de datos:", error);
-        alert("Error al guardar en la base de datos."); 
-    } finally { 
-        setIsUploadingFirebase(false); 
+        alert("Error al guardar en la base de datos.");
+    } finally {
+        setIsUploadingFirebase(false);
     }
   };
 

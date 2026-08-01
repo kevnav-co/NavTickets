@@ -1,4 +1,7 @@
 
+// @deprecated — No se usa. La subida de archivos se maneja via useSupabaseStorage.
+// Se eliminará en Phase 6: Cleanup.
+
 import { useCallback } from 'react';
 import { doc, setDoc } from "firebase/firestore";
 import { ref, uploadBytes, uploadString, getDownloadURL } from "firebase/storage";

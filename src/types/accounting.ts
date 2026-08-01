@@ -1,6 +1,4 @@
 
-import { Timestamp } from 'firebase/firestore';
-
 // Base type for user information
 export type User = {
   id: string;
@@ -14,7 +12,7 @@ interface BaseMovement {
     id: string;
     amount: number;
     concept: string;
-    createdAt: Timestamp;
+    createdAt: string;
     isAnnulment?: boolean;
     relatedMovementId?: string;
     annulmentReason?: string;

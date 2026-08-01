@@ -1,3 +1,6 @@
+// @deprecated — No se usa. Las operaciones de eliminación se manejan via DataContext.
+// Se eliminará en Phase 6: Cleanup.
+
 import { getStorage, ref, deleteObject } from 'firebase/storage';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from './firebase';

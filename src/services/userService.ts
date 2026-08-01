@@ -1,4 +1,7 @@
 
+// @deprecated — No se usa. Los usuarios se cargan via DataContext (useData().users).
+// Se eliminará en Phase 6: Cleanup.
+
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import { User } from '../types';

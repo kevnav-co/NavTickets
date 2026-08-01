@@ -1,15 +1,14 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext';
-import { db } from '../../services/firebase';
-import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
 import { X, Loader, CheckCircle, Trash2, AlertTriangle, ArrowRight } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 
 // --- TIPOS ---
 type User = { id: string; name: string; role: string; };
-type TransactionData = { id: string; recipientId: string; amount: number; method: string; createdAt: Timestamp; transactionGroupId?: string; };
+type TransactionData = { id: string; recipientId: string; amount: number; method: string; createdAt: string; transactionGroupId?: string; };
 type AccountType = 'Efectivo' | 'Transferencia';
 
 const SELF_TRANSFER_ID = '__SELF__';
@@ -22,6 +21,7 @@ const toDateTimeLocal = (date: Date): string => {
 
 export const TransferModal: React.FC = () => {
   const { currentUser } = useAuth();
+  const { addItem, updateItem, deleteItem, users: appUsers } = useData();
   const { isModalOpen, closeModal, modalData } = useModal();
   const isOpen = isModalOpen('transfer');
   const editingTransaction = modalData?.editingTransaction as TransactionData | undefined;
@@ -55,32 +55,21 @@ export const TransferModal: React.FC = () => {
             setRecipientId(editingTransaction.recipientId);
             setAmount(editingTransaction.amount);
             setMethod(editingTransaction.method as AccountType);
-            setTransferDateTime(toDateTimeLocal(editingTransaction.createdAt.toDate()));
+            setTransferDateTime(toDateTimeLocal(new Date(editingTransaction.createdAt)));
         } else {
-            resetState(false); 
+            resetState(false);
         }
 
-        const fetchUsers = async () => {
-            if (!currentUser) return;
-            setLoadingUsers(true);
-            try {
-                const usersRef = collection(db, 'users');
-                const querySnapshot = await getDocs(usersRef);
-                const allUsers = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() } as User));
-                const filteredUsers = allUsers.filter(user => user.id !== currentUser.id && user.role !== 'developer');
-                setUsers(filteredUsers);
-            } catch (err) { 
-                console.error("Error fetching users:", err);
-                setError('No se pudieron cargar los usuarios.'); 
-            }
-            finally { setLoadingUsers(false); }
-        };
-
-        fetchUsers();
+        // Usar usuarios del DataContext (ya cargados desde Supabase)
+        setLoadingUsers(true);
+        const allUsers = (appUsers || []).map(u => ({ id: u.id, name: u.name, role: u.role }) as User);
+        const filteredUsers = allUsers.filter(user => user.id !== currentUser?.id && user.role !== 'developer');
+        setUsers(filteredUsers);
+        setLoadingUsers(false);
     } else {
         resetState(false);
     }
-}, [isOpen, currentUser, isEditMode]);
+}, [isOpen, currentUser, isEditMode, appUsers]);
 
 // Validación de saldo en tiempo real
 useEffect(() => {
@@ -129,41 +118,60 @@ useEffect(() => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (balanceError) return; // Detener si hay error de saldo
+    if (balanceError) return;
 
     if (!recipientId || !amount || amount <= 0 || !currentUser || (isSelfTransfer && fromAccount === toAccount)) {
       setError('Por favor, completa todos los campos correctamente.');
       return;
     }
-    
+
     setSubmitting(true);
     setError('');
 
     try {
+        const now = new Date(transferDateTime).toISOString();
+
         if (isSelfTransfer) {
-            const batch = writeBatch(db);
-            const now = Timestamp.fromDate(new Date(transferDateTime));
-            const groupId = doc(collection(db, 'transactions')).id;
+            const groupId = crypto.randomUUID();
+            const baseData = { senderId: currentUser.id, senderName: currentUser.name, recipientId: currentUser.id, recipientName: currentUser.name, amount };
 
-            const egressData = { senderId: currentUser.id, senderName: currentUser.name, recipientId: currentUser.id, recipientName: currentUser.name, amount, method: fromAccount, concept: `Movimiento a ${toAccount}`, createdAt: now, transactionGroupId: groupId };
-            batch.set(doc(collection(db, 'transactions')), egressData);
+            await addItem('accounting_transactions', {
+                ...baseData,
+                method: fromAccount,
+                concept: `Movimiento a ${toAccount}`,
+                createdAt: now,
+                transactionGroupId: groupId,
+            });
 
-            const ingressData = { senderId: currentUser.id, senderName: currentUser.name, recipientId: currentUser.id, recipientName: currentUser.name, amount, method: toAccount, concept: `Movimiento desde ${fromAccount}`, createdAt: now, transactionGroupId: groupId };
-            batch.set(doc(collection(db, 'transactions')), ingressData);
-            
-            await batch.commit();
+            await addItem('accounting_transactions', {
+                ...baseData,
+                method: toAccount,
+                concept: `Movimiento desde ${fromAccount}`,
+                createdAt: now,
+                transactionGroupId: groupId,
+            });
+
             setSuccessMessage('¡Movimiento exitoso!');
         } else {
             const recipient = users.find(u => u.id === recipientId);
             if (!recipient) throw new Error('Destinatario no válido');
 
-            const transactionData = { senderId: currentUser.id, senderName: currentUser.name, recipientId: recipient.id, recipientName: recipient.name, amount, method, concept: `Transferencia a ${recipient.name}`, createdAt: Timestamp.fromDate(new Date(transferDateTime)) };
+            const transactionData = {
+                senderId: currentUser.id,
+                senderName: currentUser.name,
+                recipientId: recipient.id,
+                recipientName: recipient.name,
+                amount,
+                method,
+                concept: `Transferencia a ${recipient.name}`,
+                createdAt: now,
+            };
 
             if (isEditMode && editingTransaction) {
-                await updateDoc(doc(db, 'transactions', editingTransaction.id), transactionData);
+                await updateItem('accounting_transactions', editingTransaction.id, transactionData);
                 setSuccessMessage('¡Transferencia Actualizada!');
             } else {
-                await addDoc(collection(db, 'transactions'), transactionData);
+                await addItem('accounting_transactions', transactionData);
                 setSuccessMessage('¡Transferencia Exitosa!');
             }
         }
@@ -180,24 +188,13 @@ useEffect(() => {
 
   const handleDelete = async () => {
     if (!isEditMode || !editingTransaction) return;
-    
+
     setSubmitting(true);
     setError('');
 
     try {
-        if (editingTransaction.transactionGroupId) {
-            const batch = writeBatch(db);
-            const q = query(collection(db, 'transactions'), where('transactionGroupId', '==', editingTransaction.transactionGroupId));
-            const querySnapshot = await getDocs(q);
-            
-            if (querySnapshot.empty) throw new Error("No se encontraron transacciones asociadas para eliminar.");
+        await deleteItem('accounting_transactions', editingTransaction.id);
 
-            querySnapshot.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-        } else {
-            await deleteDoc(doc(db, 'transactions', editingTransaction.id));
-        }
-        
         setSuccessMessage('¡Movimiento Eliminado!');
         setSuccess(true);
         setTimeout(() => resetState(), 1500);

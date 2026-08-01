@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import { supabase } from '../../services/supabase';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -41,7 +41,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     if (newPass !== confirmPass) {
       return setError('Las contraseñas nuevas no coinciden.');
     }
-    if (newPass.length < 6) { // Firebase default is 6
+    if (newPass.length < 6) {
       return setError('La nueva contraseña debe tener al menos 6 caracteres.');
     }
     if (!currentUser || !currentUser.username) {
@@ -49,39 +49,57 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     }
 
     setIsSaving(true);
-    const auth = getAuth();
-    const user = auth.currentUser;
 
-    if (user) {
-        const domain = company?.auth?.emailDomain || '@navas.com';
-        const userEmail = `${currentUser.username}${domain}`;
-        const credential = EmailAuthProvider.credential(userEmail, oldPass);
-        
-        try {
-            await reauthenticateWithCredential(user, credential);
-            // User re-authenticated, now update the password.
-            await updatePassword(user, newPass);
-            
-            setSuccess(true);
-            setTimeout(() => {
-                onClose();
-            }, 2000); // Close modal after 2 seconds
+    try {
+      // 1. Reautenticar con la contraseña actual (requerido por Supabase para cambiar clave)
+      const domain = company?.auth?.emailDomain || '@navas.com';
+      const userEmail = `${currentUser.username}${domain}`;
 
-        } catch (err: any) {
-            console.error("Password update error:", err.code);
-            if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                setError('La contraseña actual es incorrecta.');
-            } else if (err.code === 'auth/too-many-requests') {
-                setError('Demasiados intentos fallidos. Inténtalo más tarde.');
-            } else {
-                setError('No se pudo actualizar la contraseña. Verifica tu conexión.');
-            }
-        } finally {
-            setIsSaving(false);
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: oldPass,
+      });
+
+      if (signInError) {
+        if (signInError.message?.includes('Invalid login credentials') || signInError.status === 400) {
+          setError('La contraseña actual es incorrecta.');
+        } else {
+          setError('Error al verificar la contraseña actual.');
         }
-    } else {
-        setError('No hay un usuario activo para realizar la operación.');
         setIsSaving(false);
+        return;
+      }
+
+      // 2. Actualizar la contraseña
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPass,
+      });
+
+      if (updateError) {
+        if (updateError.message?.includes('rate limit') || updateError.status === 429) {
+          setError('Demasiados intentos fallidos. Inténtalo más tarde.');
+        } else {
+          console.error("Password update error:", updateError);
+          setError('No se pudo actualizar la contraseña. Verifica tu conexión.');
+        }
+        setIsSaving(false);
+        return;
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+
+    } catch (err: any) {
+      console.error("Password update error:", err);
+      if (err?.message?.includes('Invalid login credentials')) {
+        setError('La contraseña actual es incorrecta.');
+      } else {
+        setError('No se pudo actualizar la contraseña. Verifica tu conexión.');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 

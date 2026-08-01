@@ -1,4 +1,7 @@
 
+// @deprecated — No se usa. La autenticación se maneja via AuthContext + Supabase Auth.
+// Se eliminará en Phase 6: Cleanup.
+
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 import { User } from '../types'; // Importar el tipo User

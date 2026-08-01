@@ -1,7 +1,5 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { writeBatch, doc } from 'firebase/firestore';
-import { db } from '../../services/firebase';
 import { User, OrderStatus } from '../../types';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { Loader2, Navigation, RefreshCw, Layers, Check, WifiOff } from 'lucide-react';
@@ -299,23 +297,22 @@ const ClientMap: React.FC = () => {
     if (!window.confirm(`Se encontraron ${clientsToUpdate.length} clientes sin coordenadas. ¿Deseas geolocalizarlos automáticamente? Esta acción puede tardar y consume recursos.`)) return;
 
     setIsUpdating(true);
-    try {
-      const batch = writeBatch(db);
-      let updatedCount = 0;
-      let notFoundCount = 0;
+    let updatedCount = 0;
+    let notFoundCount = 0;
 
+    try {
       for (const client of clientsToUpdate) {
         try {
           const cachedCoords = getCachedGps(client.address);
           if (cachedCoords) {
-            batch.update(doc(db, 'clients', client.id), { latitude: cachedCoords.lat, longitude: cachedCoords.lng });
+            await updateItem('clients', client.id, { latitude: cachedCoords.lat, longitude: cachedCoords.lng });
             updatedCount++;
           } else {
             await new Promise(r => setTimeout(r, 1000));
-            
+
             const query = encodeURIComponent(`${client.address}, Montería, Córdoba, Colombia`);
             const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1&countrycodes=co`);
-            
+
             if (!response.ok) {
               console.warn(`Nominatim request failed for ${client.name} with status: ${response.status}`);
               continue;
@@ -327,8 +324,8 @@ const ClientMap: React.FC = () => {
               const { lat, lon } = results[0];
               const latitude = parseFloat(lat);
               const longitude = parseFloat(lon);
-              
-              batch.update(doc(db, 'clients', client.id), { latitude, longitude });
+
+              await updateItem('clients', client.id, { latitude, longitude });
               setCachedGps(client.address, latitude, longitude);
               updatedCount++;
             } else {
@@ -342,14 +339,13 @@ const ClientMap: React.FC = () => {
       }
 
       if (updatedCount > 0) {
-        await batch.commit();
         alert(`¡Éxito! Se actualizaron ${updatedCount} clientes. ${notFoundCount > 0 ? `No se pudieron encontrar ${notFoundCount}.` : ''}`);
         window.location.reload();
       } else {
         alert(`No se pudo actualizar ninguna ubicación. ${notFoundCount > 0 ? `${notFoundCount} direcciones no fueron encontradas.` : ''}`);
       }
     } catch (error) {
-      console.error("An error occurred during the geocoding batch process:", error);
+      console.error("An error occurred during the geocoding process:", error);
       alert("Ocurrió un error inesperado al actualizar las coordenadas. Revisa la consola para más detalles.");
     } finally {
       setIsUpdating(false);

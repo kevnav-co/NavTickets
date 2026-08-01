@@ -4,7 +4,7 @@ import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-type QueryFilter = {
+export type QueryFilter = {
   column: string;
   operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'is';
   value: any;

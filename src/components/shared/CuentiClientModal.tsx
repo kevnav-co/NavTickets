@@ -1,8 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, UserPlus, Loader2, ServerCrash, Crown, RefreshCw, ListFilter, UploadCloud } from 'lucide-react';
 import { CuentiClient, Client } from '../../types';
-import { writeBatch, doc, collection, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import { useData } from '../../context/DataContext';
 
 interface CuentiClientModalProps {
   isOpen: boolean;
@@ -23,6 +22,7 @@ interface ApiClientData {
 }
 
 export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, onClose, onImportClient, existingClients }) => {
+  const { addItem, updateItem } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [fetchedClients, setFetchedClients] = useState<(CuentiClient & { isVIP: boolean; existsInDB: boolean; needsUpdate: boolean })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -149,60 +149,51 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
 
   const handleBulkSync = async () => {
     if (filteredClients.length === 0 || isSyncingBulk) return;
-    
+
     const confirmMsg = `¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos del sistema?`;
     if (!window.confirm(confirmMsg)) return;
 
     setIsSyncingBulk(true);
-    const batch = writeBatch(db);
-    const clientsColl = collection(db, 'clients');
     let newCount = 0;
     let updateCount = 0;
 
     try {
-      filteredClients.forEach(client => {
+      for (const client of filteredClients) {
         const dbMatch = existingClients.find(c => c.identification === client.identification);
-        
+
         if (dbMatch) {
           // Es una actualización
           if (client.needsUpdate) {
-            const ref = doc(db, 'clients', dbMatch.id);
             const updates: any = {};
             if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
             if (client.email && client.email !== dbMatch.email) updates.email = client.email;
-            // Si hay dirección, comparamos. Si no, mantenemos la vieja.
             if (client.address) {
-                // Si la dirección de cuenti no está contenida en la vieja, actualizamos
                 if (!dbMatch.address?.includes(client.address)) {
                     updates.address = [client.address, client.city].filter(Boolean).join(', ');
                 }
             }
-            
+
             if (Object.keys(updates).length > 0) {
-              batch.update(ref, updates);
+              await updateItem('clients', dbMatch.id, updates);
               updateCount++;
             }
           }
         } else {
           // Es un cliente nuevo
-          const ref = doc(clientsColl);
-          batch.set(ref, {
-            id: ref.id,
+          await addItem('clients', {
             name: client.name,
             identification: client.identification,
             contact: client.phone || '',
             email: client.email || '',
             address: [client.address, client.city].filter(Boolean).join(', ') || '',
-            createdAt: new Date().toISOString()
           });
           newCount++;
         }
-      });
+      }
 
       if (newCount > 0 || updateCount > 0) {
-        await batch.commit();
         alert(`Sincronización finalizada:\n- ${newCount} nuevos agregados\n- ${updateCount} actualizados`);
-        onClose(); // Cerramos el modal tras sincronizar
+        onClose();
       } else {
         alert("No se detectaron cambios pendientes para sincronizar.");
       }
@@ -216,15 +207,14 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
 
   const handleSingleSync = async (client: any) => {
     if (isSyncingBulk) return;
-    
+
     const isUpdate = client.needsUpdate && client.existsInDB;
     const actionText = isUpdate ? 'actualizar' : 'importar';
-    
+
     try {
       const dbMatch = existingClients.find(c => c.identification === client.identification);
-      
+
       if (isUpdate && dbMatch) {
-          const ref = doc(db, 'clients', dbMatch.id);
           const updates: any = {};
           if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
           if (client.email && client.email !== dbMatch.email) updates.email = client.email;
@@ -233,29 +223,22 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
                   updates.address = [client.address, client.city].filter(Boolean).join(', ');
               }
           }
-          
+
           if (Object.keys(updates).length > 0) {
-            await updateDoc(ref, updates);
+            await updateItem('clients', dbMatch.id, updates);
           }
       } else {
-          const ref = doc(collection(db, 'clients'));
-          await setDoc(ref, {
-            id: ref.id,
+          await addItem('clients', {
             name: client.name,
             identification: client.identification,
             contact: client.phone || '',
             email: client.email || '',
             address: [client.address, client.city].filter(Boolean).join(', ') || '',
-            createdAt: new Date().toISOString()
           });
       }
 
-      // No alertamos para que sea suave, solo cerramos o notificamos visualmente si quisieras.
-      // Pero como el usuario pidió "automáticamente", cerraremos el modal para indicar éxito si es lo habitual.
-      // O simplemente dejamos que el usuario siga importando otros.
-      // Actualizamos el estado local para que desaparezca de la lista si hay filtros.
       setFetchedClients(prev => prev.map(c => c.id === client.id ? { ...c, existsInDB: true, needsUpdate: false } : c));
-      
+
     } catch (err: any) {
       console.error(`Error al ${actionText} cliente:`, err);
       alert(`Error al ${actionText}: ` + err.message);

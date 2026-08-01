@@ -1,11 +1,10 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { ChevronLeft, ChevronRight, Plus, Wallet, Users, ArrowRightLeft, ChevronDown, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Wallet, Users, ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext';
-import { db } from '../../services/firebase';
-import { collection, query, onSnapshot, doc, writeBatch, where, getDocs, DocumentData, addDoc, Timestamp } from 'firebase/firestore';
+import { useSupabaseQuery } from '../../hooks/useSupabaseQuery';
 
 import { Movement, User, Transaction, Expense, Income, GroupedMovements } from '../../types/accounting';
 import { MovementItem } from './MovementItem';
@@ -34,10 +33,8 @@ const formatGroupDate = (dateString: string) => {
     const today = new Date();
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-
     if (isSameDay(date, today)) return 'Hoy';
     if (isSameDay(date, yesterday)) return 'Ayer';
-    
     return new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
 };
 
@@ -56,14 +53,31 @@ const formatWeekRange = (date: Date) => {
 const Accounting: React.FC = () => {
   const { currentUser } = useAuth();
   const { openModal } = useModal();
+  const { users: appUsers, addItem } = useData();
+  const hasSession = !!currentUser;
 
-  // --- ESTADOS DE DATOS ---
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+  // --- DATOS REACTIVOS DESDE SUPABASE ---
+  const transactionsQuery = useSupabaseQuery<Transaction>('accounting_transactions', {
+    table: 'accounting_transactions',
+    realtime: true,
+    forceOffline: !hasSession,
+  });
+  const expensesQuery = useSupabaseQuery<Expense>('accounting_expenses', {
+    table: 'accounting_expenses',
+    realtime: true,
+    forceOffline: !hasSession,
+  });
+  const incomesQuery = useSupabaseQuery<Income>('accounting_incomes', {
+    table: 'accounting_incomes',
+    realtime: true,
+    forceOffline: !hasSession,
+  });
+
+  const transactions = transactionsQuery.data || [];
+  const expenses = expensesQuery.data || [];
+  const incomes = incomesQuery.data || [];
+  const loading = transactionsQuery.loading || expensesQuery.loading || incomesQuery.loading;
+
   // --- ESTADOS DE UI ---
   const [historyTimeRange, setHistoryTimeRange] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -76,29 +90,15 @@ const Accounting: React.FC = () => {
 
   const canViewUserBalances = currentUser?.role === 'admin' || currentUser?.role === 'developer' || currentUser?.role === 'supervisor';
 
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    setLoading(true);
-
-    const collectionsToLoad = [
-      { name: 'transactions', setter: setTransactions },
-      { name: 'expenses', setter: setExpenses },
-      ...(canViewUserBalances ? [
-        { name: 'incomes', setter: setIncomes },
-        { name: 'users', setter: setUsers }
-      ] : [])
-    ];
-
-    const unsubs = collectionsToLoad.map(c => 
-      onSnapshot(query(collection(db, c.name as string)), (snap) => {
-        c.setter(snap.docs.map((doc: DocumentData) => ({ id: doc.id, ...doc.data() } as any)));
-      })
-    );
-    
-    setLoading(false);
-
-    return () => { unsubs.forEach(unsub => unsub()); };
-  }, [currentUser, canViewUserBalances]);
+  // Mapear usuarios de appUsers al formato User de accounting
+  const users: User[] = useMemo(() => {
+    return (appUsers || []).map(u => ({
+      id: u.id,
+      name: u.name || '',
+      email: (u as any).email || '',
+      role: (u.role || 'technician') as User['role'],
+    }));
+  }, [appUsers]);
 
   const allMovements = useMemo((): Movement[] => {
     const combined: Movement[] = [
@@ -106,7 +106,7 @@ const Accounting: React.FC = () => {
       ...expenses.map(ex => ({ ...ex, movementType: 'expense' as const })),
       ...(canViewUserBalances ? incomes.map(inc => ({ ...inc, movementType: 'income' as const })) : []),
     ];
-    return combined.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis());
+    return combined.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [transactions, expenses, incomes, canViewUserBalances]);
 
   const currentUserMovements = useMemo(() => {
@@ -157,7 +157,7 @@ const Accounting: React.FC = () => {
       targetUsers = users.filter(u => u.role === 'supervisor');
     } else if (role === 'supervisor') {
       targetUsers = users.filter(u => u.role === 'technician');
-    } else { // for developer and any other case
+    } else {
       targetUsers = users.filter(u => u.role === 'technician' || u.role === 'supervisor');
     }
 
@@ -176,9 +176,9 @@ const Accounting: React.FC = () => {
   }, [allMovements, users, currentUser?.role, canViewUserBalances]);
 
   const handleOpenUserMovements = (userId: string, userName: string) => {
-    const movementsForUser = allMovements.filter(mov => 
-        (mov.movementType === 'expense' || mov.movementType === 'income') 
-            ? mov.userId === userId 
+    const movementsForUser = allMovements.filter(mov =>
+        (mov.movementType === 'expense' || mov.movementType === 'income')
+            ? mov.userId === userId
             : (mov.movementType === 'transaction' && (mov.senderId === userId || mov.recipientId === userId))
     );
     openModal('userMovements', { userId, userName, movements: movementsForUser });
@@ -190,52 +190,32 @@ const Accounting: React.FC = () => {
       movement: mov,
       onConfirm: async (reason: string) => {
         try {
-          if (mov.movementType === 'transaction' && mov.transactionGroupId) {
-            const q = query(collection(db, 'transactions'), where('transactionGroupId', '==', mov.transactionGroupId));
-            const querySnapshot = await getDocs(q);
-            const batch = writeBatch(db);
-            const newGroupId = `annul_${Date.now()}`;
-            
-            querySnapshot.forEach((docSnap) => {
-                const data = docSnap.data();
-                const newDocRef = doc(collection(db, 'transactions'));
-                batch.set(newDocRef, {
-                    ...data,
-                    amount: data.amount,
-                    concept: `ANULACIÓN: ${data.concept}${reason ? ` (Motivo: ${reason})` : ''}`,
-                    createdAt: Timestamp.now(),
-                    isAnnulment: true,
-                    relatedMovementId: docSnap.id,
-                    transactionGroupId: newGroupId,
-                    senderId: data.recipientId,
-                    senderName: data.recipientName,
-                    recipientId: data.senderId,
-                    recipientName: data.senderName
-                });
+          const now = new Date().toISOString();
+
+          if (mov.movementType === 'transaction') {
+            await addItem('accounting_transactions', {
+              senderId: mov.recipientId,
+              senderName: mov.recipientName,
+              recipientId: mov.senderId,
+              recipientName: mov.senderName,
+              amount: mov.amount,
+              method: mov.method,
+              concept: `ANULACIÓN: ${mov.concept}${reason ? ` (Motivo: ${reason})` : ''}`,
+              createdAt: now,
+              isAnnulment: true,
+              relatedMovementId: mov.id,
+              transactionGroupId: mov.transactionGroupId ? `annul_${Date.now()}` : undefined,
             });
-            await batch.commit();
-          } else if (mov.movementType === 'transaction') {
-              await addDoc(collection(db, 'transactions'), {
-                  ...mov,
-                  concept: `ANULACIÓN: ${mov.concept}${reason ? ` (Motivo: ${reason})` : ''}`,
-                  createdAt: Timestamp.now(),
-                  isAnnulment: true,
-                  relatedMovementId: mov.id,
-                  senderId: mov.recipientId,
-                  senderName: mov.recipientName,
-                  recipientId: mov.senderId,
-                  recipientName: mov.senderName
-              });
           } else {
-            const collectionName = mov.movementType === 'expense' ? 'expenses' : 'incomes';
+            const collectionName = mov.movementType === 'expense' ? 'accounting_expenses' : 'accounting_incomes';
             const { id, movementType, ...rest } = mov as any;
-            await addDoc(collection(db, collectionName), {
-                ...rest,
-                amount: -mov.amount,
-                concept: `ANULACIÓN: ${mov.concept}${reason ? ` (Motivo: ${reason})` : ''}`,
-                createdAt: Timestamp.now(),
-                isAnnulment: true,
-                relatedMovementId: mov.id
+            await addItem(collectionName, {
+              ...rest,
+              amount: -mov.amount,
+              concept: `ANULACIÓN: ${mov.concept}${reason ? ` (Motivo: ${reason})` : ''}`,
+              createdAt: now,
+              isAnnulment: true,
+              relatedMovementId: mov.id,
             });
           }
           setSelectedMovementId(null);
@@ -262,27 +242,27 @@ const Accounting: React.FC = () => {
   const historyFilteredMovements = useMemo(() => {
     const source = currentUserMovements;
     const now = new Date();
-    if (historyTimeRange === 'day') return source.filter(mov => isSameDay(mov.createdAt.toDate(), now));
-    if (historyTimeRange === 'week') return source.filter(mov => mov.createdAt.toDate() >= getStartOfWeek(now));
-    if (historyTimeRange === 'month') return source.filter(mov => mov.createdAt.toDate() >= getStartOfMonth(now));
+    if (historyTimeRange === 'day') return source.filter(mov => isSameDay(new Date(mov.createdAt), now));
+    if (historyTimeRange === 'week') return source.filter(mov => new Date(mov.createdAt) >= getStartOfWeek(now));
+    if (historyTimeRange === 'month') return source.filter(mov => new Date(mov.createdAt) >= getStartOfMonth(now));
     return source;
   }, [currentUserMovements, historyTimeRange]);
 
   const groupedMovements = useMemo((): GroupedMovements => {
     if (!currentUser?.id) return {};
     return historyFilteredMovements.reduce((groups, mov) => {
-      const jsDate = mov.createdAt.toDate();
+      const jsDate = new Date(mov.createdAt);
       const date = jsDate.toISOString().split('T')[0];
 
       if (!groups[date]) groups[date] = { movements: [], dailyBalance: 0 };
       groups[date].movements.push(mov);
-      
+
       let amountChange = 0;
       switch(mov.movementType) {
         case 'transaction':
-          if (mov.transactionGroupId) { // Movimiento interno
+          if (mov.transactionGroupId) {
               amountChange = mov.concept.startsWith('Mov. desde') ? mov.amount : -mov.amount;
-          } else { // Transferencia normal
+          } else {
             amountChange = mov.recipientId === currentUser.id ? mov.amount : -mov.amount;
           }
           break;
@@ -290,7 +270,7 @@ const Accounting: React.FC = () => {
         case 'income': amountChange = mov.amount; break;
       }
       groups[date].dailyBalance += amountChange;
-      
+
       return groups;
     }, {} as GroupedMovements);
   }, [historyFilteredMovements, currentUser?.id]);
@@ -299,13 +279,13 @@ const Accounting: React.FC = () => {
     const startOfWeek = getStartOfWeek(currentDate);
     const endOfWeek = getEndOfWeek(currentDate);
     const weekMovements = currentUserMovements.filter(mov => {
-        const movDate = mov.createdAt.toDate();
+        const movDate = new Date(mov.createdAt);
         return movDate >= startOfWeek && movDate <= endOfWeek;
     });
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     const data = days.map(name => ({ name, Ingresos: 0, Egresos: 0 }));
     weekMovements.forEach(mov => {
-        const dayIndex = mov.createdAt.toDate().getDay();
+        const dayIndex = new Date(mov.createdAt).getDay();
         const amount = mov.amount;
         switch(mov.movementType) {
             case 'income': data[dayIndex].Ingresos += amount; break;
@@ -313,9 +293,9 @@ const Accounting: React.FC = () => {
             case 'transaction':
                  if (mov.transactionGroupId) {
                     if(mov.concept.startsWith('Mov. desde')) {
-                        data[dayIndex].Ingresos += amount; 
+                        data[dayIndex].Ingresos += amount;
                     } else {
-                        data[dayIndex].Egresos += amount; 
+                        data[dayIndex].Egresos += amount;
                     }
                  } else if (mov.recipientId === currentUser?.id) {
                     data[dayIndex].Ingresos += amount;
@@ -366,27 +346,27 @@ const Accounting: React.FC = () => {
         </div>
 
       <div className="bg-white p-4 rounded-2xl shadow-sm mb-6">
-        <div 
+        <div
             className="flex justify-between items-center cursor-pointer"
             onClick={() => setIsChartCollapsed(!isChartCollapsed)}
         >
           <h3 className="font-semibold text-sm text-gray-800">Resumen Semanal</h3>
            <div className="flex items-center gap-2">
-              <button 
+              <button
                   onClick={(e) => {
                       e.stopPropagation();
                       setCurrentDate(d => new Date(d.setDate(d.getDate() - 7)))
-                  }} 
+                  }}
                   className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
               >
                   <ChevronLeft size={16}/>
               </button>
               <span className="text-xs font-bold text-gray-500 w-24 text-center">{formatWeekRange(currentDate)}</span>
-              <button 
+              <button
                   onClick={(e) => {
                       e.stopPropagation();
                       setCurrentDate(d => new Date(d.setDate(d.getDate() + 7)))
-                  }} 
+                  }}
                   className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
               >
                   <ChevronRight size={16}/>
@@ -402,9 +382,9 @@ const Accounting: React.FC = () => {
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                         <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `${Number(value) / 1000}k`} />
-                        <Tooltip 
-                            wrapperStyle={{ fontSize: '12px' }} 
-                            formatter={(value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value)} 
+                        <Tooltip
+                            wrapperStyle={{ fontSize: '12px' }}
+                            formatter={(value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value)}
                         />
                         <Legend wrapperStyle={{ fontSize: '10px' }} iconSize={10} />
                         <Bar dataKey="Ingresos" fill="#22c55e" radius={[2, 2, 0, 0]} />
@@ -441,11 +421,11 @@ const Accounting: React.FC = () => {
                                 {movements.map(mov => {
                                     const movementId = `${mov.movementType}-${mov.id}`;
                                     return (
-                                        <MovementItem 
-                                            key={movementId} 
-                                            mov={mov} 
-                                            currentUserId={currentUser?.id || ''} 
-                                            onDelete={handleAnnulMovement} 
+                                        <MovementItem
+                                            key={movementId}
+                                            mov={mov}
+                                            currentUserId={currentUser?.id || ''}
+                                            onDelete={handleAnnulMovement}
                                             isSelected={selectedMovementId === movementId}
                                             onItemClick={() => handleMovementClick(movementId)}
                                         />
@@ -466,16 +446,16 @@ const Accounting: React.FC = () => {
       </div>
 
       <div className="fixed bottom-24 right-4 md:right-6 space-y-3 md:bottom-6 z-40">
-        <button 
-            onClick={handleOpenTransferModal} 
+        <button
+            onClick={handleOpenTransferModal}
             disabled={!canSpend}
             className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-white text-primary border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
             title={canSpend ? "Transferir Dinero" : "No tienes saldo para transferir"}
         >
             <ArrowRightLeft size={24} />
         </button>
-        <button 
-            onClick={handleOpenExpenseModal} 
+        <button
+            onClick={handleOpenExpenseModal}
             disabled={!isAdminOrDev && !canSpend}
             className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-primary text-white hover:bg-primary-dark focus:ring-4 focus:ring-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
             title={isAdminOrDev || canSpend ? (isAdminOrDev ? 'Registrar Movimiento' : 'Agregar Gasto') : "No tienes saldo para registrar gastos"}

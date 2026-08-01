@@ -1,10 +1,11 @@
 // src/context/CompanyContext.tsx
+// Migrado a Supabase — reemplaza Firestore doc/getDoc/onSnapshot.
+//
 // Provides company configuration (branding, tabs, features) to the entire app.
 // Depends on AuthContext to know which company the current user belongs to.
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { useAuth } from './AuthContext';
 import { CompanyConfig, DEFAULT_COMPANY_CONFIG } from '../types/company';
 
@@ -57,9 +58,10 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const { currentUser } = useAuth();
   const [company, setCompany] = useState<CompanyConfig>(DEFAULT_COMPANY_CONFIG);
   const [loading, setLoading] = useState(true);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refreshCompany = useCallback(async () => {
-    if (!currentUser?.companyId) {
+    if (!currentUser?.companyId || !isSupabaseConfigured()) {
       setCompany(DEFAULT_COMPANY_CONFIG);
       setLoading(false);
       return;
@@ -74,26 +76,36 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setLoading(false);
     }
 
-    // Always fetch fresh data from Firestore
+    // Fetch from Supabase
     try {
-      const companyDocRef = doc(db, 'companies', companyId);
-      const companySnap = await getDoc(companyDocRef);
-      if (companySnap.exists()) {
-        const config: CompanyConfig = {
-          id: companySnap.id,
-          ...companySnap.data(),
-        } as CompanyConfig;
-        setCompany(config);
-        setCachedCompany(companyId, config);
-      } else {
-        console.warn(`[CompanyContext] No company config found for ID: ${companyId}`);
+      const { data: row, error } = await supabase
+        .from('companies')
+        .select('*')
+        .eq('id', companyId)
+        .single();
+
+      if (error) {
+        console.warn(`[CompanyContext] Error loading company: ${error.message}`);
         if (!cached) {
           setCompany({ ...DEFAULT_COMPANY_CONFIG, id: companyId });
         }
+      } else if (row) {
+        // Mapear snake_case de PostgreSQL a camelCase (CompanyConfig)
+        const normalized: CompanyConfig = {
+          id: row.id,
+          name: row.name,
+          slug: (row as any).slug || '',
+          theme: (row as any).theme || DEFAULT_COMPANY_CONFIG.theme,
+          features: (row as any).features || DEFAULT_COMPANY_CONFIG.features,
+          auth: (row as any).auth || DEFAULT_COMPANY_CONFIG.auth,
+          tabs: (row as any).tabs || [],
+        };
+        setCompany(normalized);
+        setCachedCompany(companyId, normalized);
       }
     } catch (err) {
       console.error('[CompanyContext] Error loading company config:', err);
-      // Keep the cached/default value if fetch fails
+      // Keep cached/default if fetch fails
     } finally {
       setLoading(false);
     }
@@ -105,29 +117,49 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refreshCompany();
   }, [refreshCompany]);
 
-  // Subscribe to real-time updates when company is loaded
+  // Real-time subscription via Supabase Realtime
   useEffect(() => {
-    if (!currentUser?.companyId || !company.id) return;
+    if (!currentUser?.companyId || !isSupabaseConfigured() || !company.id) return;
 
-    const companyDocRef = doc(db, 'companies', currentUser.companyId);
-    const unsubscribe = onSnapshot(
-      companyDocRef,
-      (snapshot) => {
-        if (snapshot.exists()) {
-          const config: CompanyConfig = {
-            id: snapshot.id,
-            ...snapshot.data(),
-          } as CompanyConfig;
-          setCompany(config);
-          setCachedCompany(currentUser.companyId, config);
+    // Clean up previous channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    const channel = supabase
+      .channel(`company-${currentUser.companyId}`)
+      .on(
+        'postgres_changes' as any,
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'companies',
+          filter: `id=eq.${currentUser.companyId}`,
+        },
+        (payload: any) => {
+          const newRecord = payload.new;
+          if (newRecord) {
+            const normalized: CompanyConfig = {
+              id: newRecord.id,
+              name: newRecord.name,
+              slug: newRecord.slug || '',
+              theme: newRecord.theme || DEFAULT_COMPANY_CONFIG.theme,
+              features: newRecord.features || DEFAULT_COMPANY_CONFIG.features,
+              auth: newRecord.auth || DEFAULT_COMPANY_CONFIG.auth,
+              tabs: newRecord.tabs || [],
+            };
+            setCompany(normalized);
+            setCachedCompany(currentUser.companyId, normalized);
+          }
         }
-      },
-      (err) => {
-        console.warn('[CompanyContext] Real-time sync error (silent):', err);
-      }
-    );
+      )
+      .subscribe();
 
-    return () => unsubscribe();
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser?.companyId, company.id]);
 
   const value: CompanyContextType = {

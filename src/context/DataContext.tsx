@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useMemo, useCallback, useEffect, useState } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
 import { Client, ServiceOrder, Equipment, User, AppNotification, OrderStatus } from '../types';
-import { useSupabaseQuery, snakeToCamel } from '../hooks/useSupabaseQuery';
+import { useSupabaseQuery } from '../hooks/useSupabaseQuery';
 import { useSupabaseActions } from '../hooks/useSupabaseActions';
 import { useSupabaseStorage } from '../hooks/useSupabaseStorage';
 import { useSyncManager } from '../hooks/useSyncManager';
@@ -26,7 +26,7 @@ interface DataContextType {
   uploadFile: (file: File, path: string) => Promise<string>;
   forceRefresh: () => void;
   completeOrderAndUpdateEquipment: (order: ServiceOrder, closingData: Partial<ServiceOrder>) => Promise<void>;
-  pendingWrites: number;
+  pendingCount: number;
   isSyncing: boolean;
 }
 
@@ -38,11 +38,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Queries reactivas con Supabase + offline cache ────────────────────
   const hasSession = !!currentUser;
-  const companiesQuery = useSupabaseQuery<any>('companies', {
-    table: 'companies',
-    realtime: false,
-    forceOffline: !hasSession,
-  });
   const clientsQuery = useSupabaseQuery<Client>('clients', {
     table: 'clients',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
@@ -77,7 +72,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ─── CRUD con cola offline ─────────────────────────────────────────────
   const { addItem: addItemRaw, updateItem: updateItemRaw, deleteItem: deleteItemRaw } = useSupabaseActions();
   const { uploadFile: uploadFileRaw, isUploading } = useSupabaseStorage({ bucket: 'order-photos' });
-  const { pendingWrites, isSyncing } = useSyncManager();
+  const { pendingCount, isSyncing } = useSyncManager();
 
   // ─── Loading combinado ──────────────────────────────────────────────────
   const loading = !hasSession ? false : (
@@ -163,14 +158,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     uploadFile,
     forceRefresh,
     completeOrderAndUpdateEquipment,
-    pendingWrites,
+    pendingCount,
     isSyncing,
   }), [
     clientsQuery.data, ordersQuery.data, equipmentQuery.data, usersQuery.data, notificationsQuery.data,
     loading, error, isUploading, isSyncing,
     getClientById, getOrderById, getEquipmentById,
     addItem, updateItem, deleteItem, uploadFile, forceRefresh, completeOrderAndUpdateEquipment,
-    pendingWrites, refreshKey,
+    pendingCount, refreshKey,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

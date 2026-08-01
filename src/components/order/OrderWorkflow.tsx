@@ -17,8 +17,6 @@ import { storage } from '../../services/firebase';
 import { ref, listAll, deleteObject } from 'firebase/storage';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
-import { useCollection } from '../../hooks/useCollection';
-import { where } from 'firebase/firestore';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 
 const OrderWorkflow: React.FC = () => {
@@ -26,7 +24,7 @@ const OrderWorkflow: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { clients, equipment, users, loading: dataLoading, error: dataError, deleteItem } = useData();
+  const { clients, equipment, users, loading: dataLoading, error: dataError, deleteItem, getOrderById } = useData();
   const { updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const { completeOrderAndUpdateEquipment } = useOrderActions();
@@ -39,11 +37,7 @@ const OrderWorkflow: React.FC = () => {
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
 
-  const { data: orders, loading: orderLoading, error: orderError } = useCollection<ServiceOrder>('orders', {
-    constraints: id ? [where('__name__', '==', id)] : [],
-  });
-
-  const order = useMemo(() => (orders && orders.length > 0 ? orders[0] : undefined), [orders]);
+  const order = useMemo(() => (id ? getOrderById(id) : undefined), [id, getOrderById]);
 
   const canViewOrder = useMemo(() => {
     if (!order || !currentUser) return false;
@@ -179,11 +173,11 @@ const OrderWorkflow: React.FC = () => {
     }
   }, [order, client, technician, selectedEquips]);
 
-  if (orderLoading || dataLoading) {
+  if (dataLoading) {
     return <div className="w-full h-screen flex flex-col items-center justify-center gap-4 text-center font-bold text-gray-400"><Loader2 className="animate-spin text-gray-300" size={40} /><p>Cargando datos de la orden...</p></div>;
   }
 
-  const anyError = orderError || dataError;
+  const anyError = dataError;
   if (anyError) {
     return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError.message}</div>;
   }

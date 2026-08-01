@@ -1,10 +1,18 @@
 
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache } from "firebase/firestore";
-import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";  // @deprecated — Auth reemplazado por Supabase Auth
+import { initializeFirestore, persistentLocalCache } from "firebase/firestore";  // @deprecated — se migrará en Fase 2-3
 import { getStorage } from "firebase/storage";
 import { getMessaging, isSupported, type Messaging } from "firebase/messaging";
+
+// NOTA: Firebase Auth, Firestore y Realtime DB han sido reemplazados por Supabase.
+// - Auth → supabase.auth (AuthContext)
+// - Firestore → supabase.from() (useSupabaseQuery / DataContext)
+// - Realtime DB → no se usa desde el frontend
+//
+// Firebase Storage y FCM (Messaging) aún se usan de forma transitoria:
+// - Storage: se migrará a Supabase Storage en Fase 4
+// - FCM: se migrará a OneSignal en Fase 5
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyAL1DUSVBfy-XJSbz83S-x867xirOcRx9Y",
@@ -14,15 +22,16 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "navas-33818730-80986.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "174914174318",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:174914174318:web:c7eb16cc147bad4c51557f",
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
+// Initialize Firebase (necesario para Storage y FCM)
 export const app = initializeApp(firebaseConfig);
 
-// Export other Firebase services
+// @deprecated Auth reemplazado por Supabase Auth (AuthContext)
 export const auth = getAuth(app);
-export const realtimeDB = getDatabase(app);
+
+// @deprecated Firebase Storage — se migrará a Supabase Storage en Fase 4
 export const storage = getStorage(app);
 
 // --- FCM: Lazy/conditional init for iOS Safari compatibility ---
@@ -69,11 +78,12 @@ export const getMessagingInstance = async (): Promise<Messaging | null> => {
   return _messagingInstance;
 };
 
-// Legacy export kept for backward compatibility (null-safe).
-// Prefer getMessagingInstance() in new code.
+// @deprecated Se migrará a OneSignal en Fase 5. Usar usePushNotifications hook.
 export const messaging: Messaging | null = null;
 
-// Initialize Firestore with the persistent cache for offline support
+// @deprecated Initialize Firestore — se migrará a Supabase en Fase 2-3.
+// Ya no lo usan AuthContext, DataContext ni CompanyContext.
+// Aún necesario para: Accounting, TransferModal, ExpenseModal, Tasks, etc.
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({})
 });

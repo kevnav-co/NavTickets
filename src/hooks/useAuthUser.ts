@@ -1,4 +1,7 @@
 
+// @deprecated — No se usa. Autenticación se maneja via AuthContext + Supabase Auth.
+// Se eliminará en Phase 6: Cleanup.
+
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';

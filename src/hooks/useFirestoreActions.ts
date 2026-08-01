@@ -1,4 +1,7 @@
 
+// @deprecated — No se usa. CRUD ahora se maneja via DataContext (useData()) con Supabase.
+// Se eliminará en Phase 6: Cleanup.
+
 import { useCallback } from 'react';
 import {
   doc, addDoc, updateDoc, deleteDoc, collection, DocumentData, WithFieldValue

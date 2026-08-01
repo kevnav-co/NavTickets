@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, User as UserIcon } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCollection } from '../../hooks/useCollection';
-import { QueryConstraint, where } from 'firebase/firestore';
+import type { QueryFilter } from '../../hooks/useSupabaseQuery';
 
 const getUserColor = (name: string, isPending: boolean) => {
   const n = name.toLowerCase();
@@ -71,31 +71,31 @@ const GlobalCalendar: React.FC = () => {
     return days;
   }, [currentWeekStart]);
 
-  const { pendingConstraints, openConstraints } = useMemo(() => {
-    const p: QueryConstraint[] = [];
-    const o: QueryConstraint[] = [];
+  const { pendingFilters, openFilters } = useMemo(() => {
+    const p: QueryFilter[] = [];
+    const o: QueryFilter[] = [];
     const startOfWeek = weekDays[0]?.toISOString().split('T')[0];
     const endOfWeek = weekDays[weekDays.length - 1]?.toISOString().split('T')[0];
 
     if (filterUserId !== 'all') {
-      const userFilter = where('technicianId', '==', filterUserId);
+      const userFilter: QueryFilter = { column: 'technician_id', operator: 'eq', value: filterUserId };
       p.push(userFilter);
       o.push(userFilter);
     }
 
     if (startOfWeek && endOfWeek) {
-      p.push(where('scheduledDate', '>=', startOfWeek));
-      p.push(where('scheduledDate', '<=', endOfWeek));
+      p.push({ column: 'scheduled_date', operator: 'gte', value: startOfWeek });
+      p.push({ column: 'scheduled_date', operator: 'lte', value: endOfWeek });
     }
-    
-    p.push(where('status', '==', OrderStatus.PENDING));
-    o.push(where('status', '==', OrderStatus.OPEN));
 
-    return { pendingConstraints: p, openConstraints: o };
+    p.push({ column: 'status', operator: 'eq', value: OrderStatus.PENDING });
+    o.push({ column: 'status', operator: 'eq', value: OrderStatus.OPEN });
+
+    return { pendingFilters: p, openFilters: o };
   }, [weekDays, filterUserId]);
 
-  const { data: pendingOrders, loading: loadingPending } = useCollection<ServiceOrder>('orders', { constraints: pendingConstraints });
-  const { data: openOrders, loading: loadingOpen } = useCollection<ServiceOrder>('orders', { constraints: openConstraints });
+  const { data: pendingOrders, loading: loadingPending } = useCollection<ServiceOrder>('orders', { filters: pendingFilters });
+  const { data: openOrders, loading: loadingOpen } = useCollection<ServiceOrder>('orders', { filters: openFilters });
 
   const combinedOrders = useMemo(() => [...pendingOrders, ...openOrders], [pendingOrders, openOrders]);
 

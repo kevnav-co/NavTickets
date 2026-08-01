@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext';
-import { db } from '../../services/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { X, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 
@@ -18,6 +17,7 @@ const toDateTimeLocal = (date: Date): string => {
 
 export const ExpenseModal: React.FC = () => {
   const { currentUser } = useAuth();
+  const { addItem } = useData();
   const { isModalOpen, closeModal, modalData } = useModal();
   const isOpen = isModalOpen('expense');
   const balances = modalData?.balances; // CORRECCIÓN: Acceso directo a los datos del modal
@@ -82,7 +82,7 @@ export const ExpenseModal: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (balanceError) return; // No permitir envío si hay error de saldo
+    if (balanceError) return;
 
     if (!concept || !amount || amount <= 0 || !currentUser) {
       setError('Por favor, completa el concepto y el valor.');
@@ -92,18 +92,18 @@ export const ExpenseModal: React.FC = () => {
     setSubmitting(true);
     setError('');
 
-    const collectionName = movementType === 'income' ? 'incomes' : 'expenses';
+    const collectionName = movementType === 'income' ? 'accounting_incomes' : 'accounting_expenses';
     const data: any = {
         userId: currentUser.id,
         userName: currentUser.name,
         concept,
         amount,
         origin,
-        createdAt: Timestamp.fromDate(new Date(dateTime)),
+        createdAt: new Date(dateTime).toISOString(),
     };
 
     try {
-      await addDoc(collection(db, collectionName), data);
+      await addItem(collectionName, data);
       setSuccess(true);
       setTimeout(() => resetState(true), 1500);
 

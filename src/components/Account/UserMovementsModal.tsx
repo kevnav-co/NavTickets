@@ -60,9 +60,9 @@ export const UserMovementsModal: React.FC<UserMovementsModalProps> = ({ onDelete
   const filteredMovements = useMemo(() => {
     if (!data?.movements) return [];
     const now = new Date();
-    if (timeRange === 'day') return data.movements.filter(mov => isSameDay(mov.createdAt.toDate(), now));
-    if (timeRange === 'week') return data.movements.filter(mov => mov.createdAt.toDate() >= getStartOfWeek(now));
-    if (timeRange === 'month') return data.movements.filter(mov => mov.createdAt.toDate() >= getStartOfMonth(now));
+    if (timeRange === 'day') return data.movements.filter(mov => isSameDay(new Date(mov.createdAt), now));
+    if (timeRange === 'week') return data.movements.filter(mov => new Date(mov.createdAt) >= getStartOfWeek(now));
+    if (timeRange === 'month') return data.movements.filter(mov => new Date(mov.createdAt) >= getStartOfMonth(now));
     return data.movements;
   }, [data, timeRange]);
 
@@ -70,7 +70,7 @@ export const UserMovementsModal: React.FC<UserMovementsModalProps> = ({ onDelete
     if (!data?.userId) return {};
 
     return filteredMovements.reduce((groups, mov) => {
-      const date = mov.createdAt.toDate().toISOString().split('T')[0];
+      const date = new Date(mov.createdAt).toISOString().split('T')[0];
       if (!groups[date]) {
         groups[date] = { movements: [], dailyBalance: 0 };
       }

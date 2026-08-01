@@ -1,4 +1,7 @@
 
+// @deprecated — No se usa. Los conteos se manejan via Supabase queries directamente.
+// Se eliminará en Phase 6: Cleanup.
+
 import { useState, useEffect } from 'react';
 import { collection, query, getCountFromServer, Query, QueryConstraint } from 'firebase/firestore';
 import { db } from '../services/firebase';
