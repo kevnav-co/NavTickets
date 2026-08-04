@@ -7,7 +7,6 @@ import { format, parseISO, addHours, addMinutes } from 'date-fns';
 import { useData } from '../../context/DataContext';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
 import { ServiceOrderSchema } from '../../schemas/order.schema';
-import { serverTimestamp } from 'firebase/firestore';
 import AvailabilityModal from './AvailabilityModal';
 import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
 
@@ -82,7 +81,7 @@ const OrderPendingView: React.FC<Props> = ({
         scheduledDate: newDate,
         timeSlot: newTime,
         scheduledEndTime: format(endTime, 'HH:mm'),
-        updatedAt: serverTimestamp(),
+        updatedAt: new Date().toISOString(),
         lastUpdatedBy: currentUser.id,
       };
 

@@ -1,9 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
-import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -41,7 +39,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     if (newPass !== confirmPass) {
       return setError('Las contraseñas nuevas no coinciden.');
     }
-    if (newPass.length < 6) { // Firebase default is 6
+    if (newPass.length < 6) {
       return setError('La nueva contraseña debe tener al menos 6 caracteres.');
     }
     if (!currentUser || !currentUser.username) {
@@ -49,39 +47,43 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     }
 
     setIsSaving(true);
-    const auth = getAuth();
-    const user = auth.currentUser;
 
-    if (user) {
-        const domain = company?.auth?.emailDomain || '@navas.com';
-        const userEmail = `${currentUser.username}${domain}`;
-        const credential = EmailAuthProvider.credential(userEmail, oldPass);
-        
-        try {
-            await reauthenticateWithCredential(user, credential);
-            // User re-authenticated, now update the password.
-            await updatePassword(user, newPass);
-            
-            setSuccess(true);
-            setTimeout(() => {
-                onClose();
-            }, 2000); // Close modal after 2 seconds
+    try {
+      // Call Supabase Edge Function to update password
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          newPassword: newPass,
+          currentPassword: oldPass // For verification
+        }),
+      });
 
-        } catch (err: any) {
-            console.error("Password update error:", err.code);
-            if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-                setError('La contraseña actual es incorrecta.');
-            } else if (err.code === 'auth/too-many-requests') {
-                setError('Demasiados intentos fallidos. Inténtalo más tarde.');
-            } else {
-                setError('No se pudo actualizar la contraseña. Verifica tu conexión.');
-            }
-        } finally {
-            setIsSaving(false);
-        }
-    } else {
-        setError('No hay un usuario activo para realizar la operación.');
-        setIsSaving(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      setSuccess(true);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+
+    } catch (err: any) {
+      console.error("Password update error:", err);
+      if (err.message.includes('wrong-password') || err.message.includes('invalid-credential') || err.message.includes('incorrect')) {
+        setError('La contraseña actual es incorrecta.');
+      } else if (err.message.includes('too-many-requests')) {
+        setError('Demasiados intentos fallidos. Inténtalo más tarde.');
+      } else {
+        setError('No se pudo actualizar la contraseña. Verifica tu conexión.');
+      }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -108,12 +110,12 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
             ].map((field, i) => (
               <div key={i}>
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{field.label}</label>
-                <input 
-                  type="password" 
-                  value={field.value} 
-                  onChange={e => field.setter(e.target.value)} 
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors" 
-                  required 
+                <input
+                  type="password"
+                  value={field.value}
+                  onChange={e => field.setter(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
+                  required
                 />
               </div>
             ))}

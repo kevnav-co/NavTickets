@@ -1,49 +1,74 @@
+import { createClient } from '@supabase/supabase-js';
+import { User } from '../types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from './firebase';
-import { User } from '../types'; // Importar el tipo User
+// Cliente de Supabase creado de forma perezosa para evitar problemas de inicialización
+let supabaseClient: SupabaseClient | null = null;
+
+function getSupabaseClient(): SupabaseClient {
+  if (!supabaseClient) {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (!url || !anonKey) {
+      console.error("Error: Las variables de entorno de Supabase no están configuradas.");
+      throw new Error("Supabase no está configurado. Revisa VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY");
+    }
+
+    supabaseClient = createClient(url, anonKey, {
+      auth: { persistSession: false }
+    });
+  }
+  return supabaseClient;
+}
 
 /**
- * Valida las credenciales del usuario contra la base de datos de Firestore.
+ * Valida las credenciales del usuario contra la base de datos de Supabase.
  * @param username El nombre de usuario a verificar.
  * @param password La contraseña a verificar.
  * @returns El objeto User en caso de éxito, o null en caso de fallo.
  */
 export const loginUser = async (username: string, password?: string): Promise<User | null> => {
-  if (!db) {
-    console.error("Error: La conexión a Firestore no está inicializada.");
-    return null;
-  }
   if (!username || !password) {
     console.error("El nombre de usuario y la contraseña son obligatorios.");
     return null;
   }
 
   try {
-    const usersCollectionRef = collection(db, 'users');
-    const q = query(usersCollectionRef, where("username", "==", username));
-    const querySnapshot = await getDocs(q);
+    const supabase = getSupabaseClient();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
 
-    if (querySnapshot.empty) {
+    if (error || !data) {
       console.log(`Intento de login fallido: No se encontró el usuario "${username}".`);
       return null;
     }
 
-    const userDoc = querySnapshot.docs[0];
-    const userData = userDoc.data();
+    const userData = data as any;
 
     if (userData.password === password) {
       console.log(`Login exitoso para el usuario "${username}".`);
-      
-      // CORRECCIÓN FINAL: Crear un objeto que se ajuste estrictamente al tipo `User`.
-      // Se elimina la propiedad `uid` que no pertenece al tipo.
+
       const user: User = {
-        id: userDoc.id,
-        companyId: userData.companyId || 'default', // ← NUEVO
+        id: userData.id,
+        companyId: userData.company_id || 'default',
         name: userData.name || '',
         role: userData.role || 'technician',
         username: userData.username || '',
-        // Se asume que el tipo User tiene estas propiedades. Si faltan más, se deben añadir.
+        identification: userData.identification || '',
+        email: userData.email || '',
+        phone: userData.phone || '',
+        latitude: userData.latitude || 0,
+        longitude: userData.longitude || 0,
+        signature: userData.signature || undefined,
+        fcmToken: userData.fcm_token || undefined,
+        locationUpdatedAt: userData.location_updated_at || undefined,
+        createdAt: userData.created_at,
+        updatedAt: userData.updated_at,
+        password: userData.password || '',
       };
 
       return user;

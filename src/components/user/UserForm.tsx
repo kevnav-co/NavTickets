@@ -8,7 +8,6 @@ import { useValidatedActions } from '../../hooks/useValidatedActions';
 import { UserSchema } from '../../schemas/user.schema';
 import PERMISSIONS, { hasPermission, ROLES } from '../../permissions';
 import SignatureField from '../ui/SignatureField';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import {
   ChevronLeft, Save, AtSign, Shield, HardHat, Lock, IdCard,
   User as UserIcon, UserPlus, Loader2, MapPin, Eye, EyeOff
@@ -157,9 +156,20 @@ const UserForm: React.FC<Props> = ({ users }) => {
 
             if (formData.password && formData.password.trim() !== '') {
                 try {
-                    const functions = getFunctions();
-                    const updateUserPassword = httpsCallable(functions, 'updateUserPassword');
-                    await updateUserPassword({ userId: id, newPassword: formData.password });
+                    // Call Supabase Edge Function instead of Firebase Cloud Function
+                    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-password`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                        },
+                        body: JSON.stringify({ userId: id, newPassword: formData.password }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `HTTP ${response.status}`);
+                    }
                 } catch (error: any) {
                     console.error("Error updating password:", error);
                     alert(`Error al actualizar la contraseña: ${error.message}`);

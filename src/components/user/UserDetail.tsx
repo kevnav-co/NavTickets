@@ -1,11 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  ChevronLeft, AtSign, Shield, Trash2, Edit, IdCard, 
-  AlertTriangle, Loader2, UserCheck, Code, Send, 
+import {
+  ChevronLeft, AtSign, Shield, Trash2, Edit, IdCard,
+  AlertTriangle, Loader2, UserCheck, Code, Send,
   CheckCircle2, XCircle, Smartphone, Wifi, WifiOff
 } from 'lucide-react';
 import PERMISSIONS, { hasPermission } from '../../permissions';
@@ -73,15 +72,28 @@ const UserDetail: React.FC = () => {
     setIsSendingTest(true);
     setTestResult(null);
     try {
-      const functions = getFunctions();
-      const sendTestNotification = httpsCallable(functions, 'sendTestNotification');
-      const result = await sendTestNotification({ userId: user.id });
-      setTestResult(result.data as TestResult);
+      // Call Supabase Edge Function instead of Firebase Cloud Function
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-test-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+      setTestResult(result as TestResult);
     } catch (error: any) {
       setTestResult({
         success: false,
         error: 'CALL_FAILED',
-        message: error.message || 'Error al llamar la Cloud Function.',
+        message: error.message || 'Error al llamar la Edge Function de Supabase.',
       });
     } finally {
       setIsSendingTest(false);
