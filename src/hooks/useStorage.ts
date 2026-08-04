@@ -1,41 +1,45 @@
 import { useCallback, useState } from 'react';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useSupabaseStorage } from './useSupabaseStorage';
 import { compressImage } from '../utils';
 
 /**
- * Hook que proporciona una función para subir archivos a Firebase Storage.
- * Incluye la compresión de imágenes antes de la subida.
+ * Hook that provides a function to upload files to Supabase Storage.
+ * Includes image compression before upload.
  */
 export const useStorage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  // Use Supabase storage hook with the order-photos bucket
+  const { uploadFile: uploadFileSupabase } = useSupabaseStorage({ bucket: 'order-photos' });
 
   const uploadFile = useCallback(async (file: File, path: string): Promise<string> => {
     setIsUploading(true);
     setError(null);
 
     try {
-      // 1. Comprimir la imagen antes de subirla
+      // 1. Compress the image before uploading
       const compressedFile = await compressImage(file);
-      
-      // 2. Subir el archivo a Firebase Storage
-      const storage = getStorage();
-      const storageRef = ref(storage, path);
-      const snapshot = await uploadBytes(storageRef, compressedFile);
-      
-      // 3. Obtener la URL de descarga
-      const downloadURL = await getDownloadURL(snapshot.ref);
-      
-      return downloadURL;
 
+      // 2. Upload to Supabase Storage
+      const result = await uploadFileSupabase(path, compressedFile);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      if (!result.url) {
+        throw new Error('No se obtuvo URL de descarga');
+      }
+
+      return result.url;
     } catch (err: any) {
-      console.error("Error durante la subida del archivo:", err);
+      console.error('Error during file upload:', err);
       setError(err);
-      throw err; // Relanzar el error para que el llamador pueda manejarlo
+      throw err;
     } finally {
       setIsUploading(false);
     }
-  }, []);
+  }, [uploadFileSupabase]);
 
   return { uploadFile, isUploading, error };
 };

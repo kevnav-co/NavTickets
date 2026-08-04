@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
-import { storage } from '../services/firebase';
 import { compressImage } from '../utils/imageCompression';
-import { useConnectivityStatus } from '../hooks/useConnectivityStatus';
+import { useConnectivityStatus } from './useConnectivityStatus';
 import { blobToBase64 } from '../utils/blobConverter';
+import { useSupabaseStorage } from './useSupabaseStorage';
+import { supabase } from '../services/supabase';
 
 type DocumentWithId = { id: string; [key: string]: any };
 
@@ -13,6 +13,16 @@ interface UseFileHandlerProps<T extends DocumentWithId> {
   storagePath: string;
 }
 
+/**
+ * Hook para manejar subida/eliminación de archivos con soporte offline.
+ *
+ * - Online: sube a Supabase Storage y guarda la URL pública.
+ * - Offline: convierte a base64 y guarda localmente (se sincroniza al volver online).
+ *
+ * Buckets soportados según storagePath:
+ *   - 'orders'     -> 'order-photos'
+ *   - 'equipment'  -> 'equipment-photos'
+ */
 export const useFileHandler = <T extends DocumentWithId>({
   doc,
   updateDoc,
@@ -23,19 +33,21 @@ export const useFileHandler = <T extends DocumentWithId>({
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const connectivityStatus = useConnectivityStatus();
 
+  // Determine bucket based on storagePath
+  const bucketName = storagePath === 'equipment' ? 'equipment-photos' : 'order-photos';
+  const { uploadBase64, deleteFile } = useSupabaseStorage({ bucket: bucketName });
+
   const handleSelectImage = (url: string) => setSelectedImage(url);
   const handleCloseModal = () => setSelectedImage(null);
 
   const getFileUrl = (file: string | Blob): string => {
-    if (typeof file === 'string') {
-      return file;
-    }
+    if (typeof file === 'string') return file;
     return URL.createObjectURL(file);
   };
 
   const handleUpload = useCallback(async (files: File[], fieldName: keyof T, isArray: boolean = false) => {
     if (!doc || !doc.id) {
-      setError("El documento no tiene un ID válido para subir archivos.");
+      setError('El documento no tiene un ID válido para subir archivos.');
       return;
     }
     if (!files || files.length === 0) return;
@@ -49,21 +61,23 @@ export const useFileHandler = <T extends DocumentWithId>({
 
       let finalFileRepresentations: string[];
 
+      // ---- ONLINE PATH ----
       if (connectivityStatus.text === 'Online') {
         finalFileRepresentations = await Promise.all(
           compressedBlobs.map(async (blob, index) => {
-            if (!blob) {
-              throw new Error(`La compresión falló para el archivo: ${files[index].name}`);
-            }
+            if (!blob) throw new Error(`La compresión falló para: ${files[index].name}`);
             const originalFile = files[index];
             const filePath = `${storagePath}/${doc.id}/${String(fieldName)}/${Date.now()}_${originalFile.name}`;
-            const storageRef = ref(storage, filePath);
-            const snapshot = await uploadBytesResumable(storageRef, blob);
-            const downloadURL = await getDownloadURL(snapshot.ref);
-            return downloadURL;
+
+            const { url, error: uploadError } = await uploadBase64(filePath, await blobToBase64(blob));
+            if (uploadError) throw new Error(uploadError);
+            if (!url) throw new Error('No se obtuvo URL');
+            return url;
           })
         );
-      } else { 
+      }
+      // ---- OFFLINE PATH ----
+      else {
         const base64Promises = compressedBlobs.map(blob => {
           if (!blob) return Promise.reject('Uno de los archivos comprimidos es nulo.');
           return blobToBase64(blob);
@@ -74,35 +88,33 @@ export const useFileHandler = <T extends DocumentWithId>({
       let updatedValue: any;
       if (isArray) {
         const currentFiles = (doc[fieldName] as any[] | undefined) || [];
-        // **CORRECCIÓN DEFINITIVA**: Aplanar tanto los datos existentes como los nuevos para sanear
-        // cualquier estructura anidada y corrupta antes de combinar y guardar.
         const sanitizedCurrentFiles = Array.isArray(currentFiles) ? currentFiles.flat(Infinity) : [];
         const combinedFiles = [...sanitizedCurrentFiles, ...finalFileRepresentations];
         updatedValue = [...new Set(combinedFiles)];
       } else {
         const oldRepresentation = doc[fieldName];
-        if (connectivityStatus.text === 'Online' && typeof oldRepresentation === 'string' && oldRepresentation.includes('firebasestorage')) {
+        if (connectivityStatus.text === 'Online' && typeof oldRepresentation === 'string' && oldRepresentation.includes('supabase.co/storage/v1/object/public')) {
           try {
-            const oldFileRef = ref(storage, oldRepresentation);
-            await deleteObject(oldFileRef);
-          } catch (deleteError: any) {
-            if (deleteError.code !== 'storage/object-not-found') {
-              console.warn("No se pudo eliminar el archivo antiguo:", deleteError);
+            // Extract path from Supabase URL and delete
+            const pathToDelete = oldRepresentation.split('/public/')[1]?.split('/')?.slice(1).join('/');
+            if (pathToDelete) {
+              await deleteFile(pathToDelete);
             }
+          } catch {
+            // Ignore if file doesn't exist
           }
         }
         updatedValue = finalFileRepresentations[finalFileRepresentations.length - 1];
       }
 
       await updateDoc({ [fieldName]: updatedValue } as Partial<T>);
-
     } catch (e: any) {
       console.error(`Error al procesar archivos para ${String(fieldName)}:`, e);
       setError(`Error al procesar archivos: ${e.message}`);
     } finally {
       setIsUploading(false);
     }
-  }, [doc, updateDoc, storagePath, connectivityStatus]);
+  }, [doc, updateDoc, storagePath, connectivityStatus, uploadBase64, deleteFile]);
 
   const handleRemove = useCallback(async (indexOrUrl: number | string, fieldName: keyof T, isArray: boolean = false) => {
     const currentFiles = doc[fieldName];
@@ -112,7 +124,6 @@ export const useFileHandler = <T extends DocumentWithId>({
     let updatedValue: any;
 
     if (isArray && Array.isArray(currentFiles)) {
-      // **CORRECCIÓN**: Aplanar el array antes de buscar el elemento a eliminar.
       const flattenedFiles = currentFiles.flat(Infinity);
       const target = typeof indexOrUrl === 'number' ? flattenedFiles[indexOrUrl] : indexOrUrl;
       representationToRemove = target;
@@ -121,28 +132,29 @@ export const useFileHandler = <T extends DocumentWithId>({
       representationToRemove = currentFiles;
       updatedValue = null;
     } else {
-      console.warn("Argumentos no válidos para handleRemove:", { indexOrUrl, fieldName, isArray });
+      console.warn('Argumentos no válidos para handleRemove:', { indexOrUrl, fieldName, isArray });
       return;
     }
 
     if (!representationToRemove) {
-      console.warn("Se intentó eliminar un archivo que no existe.");
+      console.warn('Se intentó eliminar un archivo que no existe.');
       return;
     }
 
     try {
-      if (typeof representationToRemove === 'string' && representationToRemove.startsWith('https://firebasestorage')) {
-        const fileRef = ref(storage, representationToRemove);
-        await deleteObject(fileRef);
+      // If it's a Supabase Storage URL, delete from storage
+      if (typeof representationToRemove === 'string' && representationToRemove.includes('supabase.co/storage/v1/object/public')) {
+        const pathToDelete = representationToRemove.split('/public/')[1]?.split('/')?.slice(1).join('/');
+        if (pathToDelete) {
+          await deleteFile(pathToDelete);
+        }
       }
       await updateDoc({ [fieldName]: updatedValue } as Partial<T>);
     } catch (e: any) {
-      if (e.code !== 'storage/object-not-found') {
-        console.error("Error al eliminar el archivo:", e);
-        setError(`Error al eliminar el archivo: ${e.message}`);
-      }
+      console.error('Error al eliminar el archivo:', e);
+      setError(`Error al eliminar el archivo: ${e.message}`);
     }
-  }, [doc, updateDoc]);
+  }, [doc, updateDoc, deleteFile]);
 
   return {
     isUploading,

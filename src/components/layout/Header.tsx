@@ -2,13 +2,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, Users2 } from 'lucide-react';
-import { getToken } from 'firebase/messaging';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext.tsx';
 import { NotificationsModal } from './NotificationsModal';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
-import { getMessagingInstance } from '../../services/firebase';
+import { useOneSignal } from '../../hooks/useOneSignal';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 
 interface HeaderProps {
@@ -28,76 +27,26 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   const { text: statusText, color: statusColor } = useConnectivityStatus();
   const navigate = useNavigate();
 
+  // OneSignal push notifications
+  const { permission, isSupported, isLoading, enableNotifications } = useOneSignal(
+    currentUser,
+    async (userId, token) => updateItem('users', userId, { fcmToken: token })
+  );
+
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [timeAgo, setTimeAgo] = useState('Hace un momento');
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>('default');
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
-
-  // Track notification permission state
-  useEffect(() => {
-    if (typeof Notification === 'undefined') {
-      setNotifPermission('unsupported');
-    } else {
-      setNotifPermission(Notification.permission);
-    }
-  }, []);
-
-  const VAPID_KEY = "BED4eP1e3O95scTlqCDXrsjCwM9FOoD4Z0WURxk7H5QDUgG4v43-ik1Mpt8jqSSr9sD8qpQLko-an14f1obSyTI";
+  const notifPermission = permission;
 
   // --- Handler: Request notification permission on user gesture (iOS requirement) ---
   const handleEnableNotifications = useCallback(async () => {
-    if (typeof Notification === 'undefined' || !currentUser) return;
-    try {
-      const permission = await Notification.requestPermission();
-      setNotifPermission(permission);
-
-      if (permission === 'granted') {
-        const msgInstance = await getMessagingInstance();
-        if (!msgInstance) {
-          console.warn('[FCM] Messaging instance unavailable after permission grant.');
-          return;
-        }
-
-        // Wait for SW to be ready with a timeout for iOS reliability
-        const swReady = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
-        ]);
-
-        if (!swReady) {
-          console.warn('[FCM] Service Worker not ready after 8s timeout. Proceeding anyway...');
-        }
-
-        // Attempt token retrieval with retry for iOS first-time installs
-        let token: string | null = null;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          try {
-            token = await getToken(msgInstance, { 
-              vapidKey: VAPID_KEY,
-              serviceWorkerRegistration: swReady || undefined
-            });
-            if (token) break;
-          } catch (tokenErr) {
-            console.warn(`[FCM] Token attempt ${attempt}/3 failed:`, tokenErr);
-            if (attempt < 3) await new Promise(r => setTimeout(r, 1500));
-          }
-        }
-
-        if (token && token !== currentUser.fcmToken) {
-          await updateItem('users', currentUser.id, { fcmToken: token });
-          console.log('[FCM] Token saved successfully.');
-        } else if (!token) {
-          console.warn('[FCM] Could not obtain FCM token after 3 attempts.');
-        }
-      }
-    } catch (err) {
-      console.warn('[FCM] Error requesting notification permission:', err);
-    }
-  }, [currentUser, updateItem]);
+    if (!currentUser || !isSupported || isLoading) return;
+    await enableNotifications();
+  }, [currentUser, isSupported, isLoading, enableNotifications]);
 
   useEffect(() => {
     const storedLastFetch = localStorage.getItem('navas_last_fetch');

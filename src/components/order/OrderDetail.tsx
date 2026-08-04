@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ServiceOrder, Client, User, Equipment, OrderStatus, WarrantyJob } from '../../types';
@@ -10,11 +9,10 @@ import { getUserPermissions } from '../../permissions';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
 import { ServiceOrderSchema } from '../../schemas/order.schema';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
-import { storage } from '../../services/firebase';
-import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { compressImage } from '../../utils/imageCompression';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { blobToBase64 } from '../../utils/blobConverter';
+import { useSupabaseStorage } from '../../hooks/useSupabaseStorage';
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
@@ -58,17 +56,17 @@ interface Props {
   getWarrantyInfo: (order: Partial<ServiceOrder>) => { expired: boolean; text: string } | null;
 }
 
-const OrderDetail: React.FC<Props> = ({ 
-  order, client, technician, equipmentList, users, onStartOrder, onCompleteOrder, 
-  onAddEquipment, onRemoveEquipment, onAddClient, onAddTechnician, onUpdateOrder, 
+const OrderDetail: React.FC<Props> = ({
+  order, client, technician, equipmentList, users, onStartOrder, onCompleteOrder,
+  onAddEquipment, onRemoveEquipment, onAddClient, onAddTechnician, onUpdateOrder,
   handleDeleteOrderAndImages,
   generatePDF, isGeneratingPdf, isDeleting, pdfProgress, currentUser,
-  onSelectImage, 
-  onUpload: genericUpload, 
-  onRemove: genericRemove, 
+  onSelectImage,
+  onUpload: genericUpload,
+  onRemove: genericRemove,
   isUploading,
   fileError,
-  getFileUrl, 
+  getFileUrl,
   getWarrantyInfo
 }) => {
   const navigate = useNavigate();
@@ -77,12 +75,14 @@ const OrderDetail: React.FC<Props> = ({
   const connectivityStatus = useConnectivityStatus();
   const initialLoad = useRef(true);
 
+  const { uploadBase64: uploadWarrantyBase64, deleteFile: deleteWarrantyFile } = useSupabaseStorage({ bucket: 'order-photos' });
+
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationInfo, setConfirmationInfo] = useState({ message: '', action: () => {} });
 
-  const currentJob = useMemo(() => 
-    order.isUnderWarrantyReview && order.warrantyJobs && order.warrantyJobs.length > 0 
-      ? order.warrantyJobs[order.warrantyJobs.length - 1] 
+  const currentJob = useMemo(() =>
+    order.isUnderWarrantyReview && order.warrantyJobs && order.warrantyJobs.length > 0
+      ? order.warrantyJobs[order.warrantyJobs.length - 1]
       : undefined
   , [order.isUnderWarrantyReview, order.warrantyJobs]);
 
@@ -93,7 +93,7 @@ const OrderDetail: React.FC<Props> = ({
   const [clientSignature, setClientSignature] = useLocalStorage<string | null>(`clientSig-${order.id}`, null);
   const [additionalObservations, setAdditionalObservations] = useLocalStorage<string>(`addObs-${order.id}`, '');
   const [currentWarrantyEvidence, setCurrentWarrantyEvidence] = useLocalStorage<(string | Blob)[]>(`warrantyEv-${order.id}`, []);
-  
+
   const [newTask, setNewTask] = useState('');
   const [editingTask, setEditingTask] = useState<{ index: number; text: string } | null>(null);
   const [isWarrantyUploading, setIsWarrantyUploading] = useState(false);
@@ -162,40 +162,39 @@ const OrderDetail: React.FC<Props> = ({
 
   const handleWarrantyImageUpload = async (files: File[]) => {
     if (!files || files.length === 0) return;
-    
+
     setIsWarrantyUploading(true);
     try {
-        const uploadPromises = files.map(async (file) => {
-            const compressedFile = await compressImage(file);
-            if (!compressedFile) throw new Error(`Compression failed for ${file.name}`);
-            
-            if (connectivityStatus.text === 'Online') {
-                const filePath = `orders/${order.id}/warrantyJobs/${Date.now()}_${file.name}`;
-                const storageRef = ref(storage, filePath);
-                const uploadTask = uploadBytesResumable(storageRef, compressedFile);
-                await uploadTask;
-                return getDownloadURL(uploadTask.snapshot.ref);
-            } else {
-                return blobToBase64(compressedFile);
-            }
-        });
+      const uploadPromises = files.map(async (file) => {
+        const compressedFile = await compressImage(file);
+        if (!compressedFile) throw new Error(`Compression failed for ${file.name}`);
 
-        const downloadURLs = await Promise.all(uploadPromises);
-        
-        const lastJobIndex = (order.warrantyJobs?.length || 0) - 1;
-        if (lastJobIndex < 0) return;
+        if (connectivityStatus.text === 'Online') {
+          const filePath = `orders/${order.id}/warrantyJobs/${Date.now()}_${file.name}`;
+          const { url, error } = await uploadWarrantyBase64(filePath, await blobToBase64(compressedFile));
+          if (error) throw new Error(error);
+          return url!;
+        } else {
+          return blobToBase64(compressedFile);
+        }
+      });
 
-        const updatedJobs = JSON.parse(JSON.stringify(order.warrantyJobs));
-        const currentImages = updatedJobs[lastJobIndex].evidenceImages || [];
-        updatedJobs[lastJobIndex].evidenceImages = [...currentImages, ...downloadURLs];
-        
-        await onUpdateOrder({ warrantyJobs: updatedJobs });
-        setCurrentWarrantyEvidence(prev => [...(prev.filter(item => typeof item === 'string')), ...downloadURLs]);
+      const downloadURLs = await Promise.all(uploadPromises);
+
+      const lastJobIndex = (order.warrantyJobs?.length || 0) - 1;
+      if (lastJobIndex < 0) return;
+
+      const updatedJobs = JSON.parse(JSON.stringify(order.warrantyJobs));
+      const currentImages = updatedJobs[lastJobIndex].evidenceImages || [];
+      updatedJobs[lastJobIndex].evidenceImages = [...currentImages, ...downloadURLs];
+
+      await onUpdateOrder({ warrantyJobs: updatedJobs });
+      setCurrentWarrantyEvidence(prev => [...(prev.filter(item => typeof item === 'string')), ...downloadURLs]);
 
     } catch (error) {
-        console.error("Error uploading warranty images:", error);
+      console.error('Error uploading warranty images:', error);
     } finally {
-        setIsWarrantyUploading(false);
+      setIsWarrantyUploading(false);
     }
   };
 
@@ -209,28 +208,28 @@ const OrderDetail: React.FC<Props> = ({
     let newImages: string[];
 
     if (typeof indexOrUrl === 'number') {
-        urlToDelete = jobImages[indexOrUrl];
-        newImages = jobImages.filter((_: string, i: number) => i !== indexOrUrl);
+      urlToDelete = jobImages[indexOrUrl];
+      newImages = jobImages.filter((_: string, i: number) => i !== indexOrUrl);
     } else {
-        urlToDelete = indexOrUrl;
-        newImages = jobImages.filter((url: string) => url !== indexOrUrl);
+      urlToDelete = indexOrUrl;
+      newImages = jobImages.filter((url: string) => url !== indexOrUrl);
     }
-    
+
     if (urlToDelete) {
       try {
-        if (urlToDelete.includes('firebasestorage')) {
-          const fileRef = ref(storage, urlToDelete);
-          await deleteObject(fileRef);
+        if (urlToDelete.includes('supabase.co/storage/v1/object/public')) {
+          const pathToDelete = urlToDelete.split('/public/')[1]?.split('/')?.slice(1).join('/');
+          if (pathToDelete) {
+            await deleteWarrantyFile(pathToDelete);
+          }
         }
-        
+
         updatedJobs[lastJobIndex].evidenceImages = newImages;
         await onUpdateOrder({ warrantyJobs: updatedJobs });
         setCurrentWarrantyEvidence(newImages);
 
       } catch (error: any) {
-        if (error.code !== 'storage/object-not-found') {
-            console.error("Error deleting warranty image:", error);
-        }
+        console.error('Error deleting warranty image:', error);
       }
     }
   };
@@ -262,16 +261,16 @@ const OrderDetail: React.FC<Props> = ({
     if (currentUser?.role !== 'admin') return;
     const newServiceName = prompt('Editar Concepto de Servicio', order.serviceName);
     if (newServiceName && newServiceName.trim() !== '' && newServiceName !== order.serviceName) {
-        try {
-            await onUpdateOrder({ 
-                serviceName: newServiceName.trim(),
-                updatedAt: new Date().toISOString(), // Use ISO string for consistency
-                lastUpdatedBy: currentUser.id,
-            });
-        } catch (error) {
-            console.error("Error updating service name:", error);
-            alert("No se pudo actualizar el concepto del servicio.");
-        }
+      try {
+        await onUpdateOrder({
+          serviceName: newServiceName.trim(),
+          updatedAt: new Date().toISOString(),
+          lastUpdatedBy: currentUser.id,
+        });
+      } catch (error) {
+        console.error('Error updating service name:', error);
+        alert('No se pudo actualizar el concepto del servicio.');
+      }
     }
   };
 
@@ -282,18 +281,18 @@ const OrderDetail: React.FC<Props> = ({
     const remainingMinutes = absMinutes % 60;
     return `${hours}h${remainingMinutes > 0 ? ` ${remainingMinutes}m` : ''}`;
   };
-  
+
   const handleInitiateStart = () => {
     const now = new Date();
     const timeSlot = order.timeSlot && order.timeSlot.match(/^\d{2}:\d{2}$/) ? order.timeSlot : '00:00';
     const scheduledDateTime = new Date(`${order.scheduledDate}T${timeSlot}`);
-    
+
     const action = () => { onStartOrder(); setShowConfirmation(false); };
 
     if (isNaN(scheduledDateTime.getTime())) {
-        setConfirmationInfo({ message: '¿Confirmas el inicio del servicio?', action });
-        setShowConfirmation(true);
-        return;
+      setConfirmationInfo({ message: '¿Confirmas el inicio del servicio?', action });
+      setShowConfirmation(true);
+      return;
     }
 
     const diffMinutes = Math.round((now.getTime() - scheduledDateTime.getTime()) / 60000);
@@ -326,40 +325,40 @@ const OrderDetail: React.FC<Props> = ({
     const { tasks: updatedTasks, observations: updatedObservations, techSig: updatedTechSig, clientSig: updatedClientSig } = updatedData;
 
     const dataToSave = {
-        tasks: updatedTasks !== undefined ? updatedTasks : tasks,
-        observations: updatedObservations !== undefined ? updatedObservations : additionalObservations,
-        techSignature: updatedTechSig !== undefined ? updatedTechSig : techSignature,
-        clientSignature: updatedClientSig !== undefined ? updatedClientSig : clientSignature,
+      tasks: updatedTasks !== undefined ? updatedTasks : tasks,
+      observations: updatedObservations !== undefined ? updatedObservations : additionalObservations,
+      techSignature: updatedTechSig !== undefined ? updatedTechSig : techSignature,
+      clientSignature: updatedClientSig !== undefined ? updatedClientSig : clientSignature,
     };
 
     let draft: Partial<ServiceOrder> = {};
     if (order.isUnderWarrantyReview) {
-        const lastJobIndex = (order.warrantyJobs?.length || 0) - 1;
-        if (lastJobIndex < 0) return;
-        const updatedJobs: WarrantyJob[] = JSON.parse(JSON.stringify(order.warrantyJobs || []));
-        const jobToUpdate = updatedJobs[lastJobIndex];
-        
-        updatedJobs[lastJobIndex] = { 
-            ...jobToUpdate,
-            tasksPerformed: dataToSave.tasks, 
-            additionalComments: dataToSave.observations, 
-            technicianSignature: dataToSave.techSignature, 
-            clientSignature: dataToSave.clientSignature,
-            technicianId: jobToUpdate.technicianId || order.technicianId, 
-        };
-        draft = { warrantyJobs: updatedJobs };
+      const lastJobIndex = (order.warrantyJobs?.length || 0) - 1;
+      if (lastJobIndex < 0) return;
+      const updatedJobs: WarrantyJob[] = JSON.parse(JSON.stringify(order.warrantyJobs || []));
+      const jobToUpdate = updatedJobs[lastJobIndex];
+
+      updatedJobs[lastJobIndex] = {
+        ...jobToUpdate,
+        tasksPerformed: dataToSave.tasks,
+        additionalComments: dataToSave.observations,
+        technicianSignature: dataToSave.techSignature,
+        clientSignature: dataToSave.clientSignature,
+        technicianId: jobToUpdate.technicianId || order.technicianId,
+      };
+      draft = { warrantyJobs: updatedJobs };
     } else {
-        draft = {
-            closingData: { 
-              ...order.closingData,
-              tasksPerformed: dataToSave.tasks, 
-              approverName, 
-              approverId, 
-              technicianSignature: dataToSave.techSignature, 
-              clientSignature: dataToSave.clientSignature,
-              additionalComments: dataToSave.observations 
-            },
-        };
+      draft = {
+        closingData: {
+          ...order.closingData,
+          tasksPerformed: dataToSave.tasks,
+          approverName,
+          approverId,
+          technicianSignature: dataToSave.techSignature,
+          clientSignature: dataToSave.clientSignature,
+          additionalComments: dataToSave.observations
+        },
+      };
     }
     await onUpdateOrder(draft);
   };
@@ -386,8 +385,22 @@ const OrderDetail: React.FC<Props> = ({
     if (!currentUser || !order.warrantyJobs || order.warrantyJobs.length === 0) return;
     const currentJobIndex = order.warrantyJobs.length - 1;
     const updatedJobs = [...order.warrantyJobs];
-    updatedJobs[currentJobIndex] = { ...updatedJobs[currentJobIndex], endTime: new Date().toISOString(), tasksPerformed: tasks, additionalComments: additionalObservations, evidenceImages: currentWarrantyEvidence.filter(e => typeof e === 'string') as string[], technicianSignature: techSignature || null, clientSignature: clientSignature || null };
-    await updateValidated('orders', order.id, { status: OrderStatus.CLOSED, isUnderWarrantyReview: false, warrantyJobs: updatedJobs, warrantyStartTime: null, warrantyEndTime: null }, ServiceOrderSchema);
+    updatedJobs[currentJobIndex] = {
+      ...updatedJobs[currentJobIndex],
+      endTime: new Date().toISOString(),
+      tasksPerformed: tasks,
+      additionalComments: additionalObservations,
+      evidenceImages: currentWarrantyEvidence.filter(e => typeof e === 'string') as string[],
+      technicianSignature: techSignature || null,
+      clientSignature: clientSignature || null
+    };
+    await updateValidated('orders', order.id, {
+      status: OrderStatus.CLOSED,
+      isUnderWarrantyReview: false,
+      warrantyJobs: updatedJobs,
+      warrantyStartTime: null,
+      warrantyEndTime: null
+    }, ServiceOrderSchema);
     cleanupLocalStorage();
     navigate(`/orders/${order.id}`);
   };
@@ -417,7 +430,7 @@ const OrderDetail: React.FC<Props> = ({
 
   const renderContent = () => {
     if (!order || !currentUser) return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin" /></div>;
-    
+
     const warrantyTechnicianId = currentJob?.technicianId;
     const viewTechnician = warrantyTechnicianId ? users.find(u => u.id === warrantyTechnicianId) : technician;
     const totalUploading = isUploading || isWarrantyUploading;
@@ -425,66 +438,66 @@ const OrderDetail: React.FC<Props> = ({
     switch (order.status) {
       case OrderStatus.PENDING:
         return (
-          <OrderPendingView 
+          <OrderPendingView
             order={order} client={client} technician={technician} selectedEquips={equipmentList}
             currentUser={currentUser}
             onStartOrder={handleInitiateStart} onAddEquipment={onAddEquipment!} onRemoveEquipment={onRemoveEquipment}
             onAddClient={onAddClient!} onUnlinkClient={() => handleUnlink('client')}
             onAddTechnician={onAddTechnician} onUnlinkTechnician={() => handleUnlink('technician')}
             onUpdateDescription={(d) => onUpdateOrder({ description: d })}
-            initialPhotos={order.initialPhotos || []} 
+            initialPhotos={order.initialPhotos || []}
             onUpload={(file, type) => masterUploadHandler([file], type as keyof ServiceOrder, true)}
             onRemove={(index, type) => masterRemoveHandler(index, type as keyof ServiceOrder, true)}
-            onSelectImage={onSelectImage} getEvidenceUrl={getFileUrl} 
-            isUploading={totalUploading} isDeleting={isDeleting} onDestroyOrder={handleDeleteOrderAndImages} 
-            canUpdate={permissions.canUpdate} canDelete={permissions.canDelete} canAssign={permissions.canAssign} 
-            canStart={permissions.canStart} canReschedule={permissions.canReschedule} 
+            onSelectImage={onSelectImage} getEvidenceUrl={getFileUrl}
+            isUploading={totalUploading} isDeleting={isDeleting} onDestroyOrder={handleDeleteOrderAndImages}
+            canUpdate={permissions.canUpdate} canDelete={permissions.canDelete} canAssign={permissions.canAssign}
+            canStart={permissions.canStart} canReschedule={permissions.canReschedule}
             canUploadInitialEvidence={permissions.canUploadInitialEvidence}
           />
         );
       case OrderStatus.OPEN:
         return (
-           <OrderInProgressView 
-            order={order} 
-            client={client} 
-            technician={viewTechnician} 
+           <OrderInProgressView
+            order={order}
+            client={client}
+            technician={viewTechnician}
             equipmentList={equipmentList}
-            isDeleting={isDeleting} 
+            isDeleting={isDeleting}
             isUploading={totalUploading}
-            onAddClient={onAddClient!} 
+            onAddClient={onAddClient!}
             onUnlinkClient={() => handleUnlink('client')}
-            onAddEquipment={onAddEquipment!} 
+            onAddEquipment={onAddEquipment!}
             onRemoveEquipment={onRemoveEquipment}
             onAddTechnician={onAddTechnician}
-            tasks={tasks} 
-            newTask={newTask} 
+            tasks={tasks}
+            newTask={newTask}
             setNewTask={setNewTask}
             addTask={handleAddTask}
             removeTask={handleRemoveTask}
-            editingTask={editingTask} 
+            editingTask={editingTask}
             onEditTask={(index: number) => setEditingTask({ index, text: tasks[index] })}
             onUpdateTask={handleUpdateTask}
-            onCancelEdit={() => setEditingTask(null)} 
+            onCancelEdit={() => setEditingTask(null)}
             setEditingTask={setEditingTask}
-            techSignature={techSignature} 
+            techSignature={techSignature}
             setTechSignature={(sig) => { setTechSignature(sig); handleSaveDraft({ techSig: sig }); }}
-            clientSignature={clientSignature} 
+            clientSignature={clientSignature}
             setClientSignature={(sig) => { setClientSignature(sig); handleSaveDraft({ clientSig: sig }); }}
-            onSelectImage={onSelectImage} 
+            onSelectImage={onSelectImage}
             getEvidenceUrl={getFileUrl}
-            additionalObservations={additionalObservations} 
+            additionalObservations={additionalObservations}
             setAdditionalObservations={(obs) => { setAdditionalObservations(obs); handleSaveDraft({ observations: obs }); }}
             onSaveDraft={() => handleSaveDraft({ observations: additionalObservations, tasks: tasks })}
-            onDestroyOrder={handleDeleteOrderAndImages} 
+            onDestroyOrder={handleDeleteOrderAndImages}
             onRestartOrder={handleRestartOrder}
-            canUpdate={permissions.canUpdate} 
-            canDelete={permissions.canDelete} 
-            canRestart={permissions.canRestart} 
+            canUpdate={permissions.canUpdate}
+            canDelete={permissions.canDelete}
+            canRestart={permissions.canRestart}
             canAssign={permissions.canAssign}
             isUnderWarrantyReview={order.isUnderWarrantyReview || false}
-            approverName={approverName} 
+            approverName={approverName}
             setApproverName={setApproverName}
-            approverId={approverId} 
+            approverId={approverId}
             setApproverId={setApproverId}
             initialPhotos={order.initialPhotos || []}
             currentWarrantyEvidence={currentWarrantyEvidence}
@@ -498,11 +511,11 @@ const OrderDetail: React.FC<Props> = ({
         );
       case OrderStatus.CLOSED:
          return (
-          <OrderSummaryView 
+          <OrderSummaryView
             order={order} client={client} technician={technician} selectedEquips={equipmentList} users={users}
             currentUser={currentUser} generatePDF={generatePDF} isGeneratingPdf={isGeneratingPdf} isDeleting={isDeleting}
             pdfProgress={pdfProgress} handleDeleteOrderAndImages={handleDeleteOrderAndImages}
-            onSelectImage={onSelectImage} onUpdateOrder={onUpdateOrder} 
+            onSelectImage={onSelectImage} onUpdateOrder={onUpdateOrder}
             onUpload={(files, type) => masterUploadHandler(files, type, true)}
             onRemove={(index, type) => masterRemoveHandler(index, type, true)}
             isUploading={totalUploading} fileError={fileError} getWarrantyInfo={getWarrantyInfo}

@@ -1,15 +1,15 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
-import { db } from '../../services/firebase';
-import { collection, getDocs, addDoc, updateDoc, doc, Timestamp, deleteDoc, writeBatch, query, where } from 'firebase/firestore';
+import { useData } from '../../context/DataContext';
+import { useCollection } from '../../hooks/useCollection';
 import { X, Loader, CheckCircle, Trash2, AlertTriangle, ArrowRight } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 
 // --- TIPOS ---
 type User = { id: string; name: string; role: string; };
-type TransactionData = { id: string; recipientId: string; amount: number; method: string; createdAt: Timestamp; transactionGroupId?: string; };
+type TransactionData = { id: string; recipientId: string; amount: number; method: string; createdAt: string; transactionGroupId?: string; };
 type AccountType = 'Efectivo' | 'Transferencia';
 
 const SELF_TRANSFER_ID = '__SELF__';

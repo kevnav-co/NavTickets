@@ -1,28 +1,29 @@
 
 import React, { useState, useMemo, useRef } from 'react';
-import { writeBatch, doc, collection } from 'firebase/firestore';
-import { db } from '../../services/firebase';
 import { Client } from '../../types';
-import { 
-  Sparkles, XCircle, TrendingDown, Crown, ListFilter, UploadCloud, 
+import {
+  Sparkles, XCircle, TrendingDown, Crown, ListFilter, UploadCloud,
   Loader2, CheckSquare, Square, FileSpreadsheet, UserPlus, RefreshCw
 } from 'lucide-react';
 
-import { 
-  AnalyzedProduct, AnalyzedClient, ClientDiff, AnalysisType 
+import {
+  AnalyzedProduct, AnalyzedClient, ClientDiff, AnalysisType
 } from '../../types/intelligence';
 import { mapExcelToProduct } from '../../utils/productUtils';
+import { useData } from '../../context/DataContext';
 
 interface IntelligenceEngineProps {
   clients: Client[] | null;
 }
 
 const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
+  const { addItem, updateItem } = useData();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // ...
   const [analysisData, setAnalysisData] = useState<{ type: AnalysisType, items: any[] } | null>(null);
   const [processingStatus, setProcessingStatus] = useState<'idle' | 'reading' | 'analyzing'>('idle');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [isUploadingFirebase, setIsUploadingFirebase] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [filterVIPOnly, setFilterVIPOnly] = useState(false);
   const [filterNotAddedOnly, setFilterNotAddedOnly] = useState(false);
   const [filterNeedsUpdateOnly, setFilterNeedsUpdateOnly] = useState(false);
@@ -186,18 +187,15 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
 
   const handleUploadSelected = async () => {
     if (!analysisData || selectedIds.size === 0) return;
-    setIsUploadingFirebase(true);
+    setIsUploading(true);
     const itemsToUpload = analysisData.items.filter(item => selectedIds.has(item.id));
-    const batch = writeBatch(db);
     let newClientsCount = 0;
     let updatedClientsCount = 0;
 
     try {
         if (analysisData.type === 'clients') {
-            const coll = collection(db, 'clients');
-            itemsToUpload.forEach((client: AnalyzedClient) => {
+            for (const client of itemsToUpload) {
                 if (client.needsUpdate && client.dbClient?.id) {
-                    const ref = doc(db, 'clients', client.dbClient.id);
                     const updatedFields: { [key: string]: any } = {};
                     if (client.diff?.telefono) updatedFields.contact = client.telefono;
                     if (client.diff?.email) updatedFields.email = client.email;
@@ -208,24 +206,36 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                     }
 
                     if (Object.keys(updatedFields).length > 0) {
-                        batch.update(ref, updatedFields);
+                        await updateItem('clients', client.dbClient.id, updatedFields);
                         updatedClientsCount++;
                     }
                 } else if (!client.existsInDB) {
-                    const ref = doc(coll);
-                    batch.set(ref, { id: ref.id, name: client.nombre, identification: client.identificacion, contact: client.telefono, email: client.email, address: client.direccion ? `${client.direccion}, ${client.ciudad}` : client.ciudad, createdAt: new Date().toISOString() });
+                    await addItem('clients', {
+                        name: client.nombre,
+                        identification: client.identificacion,
+                        contact: client.telefono,
+                        email: client.email,
+                        address: client.direccion ? `${client.direccion}, ${client.ciudad}` : client.ciudad,
+                        createdAt: new Date().toISOString()
+                    });
                     newClientsCount++;
                 }
-            });
+            }
         } else {
-            const coll = collection(db, 'equipment');
-            itemsToUpload.forEach((prod: AnalyzedProduct) => {
-                const ref = doc(coll);
-                batch.set(ref, { id: ref.id, name: prod.descripcion, serialNumber: prod.codigo, description: `Categoría: ${prod.categoria}`, clientId: '', status: 'Activa', voltage: '110V', location: 'Bodega', createdAt: new Date().toISOString(), maintenanceFrequency: 6 });
-            });
+            for (const prod of itemsToUpload) {
+                await addItem('equipment', {
+                    name: prod.descripcion,
+                    serialNumber: prod.codigo,
+                    description: `Categoría: ${prod.categoria}`,
+                    clientId: '',
+                    status: 'Activa',
+                    voltage: '110V',
+                    location: 'Bodega',
+                    createdAt: new Date().toISOString(),
+                    maintenanceFrequency: 6
+                });
+            }
         }
-        
-        await batch.commit();
 
         let successMessage = "Sincronización exitosa.\n";
         if (newClientsCount > 0) successMessage += `${newClientsCount} nuevos clientes agregados.\n`;
@@ -237,11 +247,11 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
 
         alert(successMessage);
         closeAnalysis();
-    } catch (error) { 
+    } catch (error) {
         console.error("Error al guardar en la base de datos:", error);
-        alert("Error al guardar en la base de datos."); 
-    } finally { 
-        setIsUploadingFirebase(false); 
+        alert("Error al guardar en la base de datos.");
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -413,7 +423,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                 </div>
             </div>
         </div>
-        {selectedIds.size > 0 && (<div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in"><button onClick={handleUploadSelected} disabled={isUploadingFirebase} className="bg-primary text-white pl-6 pr-8 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-4">{(isUploadingFirebase ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={18} />)}<span>Sincronizar {selectedIds.size}</span></button></div>)}
+        {selectedIds.size > 0 && (<div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 fade-in"><button onClick={handleUploadSelected} disabled={isUploading} className="bg-primary text-white pl-6 pr-8 py-4 rounded-full font-black text-xs uppercase tracking-widest shadow-2xl flex items-center gap-4">{(isUploading ? <Loader2 size={20} className="animate-spin" /> : <UploadCloud size={18} />)}<span>Sincronizar {selectedIds.size}</span></button></div>)}
     </div>
   );
 }

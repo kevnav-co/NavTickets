@@ -1,13 +1,9 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-// NOTA: Firebase Messaging se reemplazará por OneSignal en Fase 5.
-// Por ahora se mantiene para compatibilidad con notificaciones existentes.
-import { getToken, onMessage } from "firebase/messaging";
-import { getMessagingInstance } from './services/firebase';
 import { ChangePasswordModal } from './components/layout/ChangePasswordModal';
 import SignatureModal from './components/ui/SignatureModal';
-import { TransferModal } from './components/Account/TransferModal'; 
+import { TransferModal } from './components/Account/TransferModal';
 import { ExpenseModal } from './components/Account/ExpenseModal';
 import { AnnulmentConfirmModal } from './components/Account/AnnulmentConfirmModal';
 import { DesktopSidebar } from './components/layout/DesktopSidebar';
@@ -30,7 +26,7 @@ import PERMISSIONS, { hasPermission } from './permissions';
 
 // --- LAZY LOADED COMPONENTS ---
 const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
-const Tasks = React.lazy(() => import('./components/task/Tasks')); 
+const Tasks = React.lazy(() => import('./components/task/Tasks'));
 const Accounting = React.lazy(() => import('./components/Account/Accounting'));
 const OrderList = React.lazy(() => import('./components/order/OrderList'));
 const ClientManager = React.lazy(() => import('./components/client/ClientManager'));
@@ -48,7 +44,6 @@ const ClientMap = React.lazy(() => import('./components/map/ClientMap'));
 const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
 
 // --- CONSTANTS AND INTERFACES ---
-const VAPID_KEY = "BED4eP1e3O95scTlqCDXrsjCwM9FOoD4Z0WURxk7H5QDUgG4v43-ik1Mpt8jqSSr9sD8qpQLko-an14f1obSyTI";
 const GPS_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutes
 
 interface BeforeInstallPromptEvent extends Event {
@@ -85,90 +80,6 @@ function App() {
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  // --- FCM: Silent token refresh (only if permission already granted) ---
-  // iOS Safari requires Notification.requestPermission() to be triggered by a user gesture.
-  // If permission is already 'granted' (from a previous session), we silently refresh the token.
-  // If not, we defer the permission request to a button click in Header.tsx.
-  useEffect(() => {
-    const configPush = async () => {
-      // Verificar sesión con Supabase en lugar de Firebase auth
-      const { data: { session } } = await import('./services/supabase').then(m => m.supabase.auth.getSession());
-      if (!currentUser || !isInternetAvailable || !session?.user) return;
-      if (typeof Notification === 'undefined') return;
-
-      try {
-        // Only silently refresh token if permission was ALREADY granted
-        if (Notification.permission === 'granted') {
-          const msgInstance = await getMessagingInstance();
-          if (!msgInstance) return;
-
-          // Wait for SW with timeout (iOS can be slow on first load)
-          const swReady = await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise<null>((resolve) => setTimeout(() => resolve(null), 8000)),
-          ]);
-          if (!swReady) {
-            console.warn('[FCM] configPush: SW not ready after 8s.');
-          }
-
-          // Retry token retrieval
-          let token: string | null = null;
-          for (let attempt = 1; attempt <= 2; attempt++) {
-            try {
-              token = await getToken(msgInstance, { 
-                vapidKey: VAPID_KEY,
-                serviceWorkerRegistration: swReady || undefined
-              });
-              if (token) break;
-            } catch (tokenErr) {
-              console.warn(`[FCM] configPush token attempt ${attempt}/2:`, tokenErr);
-              if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
-            }
-          }
-
-          if (token && token !== currentUser.fcmToken) {
-            await updateItem('users', currentUser.id, { fcmToken: token });
-          }
-        }
-      } catch (err) { console.warn("FCM Token Error:", err); }
-    };
-    configPush();
-  }, [currentUser, isInternetAvailable, updateItem]);
-
-  // --- FCM: Foreground message handler ---
-  useEffect(() => {
-    let unsubscribe: (() => void) | undefined;
-
-    const setupForegroundMessages = async () => {
-      const msgInstance = await getMessagingInstance();
-      if (!msgInstance) return;
-
-      unsubscribe = onMessage(msgInstance, (payload) => {
-        console.log("[FCM] Message received in foreground:", payload);
-        if (Notification.permission === 'granted') {
-          const notification = new Notification(payload.notification?.title || 'Notificación', {
-            body: payload.notification?.body,
-            icon: 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f',
-            data: payload.data
-          });
-
-          notification.onclick = (event) => {
-            event.preventDefault();
-            window.focus();
-            const path = payload.data?.path;
-            if (path) {
-              window.location.hash = path;
-            }
-            notification.close();
-          };
-        }
-      });
-    };
-
-    setupForegroundMessages();
-    return () => { unsubscribe?.(); };
   }, []);
 
   useEffect(() => {

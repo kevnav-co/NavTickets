@@ -1,51 +1,50 @@
-import { getStorage, ref, deleteObject } from 'firebase/storage';
-import { doc, deleteDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import { supabase } from './supabase';
 import { ServiceOrder } from '../types';
 
 /**
- * Elimina una orden de servicio y toda la evidencia de imágenes asociada a ella en Firebase Storage.
- * @param order El objeto de la orden de servicio a eliminar.
+ * Deletes a service order and all associated evidence images from Supabase Storage.
+ *
+ * The function extracts storage paths from any string URLs that appear in the
+ * order's evidence arrays, deletes those files from the 'order-photos' bucket,
+ * and then deletes the order record from the 'orders' table.
  */
 export const deleteOrderWithEvidence = async (order: ServiceOrder): Promise<void> => {
-  const storage = getStorage();
-
-  // 1. Recopilar todas las URIs de la evidencia de la orden.
+  // Gather any string URLs that look like Supabase public URLs.
   const evidenceItems = [
     ...(order.initialEvidence || []),
     ...(order.closingData?.evidenceImages || []),
   ];
 
-  // CORRECCIÓN: Filtramos para quedarnos solo con los elementos que son strings (URLs de Firebase).
-  // Los Blobs locales no necesitan ser eliminados de Storage, por lo que los ignoramos.
-  const storageUris = evidenceItems.filter(
-    (item): item is string => typeof item === 'string' && item.includes('firebasestorage.googleapis.com')
+  const storageUrls = evidenceItems.filter(
+    (item): item is string => typeof item === 'string' && item.includes('supabase.co/storage/v1/object/public')
   );
 
-  // 2. Crear promesas para eliminar cada archivo de Storage.
-  const deletePromises = storageUris.map(uri => {
+  // Convert URLs to bucket paths.
+  const pathsToDelete = storageUrls.map(url => {
     try {
-      const fileRef = ref(storage, uri);
-      return deleteObject(fileRef);
-    } catch (error) { 
-      console.error('Error creando referencia de storage para eliminar:', error);
-      return Promise.resolve();
+      const [, bucket, ...rest] = url.split('/public/');
+      // After '/public/' we have '<bucket>/<path>'. Return the path portion.
+      const parts = rest[0].split('/');
+      // Remove the bucket name (first part) and join the rest as path.
+      parts.shift(); // remove bucket name
+      return parts.join('/');
+    } catch {
+      // If parsing fails, fallback to the whole URL (delete will error silently).
+      return url;
     }
   });
 
-  // 3. Ejecutar todas las promesas de eliminación.
-  const results = await Promise.allSettled(deletePromises);
-  results.forEach(result => {
-    if (result.status === 'rejected') {
-      console.warn('No se pudo eliminar un archivo de evidencia:', result.reason);
+  if (pathsToDelete.length > 0) {
+    const { error } = await supabase.storage.from('order-photos').remove(pathsToDelete);
+    if (error) {
+      console.warn('Failed to delete some evidence files from Supabase Storage:', error.message);
     }
-  });
-
-  // 4. Una vez eliminada la evidencia, eliminar el documento de la orden en Firestore.
-  if (db) {
-    await deleteDoc(doc(db, 'orders', order.id));
-    console.log(`Orden ${order.id} y su evidencia han sido eliminadas.`);
-  } else {
-    throw new Error("Firestore no está inicializado.");
   }
+
+  // Delete the order record from Supabase.
+  const { error: dbError } = await supabase.from('orders').delete().eq('id', order.id);
+  if (dbError) {
+    throw new Error(`Failed to delete order ${order.id}: ${dbError.message}`);
+  }
+  console.log(`Order ${order.id} and its evidence have been deleted.`);
 };

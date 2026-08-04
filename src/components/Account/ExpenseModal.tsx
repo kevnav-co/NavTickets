@@ -2,8 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
-import { db } from '../../services/firebase';
-import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { useData } from '../../context/DataContext';
 import { X, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
 import CurrencyInput from 'react-currency-input-field';
 
@@ -19,6 +18,7 @@ const toDateTimeLocal = (date: Date): string => {
 export const ExpenseModal: React.FC = () => {
   const { currentUser } = useAuth();
   const { isModalOpen, closeModal, modalData } = useModal();
+  const { addItem } = useData();
   const isOpen = isModalOpen('expense');
   const balances = modalData?.balances; // CORRECCIÓN: Acceso directo a los datos del modal
 
@@ -99,11 +99,11 @@ export const ExpenseModal: React.FC = () => {
         concept,
         amount,
         origin,
-        createdAt: Timestamp.fromDate(new Date(dateTime)),
+        createdAt: new Date(dateTime).toISOString(),
     };
 
     try {
-      await addDoc(collection(db, collectionName), data);
+      await addItem(collectionName, data);
       setSuccess(true);
       setTimeout(() => resetState(true), 1500);
 

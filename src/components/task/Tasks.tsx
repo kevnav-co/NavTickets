@@ -1,26 +1,21 @@
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  Plus, Check, ChevronDown, ChevronRight, 
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import {
+  Plus, Check, ChevronDown, ChevronRight,
   Bell, Calendar, Repeat, X, User as UserIcon, Users, FileText, Search,
   LayoutGrid, LayoutList, Loader2, Mic, MicOff, CalendarDays
 } from 'lucide-react';
-import { 
-  collection, addDoc, query, onSnapshot, 
-  updateDoc, deleteDoc, doc, where
-} from 'firebase/firestore';
-import { db } from '../../services/firebase';
 import { Task } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { TaskDetailModal } from './TaskDetailModal';
 import { TaskSchema } from '../../schemas/task.schema';
-import { z } from 'zod';
+import { useCollection } from '../../hooks/useCollection';
 
 const Tasks: React.FC = () => {
   const { currentUser } = useAuth();
   const { users } = useData();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { addItem, updateItem, deleteItem } = useData();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showCompleted, setShowCompleted] = useState(false);
@@ -31,21 +26,24 @@ const Tasks: React.FC = () => {
   const recognitionRef = useRef<any>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    const q = query(collection(db, "tasks"), where('participants', 'array-contains', currentUser.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-        const tasksData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
-        tasksData.sort((a, b) => {
-            if (a.completed === b.completed) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            return a.completed ? 1 : -1;
-        });
-        setTasks(tasksData);
+  // Use useCollection for reactive tasks data
+  const { data: tasks, loading } = useCollection<Task>('tasks', {
+    filters: currentUser ? [{ column: 'participants', operator: 'contains', value: currentUser.id }] : [],
+    realtime: true,
+    enabled: !!currentUser,
+  });
+
+  // Sort tasks: active first, then by createdAt desc
+  const sortedTasks = useMemo(() => {
+    if (!tasks) return [];
+    return [...tasks].sort((a, b) => {
+      if (a.completed === b.completed) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      return a.completed ? 1 : -1;
     });
-    return () => unsubscribe();
-  }, [currentUser]);
+  }, [tasks]);
 
   useEffect(() => {
+    // ...
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
@@ -70,7 +68,7 @@ const Tasks: React.FC = () => {
           return;
       }
       try {
-          await addDoc(collection(db, "tasks"), result.data);
+          await addItem('tasks', result.data);
           setNewTaskTitle('');
       } catch (error) {
           console.error("Error adding task: ", error);
@@ -111,7 +109,7 @@ const Tasks: React.FC = () => {
           return;
       }
       try {
-          await updateDoc(doc(db, "tasks", id), result.data);
+          await updateItem('tasks', id, result.data);
       } catch (error) {
           console.error("Error updating task: ", error);
       }
@@ -119,14 +117,14 @@ const Tasks: React.FC = () => {
 
   const handleDeleteTask = async (id: string) => {
       try {
-          await deleteDoc(doc(db, "tasks", id));
+          await deleteItem('tasks', id);
           if (selectedTask?.id === id) setSelectedTask(null);
       } catch (error) {
           console.error("Error deleting task: ", error);
       }
   };
 
-  const filteredTasks = useMemo(() => tasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase())), [tasks, searchQuery]);
+  const filteredTasks = useMemo(() => sortedTasks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase())), [sortedTasks, searchQuery]);
   const activeTasks = filteredTasks.filter(t => !t.completed);
   const completedTasks = filteredTasks.filter(t => t.completed);
   const hasFilteredTasks = filteredTasks.length > 0;
@@ -176,7 +174,7 @@ const Tasks: React.FC = () => {
     );
   };
 
-  if (!users || !currentUser) {
+  if (!users || !currentUser || loading) {
       return (
           <div className="flex items-center justify-center h-full">
               <Loader2 className="animate-spin text-gray-300" size={48} />

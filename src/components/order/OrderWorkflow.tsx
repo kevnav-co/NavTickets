@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { ServiceOrder, OrderStatus, Client, User } from '../../types';
@@ -13,13 +12,12 @@ import ClientSearchModal from '../shared/ClientSearchModal';
 import EquipmentSelectorModal from '../shared/EquipmentSelectorModal';
 import UserSearchModal from '../shared/UserSearchModal';
 import { Loader2 } from 'lucide-react';
-import { storage } from '../../services/firebase';
-import { ref, listAll, deleteObject } from 'firebase/storage';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
 import { useCollection } from '../../hooks/useCollection';
-import { where } from 'firebase/firestore';
+import { QueryFilter } from '../../hooks/useSupabaseQuery';
 import PERMISSIONS, { hasPermission } from '../../permissions';
+import { supabase } from '../../services/supabase';
 
 const OrderWorkflow: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -34,13 +32,14 @@ const OrderWorkflow: React.FC = () => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [pdfProgress, setPdfProgress] = useState(0);
-  const [notification, setNotification] = useState<{ show: boolean, title: string, message: string }>({ show: false, title: '', message: '' });
+  const [notification, setNotification] = useState<{ show: boolean; title: string; message: string }>({ show: false, title: '', message: '' });
   const [showEquipmentSelector, setShowEquipmentSelector] = useState(false);
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
 
+  // Use Supabase QueryFilters instead of Firestore QueryConstraints
   const { data: orders, loading: orderLoading, error: orderError } = useCollection<ServiceOrder>('orders', {
-    constraints: id ? [where('__name__', '==', id)] : [],
+    filters: id ? [{ column: 'id', operator: 'eq', value: id }] : [],
   });
 
   const order = useMemo(() => (orders && orders.length > 0 ? orders[0] : undefined), [orders]);
@@ -71,74 +70,95 @@ const OrderWorkflow: React.FC = () => {
   const handleStartOrder = useCallback(async () => {
     if (order) {
       await updateValidated('orders', order.id, { status: OrderStatus.OPEN, startTime: new Date().toISOString() }, ServiceOrderSchema);
-      sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+      sessionStorage.removeItem('accountingOrdersCache');
     }
   }, [order, updateValidated]);
 
   const handleCompleteOrder = useCallback(async (closingData: Partial<ServiceOrder>) => {
     if (!order) return;
     await completeOrderAndUpdateEquipment(order, closingData);
-    sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+    sessionStorage.removeItem('accountingOrdersCache');
     navigate(`/orders/${order.id}`);
   }, [order, completeOrderAndUpdateEquipment, navigate]);
-  
+
   const handleDeleteOrderAndImages = useCallback(async () => {
-    if (!order || !window.confirm("¿Estás seguro de que quieres eliminar esta orden? Esta acción es irreversible y borrará todos los datos y fotos asociadas.")) return;
+    if (!order || !window.confirm('¿Estás seguro de que quieres eliminar esta orden? Esta acción es irreversible y borrará todos los datos y fotos asociadas.')) return;
     setIsDeleting(true);
     try {
-      const orderFolderRef = ref(storage, `orders/${order.id}`);
-      const res = await listAll(orderFolderRef);
-      const deleteFilePromises = res.items.map(itemRef => deleteObject(itemRef));
-      const deleteFolderPromises = res.prefixes.map(async (folderRef) => {
-        const folderItems = await listAll(folderRef);
-        const folderFilePromises = folderItems.items.map(itemRef => deleteObject(itemRef));
-        return Promise.all(folderFilePromises);
-      });
-      await Promise.all([...deleteFilePromises, ...deleteFolderPromises.flat()]);
+      // Delete order evidence images from Supabase Storage
+      const evidenceItems = [
+        ...(order.initialEvidence || []),
+        ...(order.closingData?.evidenceImages || []),
+      ];
+      const storageUrls = evidenceItems.filter(
+        (item): item is string => typeof item === 'string' && item.includes('supabase.co/storage/v1/object/public')
+      );
+
+      if (storageUrls.length > 0) {
+        const pathsToDelete = storageUrls.map(url => {
+          try {
+            const [, rest] = url.split('/public/');
+            const parts = rest[0].split('/');
+            parts.shift();
+            return parts.join('/');
+          } catch {
+            return null;
+          }
+        }).filter(Boolean) as string[];
+
+        if (pathsToDelete.length > 0) {
+          const { error: storageError } = await supabase.storage.from('order-photos').remove(pathsToDelete);
+          if (storageError) {
+            console.warn('Failed to delete some evidence files from Supabase Storage:', storageError.message);
+          }
+        }
+      }
+
+      // Delete the order record from Supabase
       await deleteItem('orders', order.id);
-      sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+      sessionStorage.removeItem('accountingOrdersCache');
       navigate('/orders');
     } catch (error) {
-      console.error("Error deleting order:", error);
-      setNotification({ show: true, title: "Error Crítico", message: "No se pudo eliminar la orden o sus archivos." });
+      console.error('Error deleting order:', error);
+      setNotification({ show: true, title: 'Error Crítico', message: 'No se pudo eliminar la orden o sus archivos.' });
     } finally {
       setIsDeleting(false);
     }
   }, [order, deleteItem, navigate]);
-  
+
   const handleClientUpdate = useCallback(async (selectedClient: Client) => {
     if (order) {
-        await updateValidated('orders', order.id, {
-            clientId: selectedClient.id,
-            clientName: selectedClient.name, // Add clientName on update
-            equipmentIds: []
-        }, ServiceOrderSchema);
-        sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+      await updateValidated('orders', order.id, {
+        clientId: selectedClient.id,
+        clientName: selectedClient.name,
+        equipmentIds: [],
+      }, ServiceOrderSchema);
+      sessionStorage.removeItem('accountingOrdersCache');
     }
     setShowClientSearch(false);
   }, [order, updateValidated]);
 
   const handleUserUpdate = useCallback(async (selectedUser: User) => {
     if (order) {
-        await updateValidated('orders', order.id, { technicianId: selectedUser.id }, ServiceOrderSchema);
-        sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+      await updateValidated('orders', order.id, { technicianId: selectedUser.id }, ServiceOrderSchema);
+      sessionStorage.removeItem('accountingOrdersCache');
     }
     setShowUserSearch(false);
   }, [order, updateValidated]);
 
   const handleEquipmentUpdate = useCallback(async (ids: string[]) => {
-    if(order) {
-        await updateValidated('orders', order.id, { equipmentIds: ids }, ServiceOrderSchema);
-        sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+    if (order) {
+      await updateValidated('orders', order.id, { equipmentIds: ids }, ServiceOrderSchema);
+      sessionStorage.removeItem('accountingOrdersCache');
     }
     setShowEquipmentSelector(false);
   }, [order, updateValidated]);
-  
+
   const handleRemoveEquipment = useCallback(async (equipmentId: string) => {
     if (order) {
       const updatedEquipmentIds = order.equipmentIds?.filter(id => id !== equipmentId) || [];
       await updateValidated('orders', order.id, { equipmentIds: updatedEquipmentIds }, ServiceOrderSchema);
-      sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
+      sessionStorage.removeItem('accountingOrdersCache');
     }
   }, [order, updateValidated]);
 
@@ -149,33 +169,33 @@ const OrderWorkflow: React.FC = () => {
 
   const handleGeneratePDF = useCallback(async (action: 'download' | 'share' | 'view') => {
     if (!order || !client || !technician) {
-      setNotification({ show: true, title: "Datos Incompletos", message: "Falta información de la orden, cliente o técnico." });
+      setNotification({ show: true, title: 'Datos Incompletos', message: 'Falta información de la orden, cliente o técnico.' });
       return;
     }
     setIsGeneratingPdf(true);
     try {
-        const { generateServiceActa } = await import('../../utils/pdfGenerator');
-        const pdfParams = {
-            order,
-            client,
-            technician,
-            selectedEquips,
-            tasks: order.closingData?.tasksPerformed || [],
-            additionalComments: order.closingData?.additionalComments || '',
-            approverName: order.closingData?.approverName || client.name,
-            approverId: order.closingData?.approverId || client.identification || '',
-            techSignature: technician.signature || null,
-            clientSignature: order.closingData?.clientSignature || null,
-            setPdfProgress,
-            setNotification,
-        };
-        await generateServiceActa(pdfParams, action);
+      const { generateServiceActa } = await import('../../utils/pdfGenerator');
+      const pdfParams = {
+        order,
+        client,
+        technician,
+        selectedEquips,
+        tasks: order.closingData?.tasksPerformed || [],
+        additionalComments: order.closingData?.additionalComments || '',
+        approverName: order.closingData?.approverName || client.name,
+        approverId: order.closingData?.approverId || client.identification || '',
+        techSignature: technician.signature || null,
+        clientSignature: order.closingData?.clientSignature || null,
+        setPdfProgress,
+        setNotification,
+      };
+      await generateServiceActa(pdfParams, action);
     } catch (error) {
-        console.error("Failed to load or run PDF generator", error);
-        setNotification({ show: true, title: "Error", message: "No se pudo cargar el generador de PDF." });
+      console.error('Failed to load or run PDF generator', error);
+      setNotification({ show: true, title: 'Error', message: 'No se pudo cargar el generador de PDF.' });
     } finally {
-        setIsGeneratingPdf(false);
-        setPdfProgress(0);
+      setIsGeneratingPdf(false);
+      setPdfProgress(0);
     }
   }, [order, client, technician, selectedEquips]);
 

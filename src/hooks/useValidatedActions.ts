@@ -1,11 +1,10 @@
 import { useCallback } from 'react';
 import { z } from 'zod';
-import { useFirestoreActions } from './useFirestoreActions';
-import { DocumentData } from 'firebase/firestore';
+import { useData } from '../context/DataContext';
 
 /**
- * Hook que envuelve useFirestoreActions con validación Zod.
- * Garantiza que todos los datos escritos a Firestore cumplan
+ * Hook que envuelve useData (Supabase) con validación Zod.
+ * Garantiza que todos los datos escritos cumplan
  * con los schemas definidos en src/schemas/.
  *
  * Uso:
@@ -14,14 +13,14 @@ import { DocumentData } from 'firebase/firestore';
  *   await updateValidated('orders', id, partialData, ServiceOrderSchema);
  */
 export const useValidatedActions = () => {
-  const { addItem, updateItem, deleteItem } = useFirestoreActions();
+  const { addItem, updateItem, deleteItem } = useData();
 
   /**
    * Agrega un documento validándolo contra un schema Zod.
    * Si la validación falla, lanza un error con los detalles.
    */
   const addValidated = useCallback(
-    async <T extends DocumentData>(
+    async <T extends Record<string, any>>(
       collectionName: string,
       data: T,
       schema: z.ZodSchema<T>
@@ -46,13 +45,13 @@ export const useValidatedActions = () => {
    * Usa .partial() para permitir actualizaciones con solo algunos campos.
    */
   const updateValidated = useCallback(
-    async <T extends DocumentData>(
+    async <T extends Record<string, any>>(
       collectionName: string,
       id: string,
       data: Partial<T>,
       schema: z.ZodSchema<T>
     ): Promise<void> => {
-      const partialSchema = schema.partial() as z.ZodSchema<Partial<T>>;
+      const partialSchema = (schema as z.ZodObject<any>).partial() as z.ZodSchema<Partial<T>>;
       const result = partialSchema.safeParse(data);
       if (!result.success) {
         const issues = result.error.issues
@@ -73,7 +72,7 @@ export const useValidatedActions = () => {
    * Útil cuando quieres manejar el error tú mismo en lugar de un try/catch.
    */
   const addValidatedSafe = useCallback(
-    async <T extends DocumentData>(
+    async <T extends Record<string, any>>(
       collectionName: string,
       data: T,
       schema: z.ZodSchema<T>
@@ -87,10 +86,10 @@ export const useValidatedActions = () => {
         const id = await addItem(collectionName, result.data);
         return { success: true, id };
       } catch (err) {
-        console.error(`[Validation] Error Firestore al crear en "${collectionName}":`, err);
+        console.error(`[Validation] Error de BD al crear en "${collectionName}":`, err);
         return {
           success: false,
-          errors: [{ path: ['firestore'], message: 'Error al guardar en la base de datos', code: 'firestore_error' } as z.ZodIssue],
+          errors: [{ path: ['supabase'], message: 'Error al guardar en la base de datos', code: 'supabase_error' } as unknown as z.ZodIssue],
         };
       }
     },

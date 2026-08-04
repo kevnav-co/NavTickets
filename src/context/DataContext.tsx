@@ -1,7 +1,6 @@
-
-import React, { createContext, useContext, useMemo, useCallback, useEffect, useState } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
 import { Client, ServiceOrder, Equipment, User, AppNotification, OrderStatus } from '../types';
-import { useSupabaseQuery, snakeToCamel } from '../hooks/useSupabaseQuery';
+import { useSupabaseQuery } from '../hooks/useSupabaseQuery';
 import { useSupabaseActions } from '../hooks/useSupabaseActions';
 import { useSupabaseStorage } from '../hooks/useSupabaseStorage';
 import { useSyncManager } from '../hooks/useSyncManager';
@@ -26,7 +25,7 @@ interface DataContextType {
   uploadFile: (file: File, path: string) => Promise<string>;
   forceRefresh: () => void;
   completeOrderAndUpdateEquipment: (order: ServiceOrder, closingData: Partial<ServiceOrder>) => Promise<void>;
-  pendingWrites: number;
+  pendingCount: number;
   isSyncing: boolean;
 }
 
@@ -38,11 +37,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Queries reactivas con Supabase + offline cache ────────────────────
   const hasSession = !!currentUser;
-  const companiesQuery = useSupabaseQuery<any>('companies', {
-    table: 'companies',
-    realtime: false,
-    forceOffline: !hasSession,
-  });
   const clientsQuery = useSupabaseQuery<Client>('clients', {
     table: 'clients',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
@@ -69,7 +63,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const notificationsQuery = useSupabaseQuery<AppNotification>('notifications', {
     table: 'notifications',
-    filters: [{ column: 'user_id', operator: 'eq', value: companyId }], // filtered server-side
+    filters: [{ column: 'user_id', operator: 'eq', value: companyId }],
     realtime: true,
     forceOffline: !hasSession,
   });
@@ -77,10 +71,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ─── CRUD con cola offline ─────────────────────────────────────────────
   const { addItem: addItemRaw, updateItem: updateItemRaw, deleteItem: deleteItemRaw } = useSupabaseActions();
   const { uploadFile: uploadFileRaw, isUploading } = useSupabaseStorage({ bucket: 'order-photos' });
-  const { pendingWrites, isSyncing } = useSyncManager();
+  const { pendingCount, isSyncing } = useSyncManager();
 
   // ─── Loading combinado ──────────────────────────────────────────────────
-  const loading = !hasSession ? false : (
+  const loading = hasSession && (
     clientsQuery.loading || ordersQuery.loading || equipmentQuery.loading || usersQuery.loading
   );
   const error = clientsQuery.error || ordersQuery.error || equipmentQuery.error || usersQuery.error;
@@ -117,26 +111,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── Complete order + update equipment maintenance ─────────────────────
   const completeOrderAndUpdateEquipment = useCallback(async (order: ServiceOrder, closingData: Partial<ServiceOrder>) => {
-    if (!order || !order.id) {
-      throw new Error("Invalid order data provided.");
-    }
-
+    if (!order?.id) throw new Error('Invalid order data');
     const endTime = new Date().toISOString();
-    const finalOrderData = {
-      ...closingData,
-      status: OrderStatus.CLOSED,
-      endTime: endTime,
-    };
-
+    const finalOrderData = { ...closingData, status: OrderStatus.CLOSED, endTime };
     await updateItemRaw('orders', order.id, finalOrderData);
-
-    if (order.equipmentIds && order.equipmentIds.length > 0) {
-      const equipmentUpdatePromises = order.equipmentIds.map(equipmentId => {
-        return updateItemRaw('equipment', equipmentId, {
-          lastMaintenanceDate: endTime.split('T')[0]
-        });
-      });
-      await Promise.all(equipmentUpdatePromises);
+    if (order.equipmentIds?.length) {
+      await Promise.all(order.equipmentIds.map(equipmentId =>
+        updateItemRaw('equipment', equipmentId, { lastMaintenanceDate: endTime.split('T')[0] })
+      ));
     }
   }, [updateItemRaw]);
 
@@ -163,14 +145,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     uploadFile,
     forceRefresh,
     completeOrderAndUpdateEquipment,
-    pendingWrites,
+    pendingCount,
     isSyncing,
   }), [
     clientsQuery.data, ordersQuery.data, equipmentQuery.data, usersQuery.data, notificationsQuery.data,
     loading, error, isUploading, isSyncing,
     getClientById, getOrderById, getEquipmentById,
     addItem, updateItem, deleteItem, uploadFile, forceRefresh, completeOrderAndUpdateEquipment,
-    pendingWrites, refreshKey,
+    pendingCount, refreshKey,
   ]);
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
@@ -178,8 +160,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useData = (): DataContextType => {
   const context = useContext(DataContext);
-  if (context === undefined) {
-    throw new Error('useData must be used within a DataProvider');
-  }
+  if (!context) throw new Error('useData must be used within a DataProvider');
   return context;
 };

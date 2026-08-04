@@ -4,55 +4,41 @@ import { useValidatedActions } from './useValidatedActions';
 import { ServiceOrderSchema } from '../schemas/order.schema';
 import { EquipmentSchema } from '../schemas/equipment.schema';
 import { useConnectivityStatus } from './useConnectivityStatus';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { storage } from '../services/firebase';
+import { useSupabaseStorage } from './useSupabaseStorage';
 
-// Helper function to recursively find base64 strings and their paths
-const findBase64Fields = (obj: any, path: string[] = []): { path: string[], value: string }[] => {
-  let results: { path: string[], value: string }[] = [];
-  
+// Helper function to recursively find base64 strings and their paths in an object.
+const findBase64Fields = (obj: any, path: string[] = []): { path: string[]; value: string }[] => {
+  const results: { path: string[]; value: string }[] = [];
   if (!obj || typeof obj !== 'object') return results;
 
   for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      const value = obj[key];
-      const currentPath = [...path, key];
-      
-      if (typeof value === 'string' && value.startsWith('data:image/')) {
-        results.push({ path: currentPath, value });
-      } else if (Array.isArray(value)) {
-        value.forEach((item, index) => {
-          if (typeof item === 'string' && item.startsWith('data:image/')) {
-            results.push({ path: [...currentPath, String(index)], value: item });
-          } else if (typeof item === 'object') {
-            results = [...results, ...findBase64Fields(item, [...currentPath, String(index)])];
-          }
-        });
-      } else if (typeof value === 'object') {
-        results = [...results, ...findBase64Fields(value, currentPath)];
-      }
+    if (!Object.prototype.hasOwnProperty.call(obj, key)) continue;
+    const value = obj[key];
+    const currentPath = [...path, key];
+    if (typeof value === 'string' && value.startsWith('data:image/')) {
+      results.push({ path: currentPath, value });
+    } else if (Array.isArray(value)) {
+      value.forEach((item, idx) => {
+        if (typeof item === 'string' && item.startsWith('data:image/')) {
+          results.push({ path: [...currentPath, String(idx)], value: item });
+        } else if (typeof item === 'object') {
+          results.push(...findBase64Fields(item, [...currentPath, String(idx)]));
+        }
+      });
+    } else if (typeof value === 'object') {
+      results.push(...findBase64Fields(value, currentPath));
     }
   }
-  
   return results;
 };
 
-// Helper function to set a value at a specific path in an object
+// Helper to set a nested value in an immutable way.
 const setNestedValue = (obj: any, path: string[], value: any): any => {
   if (path.length === 0) return value;
-  
-  const [currentKey, ...remainingPath] = path;
-  
-  if (Array.isArray(obj)) {
-    const newArr = [...obj];
-    const index = parseInt(currentKey, 10);
-    newArr[index] = setNestedValue(newArr[index], remainingPath, value);
-    return newArr;
-  } else {
-    const newObj = { ...obj };
-    newObj[currentKey] = setNestedValue(newObj[currentKey], remainingPath, value);
-    return newObj;
-  }
+  const [head, ...rest] = path;
+  const clone = Array.isArray(obj) ? [...obj] : { ...obj };
+  clone[head] = setNestedValue(clone[head], rest, value);
+  return clone;
 };
 
 export const useBackgroundSync = () => {
@@ -61,106 +47,84 @@ export const useBackgroundSync = () => {
   const { updateValidated } = useValidatedActions();
   const [isSyncing, setIsSyncing] = useState(false);
 
+  // Supabase storage hooks for the appropriate buckets.
+  const orderStorage = useSupabaseStorage({ bucket: 'order-photos' });
+  const equipmentStorage = useSupabaseStorage({ bucket: 'equipment-photos' });
+
   const syncBase64ToStorage = useCallback(async () => {
     if (connectionText !== 'Online' || isSyncing) return;
-    
     setIsSyncing(true);
-    
     try {
-      // 1. Check Orders
+      // 1. Sync Orders
       for (const order of orders) {
         const base64Fields = findBase64Fields(order);
-        
-        if (base64Fields.length > 0) {
-          console.log(`Syncing offline images for order ${order.id}...`);
-          let updatedOrder = { ...order };
-          let hasChanges = false;
-          
-          for (const field of base64Fields) {
-            try {
-              // Extract the root field name (e.g. 'photos' or 'signature')
-              const rootFieldName = field.path[0];
-              const filePath = `orders/${order.id}/${rootFieldName}/${Date.now()}_sync.jpg`;
-              const storageRef = ref(storage, filePath);
-              
-              // Upload the base64 string
-              const snapshot = await uploadString(storageRef, field.value, 'data_url');
-              const downloadURL = await getDownloadURL(snapshot.ref);
-              
-              // Update the object path with the new URL
-              updatedOrder = setNestedValue(updatedOrder, field.path, downloadURL);
-              hasChanges = true;
-            } catch (err) {
-              console.error(`Failed to upload base64 image for order ${order.id} at path ${field.path.join('.')}:`, err);
-            }
+        if (!base64Fields.length) continue;
+        console.log(`Syncing offline images for order ${order.id}...`);
+        let updatedOrder = { ...order };
+        let hasChanges = false;
+        for (const field of base64Fields) {
+          try {
+            const rootField = field.path[0];
+            const filePath = `orders/${order.id}/${rootField}/${Date.now()}_sync.jpg`;
+            const { url, error } = await orderStorage.uploadBase64(filePath, field.value);
+            if (error) throw new Error(error);
+            updatedOrder = setNestedValue(updatedOrder, field.path, url);
+            hasChanges = true;
+          } catch (e) {
+            console.error(`Failed to upload base64 for order ${order.id} at ${field.path.join('.')}:`, e);
           }
-          
-          if (hasChanges) {
-            // Determine which root fields changed to construct the update object
-            const updates: any = {};
-            base64Fields.forEach(field => {
-              const rootKey = field.path[0];
-              updates[rootKey] = updatedOrder[rootKey as keyof typeof updatedOrder];
-            });
-            
-            await updateValidated('orders', order.id, updates, ServiceOrderSchema);
-            console.log(`Successfully synced order ${order.id} to cloud storage.`);
-          }
+        }
+        if (hasChanges) {
+          const updates: any = {};
+          base64Fields.forEach(f => {
+            const root = f.path[0];
+            updates[root] = updatedOrder[root as keyof typeof updatedOrder];
+          });
+          await updateValidated('orders', order.id, updates, ServiceOrderSchema);
+          console.log(`Successfully synced order ${order.id}`);
         }
       }
 
-      // 2. Check Equipment
+      // 2. Sync Equipment
       for (const equip of equipment) {
         const base64Fields = findBase64Fields(equip);
-        
-        if (base64Fields.length > 0) {
-          console.log(`Syncing offline images for equipment ${equip.id}...`);
-          let updatedEquip = { ...equip };
-          let hasChanges = false;
-          
-          for (const field of base64Fields) {
-            try {
-              const rootFieldName = field.path[0];
-              const filePath = `equipment/${equip.id}/${rootFieldName}/${Date.now()}_sync.jpg`;
-              const storageRef = ref(storage, filePath);
-              
-              const snapshot = await uploadString(storageRef, field.value, 'data_url');
-              const downloadURL = await getDownloadURL(snapshot.ref);
-              
-              updatedEquip = setNestedValue(updatedEquip, field.path, downloadURL);
-              hasChanges = true;
-            } catch (err) {
-              console.error(`Failed to upload base64 image for equipment ${equip.id} at path ${field.path.join('.')}:`, err);
-            }
-          }
-          
-          if (hasChanges) {
-            const updates: any = {};
-            base64Fields.forEach(field => {
-              const rootKey = field.path[0];
-              updates[rootKey] = updatedEquip[rootKey as keyof typeof updatedEquip];
-            });
-            
-            await updateValidated('equipment', equip.id, updates, EquipmentSchema);
-            console.log(`Successfully synced equipment ${equip.id} to cloud storage.`);
+        if (!base64Fields.length) continue;
+        console.log(`Syncing offline images for equipment ${equip.id}...`);
+        let updatedEquip = { ...equip };
+        let hasChanges = false;
+        for (const field of base64Fields) {
+          try {
+            const rootField = field.path[0];
+            const filePath = `equipment/${equip.id}/${rootField}/${Date.now()}_sync.jpg`;
+            const { url, error } = await equipmentStorage.uploadBase64(filePath, field.value);
+            if (error) throw new Error(error);
+            updatedEquip = setNestedValue(updatedEquip, field.path, url);
+            hasChanges = true;
+          } catch (e) {
+            console.error(`Failed to upload base64 for equipment ${equip.id} at ${field.path.join('.')}:`, e);
           }
         }
+        if (hasChanges) {
+          const updates: any = {};
+          base64Fields.forEach(f => {
+            const root = f.path[0];
+            updates[root] = updatedEquip[root as keyof typeof updatedEquip];
+          });
+          await updateValidated('equipment', equip.id, updates, EquipmentSchema);
+          console.log(`Successfully synced equipment ${equip.id}`);
+        }
       }
-    } catch (error) {
-      console.error('Error in background sync:', error);
+    } catch (err) {
+      console.error('Error in background sync:', err);
     } finally {
       setIsSyncing(false);
     }
-  }, [orders, equipment, connectionText, isSyncing, updateValidated]);
+  }, [orders, equipment, connectionText, isSyncing, updateValidated, orderStorage, equipmentStorage]);
 
-  // Run the sync when online, but debounce/throttle it
+  // Trigger sync when coming online.
   useEffect(() => {
     if (connectionText === 'Online' && (orders.length > 0 || equipment.length > 0)) {
-      // Small timeout to not block the main thread immediately upon connection
-      const timer = setTimeout(() => {
-        syncBase64ToStorage();
-      }, 5000); // Wait 5 seconds after coming online or data changes
-      
+      const timer = setTimeout(() => syncBase64ToStorage(), 5000);
       return () => clearTimeout(timer);
     }
   }, [connectionText, orders, equipment, syncBase64ToStorage]);

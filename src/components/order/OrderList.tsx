@@ -1,14 +1,13 @@
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { OrderStatus, ServiceOrder, User } from '../../types'; 
+import { OrderStatus, ServiceOrder, User } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { getWarrantyInfo } from '../../utils/warranty';
 import { Search, Calendar, ChevronRight, Plus, Cog, LayoutGrid, LayoutList, Building2, Filter, HardHat, Clock, TriangleAlert, ShieldCheck } from 'lucide-react';
 import PERMISSIONS, { hasPermission, ROLES } from '../../permissions';
 import { usePaginatedCollection } from '../../hooks/usePaginatedCollection';
-import { where, orderBy, QueryConstraint } from 'firebase/firestore';
+import { QueryFilter } from '../../hooks/useSupabaseQuery';
 
 const LoadingSpinner: React.FC = () => (
   <div className="flex justify-center items-center">
@@ -41,31 +40,31 @@ const OrderList: React.FC = () => {
     else setActiveTab(OrderStatus.PENDING);
   }, [searchParams]);
 
-  const constraints = useMemo(() => {
-    const q: QueryConstraint[] = [];
+  const filters = useMemo(() => {
+    const q: QueryFilter[] = [];
     if (activeTab === 'Warranty') {
-      q.push(where('status', '==', OrderStatus.CLOSED));
+      q.push({ column: 'status', operator: 'eq', value: OrderStatus.CLOSED });
     } else if (activeTab !== 'All') {
-      q.push(where('status', '==', activeTab));
+      q.push({ column: 'status', operator: 'eq', value: activeTab });
     }
     if (currentUser && hasPermission(currentUser.role, PERMISSIONS.VIEW_ALL_ORDERS)) {
       if (filterTechId !== 'all') {
-        q.push(where('technicianId', '==', filterTechId));
+        q.push({ column: 'technician_id', operator: 'eq', value: filterTechId });
       }
     } else if (currentUser) {
-      q.push(where('technicianId', '==', currentUser.id));
+      q.push({ column: 'technician_id', operator: 'eq', value: currentUser.id });
     }
     if (dateFilter !== 'all') {
       const today = new Date();
       const currentIsoDate = today.toISOString().split('T')[0];
       if (dateFilter === 'today') {
-        q.push(where('scheduledDate', '==', currentIsoDate));
+        q.push({ column: 'scheduled_date', operator: 'eq', value: currentIsoDate });
       } else if (dateFilter === 'month') {
         const startOfMonth = currentIsoDate.substring(0, 7) + '-01';
         const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
         const startOfNextMonth = nextMonth.toISOString().split('T')[0];
-        q.push(where('scheduledDate', '>=', startOfMonth));
-        q.push(where('scheduledDate', '<', startOfNextMonth));
+        q.push({ column: 'scheduled_date', operator: 'gte', value: startOfMonth });
+        q.push({ column: 'scheduled_date', operator: 'lt', value: startOfNextMonth });
       } else if (dateFilter === 'week') {
         const d = new Date(today);
         const day = d.getDay();
@@ -73,21 +72,19 @@ const OrderList: React.FC = () => {
         const monday = new Date(d.setDate(diff));
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
-        q.push(where('scheduledDate', '>=', monday.toISOString().split('T')[0]));
-        q.push(where('scheduledDate', '<=', sunday.toISOString().split('T')[0]));
+        q.push({ column: 'scheduled_date', operator: 'gte', value: monday.toISOString().split('T')[0] });
+        q.push({ column: 'scheduled_date', operator: 'lte', value: sunday.toISOString().split('T')[0] });
       }
     }
-    q.push(orderBy('priority', 'desc'));
-    q.push(orderBy('scheduledDate', 'desc'));
     return q;
   }, [activeTab, filterTechId, dateFilter, currentUser]);
 
   const { data: orders, loading, loadingMore, hasMore, error, refresh, loadMore } = usePaginatedCollection<ServiceOrder>(
     'orders',
-    { constraints }
+    { filters, orderBy: [{ column: 'priority', ascending: false }, { column: 'scheduled_date', ascending: false }] }
   );
 
-  useEffect(() => { refresh(); }, [constraints]);
+  useEffect(() => { refresh(); }, [filters]);
 
   const getClientName = useCallback((id: string | undefined) => clients.find(c => c.id === id)?.name || 'N/A', [clients]);
   const getTechName = useCallback((id: string | undefined) => users.find(u => u.id === id)?.name || 'N/A', [users]);
@@ -111,7 +108,7 @@ const OrderList: React.FC = () => {
     }
     return result;
   }, [orders, activeTab, query, getClientName, getTechName]);
-  
+
   const getEquipmentNames = useCallback((ids: string[] | undefined) => {
     if (!ids || ids.length === 0) return 'N/A';
     if (ids.length === 1) return equipment.find(e => e.id === ids[0])?.name || 'N/A';
@@ -148,7 +145,7 @@ const OrderList: React.FC = () => {
             </div>
             <input type="text" placeholder="Buscar..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
-          
+
           {hasPermission(currentUser?.role, PERMISSIONS.VIEW_ALL_ORDERS) && (
              <div className={`relative h-12 w-12 flex-shrink-0 border rounded-xl shadow-sm flex items-center justify-center ${filterTechId !== 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-500 border-gray-200'}`}>
                <HardHat size={20} />
@@ -226,7 +223,7 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, viewMode, getCl
   const { priority = 'Baja', status, startTime, endTime, scheduledDate, timeSlot } = order;
   const isClosed = status === OrderStatus.CLOSED;
   const isInProgress = status === OrderStatus.OPEN;
-  
+
   const isTechnician = userRole === ROLES.TECHNICIAN;
 
   const priorityStyles = { Urgente: { icon: 'text-red-500', text: 'text-red-700' }, Alta: { icon: 'text-orange-500', text: 'text-orange-700' }, Media: { icon: 'text-yellow-500', text: 'text-yellow-700' }, Baja: { icon: 'text-green-500', text: 'text-green-700' } };
@@ -254,7 +251,7 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, viewMode, getCl
           <div className="flex items-start gap-2.5"><Building2 size={14} className="text-blue-500 flex-shrink-0 mt-0.5" /><span className="font-semibold text-gray-700 whitespace-normal">{getClientName(order.clientId)}</span></div>
           <div className="flex items-start gap-2.5"><Cog size={14} className="text-gray-400 flex-shrink-0 mt-0.5" /><span className="font-semibold text-gray-700 whitespace-normal">{getEquipmentNames(order.equipmentIds)}</span></div>
         </div>
-        
+
         <div className={`py-3 grid grid-cols-3 gap-2 ${viewMode === 'list' ? 'text-sm' : 'text-xs'} ${!isTechnician ? 'border-y border-gray-100' : ''}`}>
           {isClosed && startTime ? (
             <>
@@ -270,7 +267,7 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, viewMode, getCl
             </>
           )}
         </div>
-        
+
         {!isTechnician && (
           <div className="flex items-center pt-3 mt-auto">
             <div className="flex items-center gap-2">
