@@ -2,9 +2,11 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import tailwindcss from '@tailwindcss/vite';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const isAnalyze = process.env.ANALYZE === 'true';
 
   const define = {
     'import.meta.env.VITE_FIREBASE_API_KEY': JSON.stringify(env.VITE_FIREBASE_API_KEY),
@@ -105,11 +107,17 @@ export default defineConfig(({ mode }) => {
             }
           ]
         },
+      }),
+      isAnalyze && visualizer({
+        filename: 'dist/stats.html',
+        open: true,
+        gzipSize: true,
+        brotliSize: true,
       })
     ],
     define: define,
     build: {
-      outDir: 'dist', 
+      outDir: 'dist',
       assetsDir: 'assets',
       emptyOutDir: true,
       sourcemap: false,
@@ -117,8 +125,18 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 2000,
       rollupOptions: {
         output: {
-          // Las cargas dinámicas (React.lazy y await import()) ya hacen el trabajo duro.
-          // Dejamos que el motor de Vite (Rollup) optimice automáticamente las relaciones entre librerías.
+          manualChunks: {
+            // Heavy libraries - loaded on demand
+            'vendor-xlsx': ['xlsx'],
+            'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
+            'vendor-html2canvas': ['html2canvas'],
+            'vendor-recharts': ['recharts'],
+            'vendor-leaflet': ['leaflet', 'react-leaflet'],
+            'vendor-supabase': ['@supabase/supabase-js'],
+            'vendor-date-fns': ['date-fns'],
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-zod': ['zod'],
+          },
         },
       },
     },

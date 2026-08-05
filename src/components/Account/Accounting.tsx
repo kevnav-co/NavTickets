@@ -1,7 +1,6 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { ChevronLeft, ChevronRight, Plus, Wallet, Users, ArrowRightLeft, ChevronDown, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Wallet, Users, ArrowRightLeft, ChevronDown, RotateCcw, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
 import { useData } from '../../context/DataContext';
@@ -11,9 +10,12 @@ import { Movement, User, Transaction, Expense, Income, GroupedMovements } from '
 import { MovementItem } from './MovementItem';
 import { UserMovementsModal } from './UserMovementsModal';
 
+// Lazy-loaded Chart component to defer recharts bundle
+const WeeklyChart = lazy(() => import('./WeeklyChart'));
+
 // --- FUNCIONES DE AYUDA ---
-const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-const getStartOfWeek = (date: Date) => {
+export const isSameDay = (d1: Date, d2: Date) => d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+export const getStartOfWeek = (date: Date) => {
   const d = new Date(date);
   const day = d.getDay();
   const diff = d.getDate() - day;
@@ -21,15 +23,15 @@ const getStartOfWeek = (date: Date) => {
   d.setHours(0, 0, 0, 0);
   return d;
 };
-const getEndOfWeek = (date: Date) => {
+export const getEndOfWeek = (date: Date) => {
     const start = getStartOfWeek(date);
     start.setDate(start.getDate() + 6);
     start.setHours(23, 59, 59, 999);
     return start;
 }
-const getStartOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
+export const getStartOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
 
-const formatGroupDate = (dateString: string) => {
+export const formatGroupDate = (dateString: string) => {
     const date = new Date(`${dateString}T12:00:00Z`);
     const today = new Date();
     const yesterday = new Date();
@@ -41,7 +43,7 @@ const formatGroupDate = (dateString: string) => {
     return new Intl.DateTimeFormat('es-CO', { weekday: 'long', day: 'numeric', month: 'long' }).format(date);
 };
 
-const formatWeekRange = (date: Date) => {
+export const formatWeekRange = (date: Date) => {
     const start = getStartOfWeek(date);
     const end = getEndOfWeek(date);
     const startMonth = new Intl.DateTimeFormat('es-CO', { month: 'short' }).format(start);
@@ -290,39 +292,6 @@ const Accounting: React.FC = () => {
     }, {} as GroupedMovements);
   }, [historyFilteredMovements, currentUser?.id]);
 
-  const chartData = useMemo(() => {
-    const startOfWeek = getStartOfWeek(currentDate);
-    const endOfWeek = getEndOfWeek(currentDate);
-    const weekMovements = currentUserMovements.filter(mov => {
-        const movDate = new Date(mov.createdAt);
-        return movDate >= startOfWeek && movDate <= endOfWeek;
-    });
-    const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-    const data = days.map(name => ({ name, Ingresos: 0, Egresos: 0 }));
-    weekMovements.forEach(mov => {
-        const dayIndex = new Date(mov.createdAt).getDay();
-        const amount = mov.amount;
-        switch(mov.movementType) {
-            case 'income': data[dayIndex].Ingresos += amount; break;
-            case 'expense': data[dayIndex].Egresos += amount; break;
-            case 'transaction':
-                 if (mov.transactionGroupId) {
-                    if(mov.concept.startsWith('Mov. desde')) {
-                        data[dayIndex].Ingresos += amount;
-                    } else {
-                        data[dayIndex].Egresos += amount;
-                    }
-                 } else if (mov.recipientId === currentUser?.id) {
-                    data[dayIndex].Ingresos += amount;
-                 } else if (mov.senderId === currentUser?.id) {
-                    data[dayIndex].Egresos += amount;
-                 }
-                 break;
-        }
-    });
-    return data;
-  }, [currentUserMovements, currentDate, currentUser?.id]);
-
   return (
     <>
     <div className="p-4 md:p-6 bg-gray-100 min-h-screen pb-32">
@@ -390,23 +359,15 @@ const Accounting: React.FC = () => {
             </div>
         </div>
         {!isChartCollapsed && (
-            <div className="mt-4 animate-fade-in-fast" style={{ width: '100%', height: 200 }}>
-              {loading ? <p className="text-center text-gray-500 text-sm">Cargando datos...</p> : (
-                <ResponsiveContainer>
-                    <BarChart data={chartData} margin={{ top: 5, right: 5, left: -25, bottom: -5 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                        <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `${Number(value) / 1000}k`} />
-                        <Tooltip 
-                            wrapperStyle={{ fontSize: '12px' }} 
-                            formatter={(value: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(value)} 
-                        />
-                        <Legend wrapperStyle={{ fontSize: '10px' }} iconSize={10} />
-                        <Bar dataKey="Ingresos" fill="#22c55e" radius={[2, 2, 0, 0]} />
-                        <Bar dataKey="Egresos" fill="#ef4444" radius={[2, 2, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
-              )}
+            <div className="mt-4 animate-fade-in-fast">
+              <Suspense fallback={<div className="h-20 flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-700" /></div>}>
+                <WeeklyChart
+                  currentUserMovements={currentUserMovements}
+                  currentDate={currentDate}
+                  currentUserId={currentUser?.id}
+                  loading={loading}
+                />
+              </Suspense>
             </div>
         )}
       </div>

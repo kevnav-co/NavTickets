@@ -1,15 +1,15 @@
-
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { OrderStatus, Equipment } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  Search, Plus, Copy, LayoutGrid, LayoutList, 
+import {
+  Search, Plus, Copy, LayoutGrid, LayoutList,
   X, Settings, Building2, Hash, Clock
 } from 'lucide-react';
 import { addMonths, differenceInCalendarDays } from 'date-fns';
 import PERMISSIONS, { hasPermission } from '../../permissions';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 type EnrichedEquipment = Equipment & {
   clientName: string;
@@ -18,8 +18,8 @@ type EnrichedEquipment = Equipment & {
   nextMaintenance?: string;
 };
 
-const EquipmentCloneModal: React.FC<{ 
-  equipment: EnrichedEquipment[]; 
+const EquipmentCloneModal: React.FC<{
+  equipment: EnrichedEquipment[];
   onSelect: (equipment: EnrichedEquipment) => void;
   onClose: () => void;
 }> = ({ equipment, onSelect, onClose }) => {
@@ -87,15 +87,15 @@ const EquipmentManager: React.FC = () => {
   const enrichedEquipment = useMemo<EnrichedEquipment[]>(() => {
     return equipment.map(e => {
       const nextMaintDate = e.lastMaintenanceDate && e.maintenanceFrequency ? addMonths(new Date(e.lastMaintenanceDate), e.maintenanceFrequency) : undefined;
-      
+
       const associatedOrders = orders.filter(o => Array.isArray(o.equipmentIds) && o.equipmentIds.includes(e.id));
 
-      return { 
-        ...e, 
-        clientName: getClientName(e.clientId), 
-        orderCount: associatedOrders.length, 
-        activeOrderCount: associatedOrders.filter(o => o.status !== OrderStatus.CLOSED).length, 
-        nextMaintenance: nextMaintDate ? nextMaintDate.toISOString().split('T')[0] : undefined 
+      return {
+        ...e,
+        clientName: getClientName(e.clientId),
+        orderCount: associatedOrders.length,
+        activeOrderCount: associatedOrders.filter(o => o.status !== OrderStatus.CLOSED).length,
+        nextMaintenance: nextMaintDate ? nextMaintDate.toISOString().split('T')[0] : undefined
       };
     });
   }, [equipment, orders, getClientName]);
@@ -104,7 +104,7 @@ const EquipmentManager: React.FC = () => {
     if (!dateString) {
       return { colorClass: 'text-gray-400', statusBarColor: 'bg-gray-400', days: null };
     }
-    
+
     const today = new Date();
     today.setHours(0,0,0,0);
     const nextDate = new Date(dateString + 'T00:00:00');
@@ -117,12 +117,12 @@ const EquipmentManager: React.FC = () => {
 
   const filteredEquipment = useMemo(() => {
     let prefiltered = [...enrichedEquipment];
-    
+
     if (searchTerm) {
       const lowercasedTerm = searchTerm.toLowerCase();
       prefiltered = prefiltered.filter(e => e.name.toLowerCase().includes(lowercasedTerm) || (e.serialNumber || '').toLowerCase().includes(lowercasedTerm) || e.clientName.toLowerCase().includes(lowercasedTerm));
     }
-    
+
     let filtered;
     if (filter === 'expired') {
         const today = new Date();
@@ -183,7 +183,7 @@ const EquipmentManager: React.FC = () => {
                 return b.activeOrderCount - a.activeOrderCount;
             }
         }
-        
+
         return a.name.localeCompare(b.name);
     });
 
@@ -194,7 +194,7 @@ const EquipmentManager: React.FC = () => {
     const { id, serialNumber, clientName, orderCount, activeOrderCount, nextMaintenance, ...cloneData } = equipmentToClone;
     navigate('/equipment/new', { state: { ...cloneData, serialNumber: '' } });
   };
-  
+
   const handleItemClick = (item: Equipment) => {
     navigate(`/equipment/${item.id}`);
   };
@@ -221,6 +221,108 @@ const EquipmentManager: React.FC = () => {
     navigate('/equipment/new', { state: { serialNumber: newSerialNumber } });
   };
 
+  // Virtualized list setup
+  const parentRef = useRef<HTMLDivElement>(null);
+  const ITEM_HEIGHT = viewMode === 'list' ? 140 : 50; // Estimate for equipment cards
+
+  const virtualizer = useVirtualizer({
+    count: filteredEquipment.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ITEM_HEIGHT,
+    overscan: 5,
+  });
+
+  // Card components
+  const EquipmentCardGrid: React.FC<{ item: EnrichedEquipment; onClick: () => void }> = React.memo(({ item, onClick }) => {
+    const maintenance = getMaintenanceInfo(item.nextMaintenance);
+    return (
+      <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
+        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${maintenance.statusBarColor}`} />
+        <div className="p-3 pl-4 flex-grow flex flex-col">
+          <div className="flex items-start gap-3 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center">
+              <Settings className="text-primary" size={16} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-bold text-sm text-gray-800 uppercase leading-snug truncate">{item.name}</h3>
+              <div className="flex items-center gap-1.5">
+                {maintenance.days !== null ? (
+                  <div className={`flex items-center gap-1 text-[10px] font-bold ${maintenance.colorClass}`}>
+                    <Clock size={10} />
+                    <span>
+                      {maintenance.days > 0
+                        ? `Vence en ${maintenance.days}d`
+                        : (maintenance.days === 0 ? 'Vence Hoy' : `Venció hace ${-maintenance.days}d`)
+                      }
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                    <Clock size={10} />
+                    <span>Sin fecha</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="pl-10 text-xs text-gray-600 space-y-1 mb-2">
+            <div className="flex items-center gap-2">
+              <Hash size={11} className="text-gray-400" />
+              <span className="font-mono">{item.serialNumber || 'S/N'}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Building2 size={11} className="text-gray-400" />
+              <span className="leading-snug truncate font-semibold">{item.clientName}</span>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-100 mt-auto pt-2 flex justify-between items-center">
+            <span className="text-[10px] font-bold uppercase text-gray-400">Servicios</span>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.activeOrderCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
+              {item.activeOrderCount > 0 ? `${item.activeOrderCount} Activo(s)` : `${item.orderCount} Total`}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  });
+
+  const EquipmentCardList: React.FC<{ item: EnrichedEquipment; onClick: () => void }> = React.memo(({ item, onClick }) => {
+    const maintenance = getMaintenanceInfo(item.nextMaintenance);
+    return (
+      <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent p-4 pl-5 flex items-center gap-4">
+        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${maintenance.statusBarColor}`} />
+        <div className="w-8 h-8 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center">
+          <Settings className="text-primary" size={18} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-base text-gray-800 uppercase leading-snug truncate">{item.name}</h3>
+          <div className="flex items-center gap-2 text-sm">
+            {maintenance.days !== null ? (
+              <span className={`flex items-center gap-1 font-bold ${maintenance.colorClass}`}>
+                <Clock size={14} />
+                {maintenance.days > 0
+                  ? `Vence en ${maintenance.days}d`
+                  : (maintenance.days === 0 ? 'Vence Hoy' : `Venció hace ${-maintenance.days}d`)
+                }
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 font-bold text-gray-400"><Clock size={14} />Sin fecha</span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+          <span className="flex items-center gap-1"><Hash size={14} className="text-gray-400" />{item.serialNumber || 'S/N'}</span>
+          <span className="flex items-center gap-1"><Building2 size={14} className="text-gray-400" />{item.clientName}</span>
+        </div>
+        <div className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.activeOrderCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
+          {item.activeOrderCount > 0 ? `${item.activeOrderCount} Activo(s)` : `${item.orderCount} Total`}
+        </div>
+      </div>
+    );
+  });
+
   return (
     <div className="w-full h-full max-w-7xl mx-auto">
       {showCloneModal && <EquipmentCloneModal equipment={enrichedEquipment} onClose={() => setShowCloneModal(false)} onSelect={handleSelectToClone} />}
@@ -228,15 +330,15 @@ const EquipmentManager: React.FC = () => {
         <div className="flex gap-2 mb-3">
             <div className="relative flex-1">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Search className="text-gray-400" size={18} /></div>
-                <input 
-                    type="text" 
-                    placeholder="Buscar máquinas..." 
+                <input
+                    type="text"
+                    placeholder="Buscar máquinas..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full h-12 bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 />
             </div>
-            <button 
+            <button
                 onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
                 className="h-12 w-12 flex-shrink-0 bg-white border border-gray-200 rounded-xl text-gray-500 shadow-sm flex items-center justify-center hover:bg-gray-100 transition-colors"
                 title={viewMode === 'list' ? "Cambiar a Cuadrícula" : "Cambiar a Lista"}
@@ -267,63 +369,75 @@ const EquipmentManager: React.FC = () => {
             <h2 className="font-bold text-gray-800">Parque de Máquinas</h2>
             <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded-lg">{filteredEquipment.length}</span>
         </div>
-        
+
         {filteredEquipment.length > 0 ? (
-             <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "grid grid-cols-1 gap-3"}>
-                {filteredEquipment.map(item => {
-                    const maintenance = getMaintenanceInfo(item.nextMaintenance);
-                    return (
-                        <div key={item.id} onClick={() => handleItemClick(item)} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
-                            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${maintenance.statusBarColor}`} />
-                            <div className="p-3 pl-4 flex-grow flex flex-col">
-                                <div className="flex items-start gap-3 mb-2">
-                                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center">
-                                        <Settings className="text-primary" size={16} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-sm text-gray-800 uppercase leading-snug truncate">{item.name}</h3>
-                                        <div className="flex items-center gap-1.5">
-                                            {maintenance.days !== null ? (
-                                                <div className={`flex items-center gap-1 text-[10px] font-bold ${maintenance.colorClass}`}>
-                                                    <Clock size={10} />
-                                                    <span>
-                                                        {maintenance.days > 0 
-                                                            ? `Vence en ${maintenance.days}d` 
-                                                            : (maintenance.days === 0 ? 'Vence Hoy' : `Venció hace ${-maintenance.days}d`)
-                                                        }
-                                                    </span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
-                                                    <Clock size={10} />
-                                                    <span>Sin fecha</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pl-10 text-xs text-gray-600 space-y-1 mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <Hash size={11} className="text-gray-400" />
-                                        <span className="font-mono">{item.serialNumber || 'S/N'}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Building2 size={11} className="text-gray-400" />
-                                        <span className="leading-snug truncate font-semibold">{item.clientName}</span>
-                                    </div>
-                                </div>
-
-                                <div className="border-t border-gray-100 mt-auto pt-2 flex justify-between items-center">
-                                    <span className="text-[10px] font-bold uppercase text-gray-400">Servicios</span>
-                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.activeOrderCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
-                                        {item.activeOrderCount > 0 ? `${item.activeOrderCount} Activo(s)` : `${item.orderCount} Total`}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    )
-                })}
+             <div
+              ref={parentRef}
+              className="relative"
+              style={{
+                height: '600px',
+                width: '100%',
+              }}
+            >
+              {viewMode === 'grid' ? (
+                <div
+                  className="relative"
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => (
+                    <div
+                      key={virtualRow.key}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-6 pt-3 h-full">
+                        {virtualRow.index < filteredEquipment.length && (
+                          <EquipmentCardGrid item={filteredEquipment[virtualRow.index]} onClick={() => handleItemClick(filteredEquipment[virtualRow.index])} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="relative"
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => (
+                    <div
+                      key={virtualRow.key}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <div className="grid grid-cols-1 gap-3 p-4 md:p-6 pt-3 h-full">
+                        {virtualRow.index < filteredEquipment.length && (
+                          <EquipmentCardList item={filteredEquipment[virtualRow.index]} onClick={() => handleItemClick(filteredEquipment[virtualRow.index])} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
         ) : (
             <div className="text-center py-16 text-gray-400">

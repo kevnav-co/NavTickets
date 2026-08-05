@@ -1,4 +1,8 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { NetworkFirst, StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
+import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { ExpirationPlugin } from 'workbox-expiration';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -15,6 +19,107 @@ self.addEventListener('activate', (event) => {
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST || []);
 
+// --- Runtime Caching Strategies ---
+
+// Supabase REST API - NetworkFirst for freshness, fallback to cache offline
+registerRoute(
+  ({ url }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/rest/v1/'),
+  new NetworkFirst({
+    cacheName: 'supabase-api',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 200,
+        maxAgeSeconds: 60 * 60 * 24, // 24 hours
+        purgeOnQuotaError: true,
+      }),
+    ],
+    networkTimeoutSeconds: 5,
+  })
+);
+
+// Supabase Auth API - NetworkOnly (auth should always go to network)
+registerRoute(
+  ({ url }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/auth/v1/'),
+  new NetworkOnly()
+);
+
+// Supabase Realtime - NetworkOnly (websockets don't cache)
+registerRoute(
+  ({ url }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/realtime/v1/'),
+  new NetworkOnly()
+);
+
+// Supabase Storage - CacheFirst for images/files
+registerRoute(
+  ({ url }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/storage/v1/'),
+  new CacheFirst({
+    cacheName: 'supabase-storage',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+// Google Fonts - CacheFirst
+registerRoute(
+  ({ url }) => url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com',
+  new CacheFirst({
+    cacheName: 'google-fonts',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 30,
+        maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+// Firebase Storage (legacy) - CacheFirst
+registerRoute(
+  ({ url }) => url.hostname === 'firebasestorage.googleapis.com',
+  new CacheFirst({
+    cacheName: 'firebase-storage',
+    plugins: [
+      new CacheableResponsePlugin({
+        statuses: [0, 200],
+      }),
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+// App routes - StaleWhileRevalidate for navigation
+registerRoute(
+  ({ request }) => request.mode === 'navigate',
+  new StaleWhileRevalidate({
+    cacheName: 'pages',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 50,
+        maxAgeSeconds: 60 * 60 * 24, // 24 hours
+      }),
+    ],
+  })
+);
+
 const ICON_URL = 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d';
 
 // --- Company name cache (set from main thread via postMessage) ---
@@ -24,6 +129,21 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
   if (event.data?.type === 'SET_COMPANY_NAME') {
     companyName = event.data.name;
     console.log(`[SW] Company name updated: ${companyName}`);
+  }
+
+  // Allow clients to request cache clearing
+  if (event.data?.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((name) => name.startsWith('supabase-') || name === 'pages')
+            .map((name) => caches.delete(name))
+        );
+      }).then(() => {
+        event.ports[0]?.postMessage({ success: true });
+      })
+    );
   }
 });
 

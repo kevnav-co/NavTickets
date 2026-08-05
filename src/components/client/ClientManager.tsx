@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { OrderStatus, CuentiClient } from '../../types';
 import { Search, Building2, UserPlus, Phone, MapPin, LayoutGrid, LayoutList, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -6,6 +6,63 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import { CuentiClientModal } from '../shared/CuentiClientModal';
+import { useVirtualizer } from '@tanstack/react-virtual';
+
+const ClientCard: React.FC<{ client: any; onClick: () => void }> = React.memo(({ client, onClick }) => (
+  <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
+    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${client.activeOrdersCount > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+    <div className="p-3 pl-4 flex-grow flex flex-col">
+      <div className="flex items-start gap-3 mb-2">
+        <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center ${client.activeOrdersCount > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+          <Building2 className={`${client.activeOrdersCount > 0 ? 'text-green-600' : 'text-gray-500'}`} size={16} />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-bold text-sm text-gray-800 uppercase leading-snug">{client.name}</h3>
+          <p className="text-xs text-gray-500 font-mono">{client.identification || 'Sin ID'}</p>
+        </div>
+      </div>
+      <div className="pl-10 text-xs text-gray-600 space-y-1 mb-2">
+        {client.contact && (
+          <div className="flex items-center gap-2">
+            <Phone size={11} className="text-gray-400" />
+            <span>{client.contact}</span>
+          </div>
+        )}
+        {client.address && (
+          <div className="flex items-center gap-2">
+            <MapPin size={11} className="text-gray-400" />
+            <span className="leading-snug truncate">{client.address}</span>
+          </div>
+        )}
+      </div>
+      <div className="border-t border-gray-100 mt-auto pt-2 flex justify-between items-center">
+        <span className="text-[10px] font-bold uppercase text-gray-400">Máquinas</span>
+        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${client.equipmentCount > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+          {client.equipmentCount}
+        </span>
+      </div>
+    </div>
+  </div>
+));
+
+const ClientCardList: React.FC<{ client: any; onClick: () => void }> = React.memo(({ client, onClick }) => (
+  <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent p-4 pl-5 flex items-center gap-4">
+    <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${client.activeOrdersCount > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+    <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ${client.activeOrdersCount > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
+      <Building2 className={`${client.activeOrdersCount > 0 ? 'text-green-600' : 'text-gray-500'}`} size={18} />
+    </div>
+    <div className="flex-1 min-w-0">
+      <h3 className="font-bold text-base text-gray-800 uppercase leading-snug truncate">{client.name}</h3>
+      <p className="text-sm text-gray-500 font-mono">{client.identification || 'Sin ID'}</p>
+    </div>
+    <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+      {client.contact && <span className="flex items-center gap-1"><Phone size={14} className="text-gray-400" />{client.contact}</span>}
+    </div>
+    <div className={`text-xs font-bold px-2 py-0.5 rounded-full ${client.equipmentCount > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
+      {client.equipmentCount} Máq.
+    </div>
+  </div>
+));
 
 const ClientManager: React.FC = () => {
   const navigate = useNavigate();
@@ -27,8 +84,8 @@ const ClientManager: React.FC = () => {
     }));
     if (searchTerm) {
       const q = searchTerm.toLowerCase();
-      enrichedClients = enrichedClients.filter(c => 
-          c.name?.toLowerCase().includes(q) || 
+      enrichedClients = enrichedClients.filter(c =>
+          c.name?.toLowerCase().includes(q) ||
           c.identification?.toLowerCase().includes(q) ||
           c.contact?.toLowerCase().includes(q)
       );
@@ -48,6 +105,17 @@ const ClientManager: React.FC = () => {
     setIsCuentiModalOpen(false);
     navigate('/clients/new', { state: { clientToImport } });
   };
+
+  // Virtualized list setup
+  const parentRef = useRef<HTMLDivElement>(null);
+  const ITEM_HEIGHT = viewMode === 'list' ? 120 : 50; // Smaller estimate for grid items
+
+  const virtualizer = useVirtualizer({
+    count: processedClients.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ITEM_HEIGHT,
+    overscan: 5,
+  });
 
   return (
     <>
@@ -112,7 +180,7 @@ const ClientManager: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 md:p-6 pt-3">
+        <div className="p-4 md:p-6 pt-3 pb-24">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold">Lista de Clientes</h2>
             <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded-lg">{processedClients.length}</span>
@@ -120,43 +188,73 @@ const ClientManager: React.FC = () => {
           {processedClients.length === 0 ? (
             <div className="text-center py-16 text-gray-400"><Search size={32} className="mx-auto mb-2"/><p className="font-medium">No se encontraron clientes.</p></div>
           ) : (
-            <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "grid grid-cols-1 gap-3"}>
-              {processedClients.map(client => (
-                <div key={client.id} onClick={() => navigate(`/clients/${client.id}`)} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${client.activeOrdersCount > 0 ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                  <div className="p-3 pl-4 flex-grow flex flex-col">
-                    <div className="flex items-start gap-3 mb-2">
-                      <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center ${client.activeOrdersCount > 0 ? 'bg-green-100' : 'bg-gray-100'}`}>
-                        <Building2 className={`${client.activeOrdersCount > 0 ? 'text-green-600' : 'text-gray-500'}`} size={16} />
+            <div
+              ref={parentRef}
+              className="relative"
+              style={{
+                height: viewMode === 'grid' ? '600px' : '600px',
+                width: '100%',
+              }}
+            >
+              {viewMode === 'grid' ? (
+                <div
+                  className="relative"
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => (
+                    <div
+                      key={virtualRow.key}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-6 pt-3 h-full">
+                        {virtualRow.index < processedClients.length && (
+                          <ClientCard client={processedClients[virtualRow.index]} onClick={() => navigate(`/clients/${processedClients[virtualRow.index].id}`)} />
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-sm text-gray-800 uppercase leading-snug">{client.name}</h3>
-                        <p className="text-xs text-gray-500 font-mono">{client.identification || 'Sin ID'}</p>
-                      </div>
                     </div>
-                    <div className="pl-10 text-xs text-gray-600 space-y-1 mb-2">
-                      {client.contact && (
-                        <div className="flex items-center gap-2">
-                          <Phone size={11} className="text-gray-400" />
-                          <span>{client.contact}</span>
-                        </div>
-                      )}
-                      {client.address && (
-                        <div className="flex items-center gap-2">
-                          <MapPin size={11} className="text-gray-400" />
-                          <span className="leading-snug truncate">{client.address}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="border-t border-gray-100 mt-auto pt-2 flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase text-gray-400">Máquinas</span>
-                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${client.equipmentCount > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-                        {client.equipmentCount}
-                      </span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <div
+                  className="relative"
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => (
+                    <div
+                      key={virtualRow.key}
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <div className="grid grid-cols-1 gap-3 p-4 md:p-6 pt-3 h-full">
+                        {virtualRow.index < processedClients.length && (
+                          <ClientCardList client={processedClients[virtualRow.index]} onClick={() => navigate(`/clients/${processedClients[virtualRow.index].id}`)} />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
