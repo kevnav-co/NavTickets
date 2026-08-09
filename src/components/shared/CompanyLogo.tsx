@@ -10,7 +10,7 @@ interface CompanyLogoProps {
   alt?: string;
 }
 
-const FALLBACK_LOGO = 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f';
+const FALLBACK_LOGO = '/assets/logo-inicio.png';
 
 const CompanyLogo: React.FC<CompanyLogoProps> = ({ className, variant = 'default', alt }) => {
   const { company } = useCompany();

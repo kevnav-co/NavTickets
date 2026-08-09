@@ -90,11 +90,6 @@ export const deleteImageFromStorage = async (imageUrl: string): Promise<void> =>
         return;
       }
     }
-    // If it's a Firebase URL, we can't delete from Supabase - just log and return
-    else if (imageUrl.includes('firebasestorage.googleapis.com')) {
-      console.warn('URL de Firebase Storage detectada, no se puede eliminar desde Supabase:', imageUrl);
-      return;
-    }
     // Assume it's a raw path
     else {
       bucket = bucketForPath(imageUrl);

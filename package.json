@@ -9,7 +9,7 @@
     "build:analyze": "ANALYZE=true vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "deploy": "vercel --prod"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -21,7 +21,6 @@
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "dexie": "^4.4.4",
-    "firebase": "^12.9.0",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2",
     "leaflet": "^1.9.4",

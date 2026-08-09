@@ -88,24 +88,6 @@ registerRoute(
   })
 );
 
-// Firebase Storage (legacy) - CacheFirst
-registerRoute(
-  ({ url }) => url.hostname === 'firebasestorage.googleapis.com',
-  new CacheFirst({
-    cacheName: 'firebase-storage',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxEntries: 50,
-        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-        purgeOnQuotaError: true,
-      }),
-    ],
-  })
-);
-
 // App routes - StaleWhileRevalidate for navigation
 registerRoute(
   ({ request }) => request.mode === 'navigate',
@@ -120,7 +102,7 @@ registerRoute(
   })
 );
 
-const ICON_URL = 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d';
+const ICON_URL = '/assets/icon-app.png';
 
 // --- Company name cache (set from main thread via postMessage) ---
 let companyName: string | null = null;

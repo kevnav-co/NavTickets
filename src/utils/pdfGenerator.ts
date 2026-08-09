@@ -111,7 +111,7 @@ export const generateServiceActa = async (
 ) => {
   try {
     setPdfProgress(5);
-    const logoUrl = "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Nit.png?alt=media&token=eaf958c8-f13e-442c-a57f-10298590bce2";
+    const logoUrl = "/assets/logo-nit.png";
 
     setPdfProgress(10);
     const [logoBase64, techSignatureBase64, clientSignatureBase64] = await Promise.all([

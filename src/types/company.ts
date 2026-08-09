@@ -56,8 +56,8 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
   slug: 'navtickets',
   theme: {
     primaryColor: '#7b1113',
-    logoUrl: 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f',
-    iconUrl: 'https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d',
+    logoUrl: '/assets/logo-inicio.png',
+    iconUrl: '/assets/icon-app.png',
   },
   features: {
     accounting: true,

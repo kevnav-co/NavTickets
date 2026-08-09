@@ -1,9 +1,26 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "functions": {
+    "api/edge/*.ts": {
+      "runtime": "edge",
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/edge/task-scheduler",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/edge/daily-expiration-check",
+      "schedule": "0 8 * * *"
+    }
   ],
   "headers": [
     {
@@ -12,21 +29,47 @@
         { "key": "Cache-Control", "value": "no-cache" },
         { "key": "Service-Worker-Allowed", "value": "/" }
       ]
-    }
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/task-reminders",
-      "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/cron/expiration-check",
-      "schedule": "0 8 * * *"
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
+      ]
     }
   ],
-  "functions": {
-    "api/cron/*.ts": {
-      "maxDuration": 60
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/api/cuenti/clients",
+      "destination": "/api/edge/cuenti-proxy"
+    },
+    {
+      "source": "/api/admin/update-password",
+      "destination": "/api/edge/update-user-password"
+    },
+    {
+      "source": "/api/admin/send-test-notification",
+      "destination": "/api/edge/send-test-notification"
     }
-  }
+  ]
 }

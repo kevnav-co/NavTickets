@@ -9,11 +9,11 @@ const NavasLogo = ({ variant = 'default', size = "large", center = false }: { va
   const isXl = size === "xl";
   const isLarge = size === "large";
   const heightClass = isXl ? 'h-40' : isLarge ? 'h-28' : 'h-12';
-  
+
   return (
     <div className={`flex flex-col ${center ? 'items-center' : 'items-start'} gap-2`}>
-      <img 
-        src="https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Inicio.png?alt=media&token=b516cd08-2ece-445d-ac69-0b91d444d78f"
+      <img
+        src="/assets/logo-inicio.png"
         alt="Logo de la empresa"
         className={`${heightClass} w-auto object-contain transition-all duration-300 ${variant === 'white' ? 'brightness-0 invert drop-shadow-md' : ''}`}
       />
@@ -73,9 +73,9 @@ const Login: React.FC = () => {
         </div>
 
         <div className="relative z-10">
-            <img 
-              src="https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Logo-Blanco.png?alt=media&token=f6170240-c993-476d-bb00-8a98ffa4ef13" 
-              alt="Logo de la empresa" 
+            <img
+              src="/assets/logo-blanco.png"
+              alt="Logo de la empresa"
               className="w-full h-auto object-contain"
             />
         </div>
