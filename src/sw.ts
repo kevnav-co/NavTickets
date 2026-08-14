@@ -1,8 +1,9 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute, NavigationRoute } from 'workbox-routing';
+import { registerRoute, NavigationRoute, Route } from 'workbox-routing';
 import { NetworkFirst, StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
+import { BackgroundSyncPlugin } from 'workbox-background-sync';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -19,11 +20,70 @@ self.addEventListener('activate', (event) => {
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST || []);
 
+// --- Background Sync for mutations ---
+// Queue failed POST/PUT/DELETE requests when offline
+const bgSyncPlugin = new BackgroundSyncPlugin('supabase-mutations-queue', {
+  maxRetentionTime: 24 * 60, // 24 hours
+  onSync: async (queue) => {
+    console.log('[SW] Background sync triggered');
+  },
+});
+
+// Register background sync for Supabase REST API mutations
+registerRoute(
+  ({ url, request }) => {
+    const isSupabaseRest = url.hostname.includes('supabase.co') &&
+      url.pathname.startsWith('/rest/v1/');
+    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
+  },
+  new NetworkOnly({
+    plugins: [bgSyncPlugin],
+  }),
+  'POST'
+);
+
+registerRoute(
+  ({ url, request }) => {
+    const isSupabaseRest = url.hostname.includes('supabase.co') &&
+      url.pathname.startsWith('/rest/v1/');
+    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
+  },
+  new NetworkOnly({
+    plugins: [bgSyncPlugin],
+  }),
+  'PATCH'
+);
+
+registerRoute(
+  ({ url, request }) => {
+    const isSupabaseRest = url.hostname.includes('supabase.co') &&
+      url.pathname.startsWith('/rest/v1/');
+    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
+  },
+  new NetworkOnly({
+    plugins: [bgSyncPlugin],
+  }),
+  'PUT'
+);
+
+registerRoute(
+  ({ url, request }) => {
+    const isSupabaseRest = url.hostname.includes('supabase.co') &&
+      url.pathname.startsWith('/rest/v1/');
+    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
+  },
+  new NetworkOnly({
+    plugins: [bgSyncPlugin],
+  }),
+  'DELETE'
+);
+
 // --- Runtime Caching Strategies ---
 
-// Supabase REST API - NetworkFirst for freshness, fallback to cache offline
+// Supabase REST API (GET) - NetworkFirst for freshness, fallback to cache offline
 registerRoute(
-  ({ url }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/rest/v1/'),
+  ({ url, request }) => url.hostname.includes('supabase.co') &&
+    url.pathname.startsWith('/rest/v1/') && request.method === 'GET',
   new NetworkFirst({
     cacheName: 'supabase-api',
     plugins: [
@@ -31,7 +91,7 @@ registerRoute(
         statuses: [0, 200],
       }),
       new ExpirationPlugin({
-        maxEntries: 200,
+        maxEntries: 500,
         maxAgeSeconds: 60 * 60 * 24, // 24 hours
         purgeOnQuotaError: true,
       }),
@@ -62,8 +122,8 @@ registerRoute(
         statuses: [0, 200],
       }),
       new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+        maxEntries: 200,
+        maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
         purgeOnQuotaError: true,
       }),
     ],
@@ -88,7 +148,24 @@ registerRoute(
   })
 );
 
-// App routes - StaleWhileRevalidate for navigation
+// CDN resources (unpkg, jsdelivr, etc.) - StaleWhileRevalidate
+registerRoute(
+  ({ url }) => url.hostname === 'unpkg.com' ||
+    url.hostname === 'cdn.jsdelivr.net' ||
+    url.hostname === 'cdn.tailwindcss.com',
+  new StaleWhileRevalidate({
+    cacheName: 'cdn-resources',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+        purgeOnQuotaError: true,
+      }),
+    ],
+  })
+);
+
+// App routes (navigation) - StaleWhileRevalidate for SPA navigation
 registerRoute(
   ({ request }) => request.mode === 'navigate',
   new StaleWhileRevalidate({
@@ -119,7 +196,7 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
       caches.keys().then((cacheNames) => {
         return Promise.all(
           cacheNames
-            .filter((name) => name.startsWith('supabase-') || name === 'pages')
+            .filter((name) => name.startsWith('supabase-') || name === 'pages' || name === 'cdn-resources')
             .map((name) => caches.delete(name))
         );
       }).then(() => {
@@ -127,16 +204,14 @@ self.addEventListener('message', (event: ExtendableMessageEvent) => {
       })
     );
   }
+
+  // Handle skip waiting message
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
-// --- Primary push handler (works on ALL platforms: Android, iOS, Desktop) ---
-// This is the SINGLE source of truth for displaying notifications.
-// We do NOT use Firebase's onBackgroundMessage because:
-// 1. It doesn't reliably fire on iOS Safari PWA
-// 2. It conflicts with native push events on Android Chrome
-// 3. The native 'push' event is the W3C standard and works everywhere
-// 4. The previous implementation had a critical bug where the native handler
-//    was skipped when Firebase SDK initialized, causing silent notification drops.
+// --- Primary push handler ---
 self.addEventListener('push', (event: PushEvent) => {
   console.log('[SW] Push event received.');
 
@@ -148,15 +223,13 @@ self.addEventListener('push', (event: PushEvent) => {
   try {
     const data = event.data?.json();
     console.log('[SW] Push data:', data);
-    
+
     if (data) {
-      // 1. Notification Object (standard FCM)
       if (data.notification) {
         title = data.notification.title || title;
         body = data.notification.body || body;
       }
 
-      // 2. Data Object (custom fields)
       if (data.data) {
         title = data.data.title || title;
         body = data.data.body || body;
@@ -164,7 +237,6 @@ self.addEventListener('push', (event: PushEvent) => {
         url = data.data.url || url;
       }
 
-      // 3. Webpush options link (fallback)
       if (data.fcmOptions?.link) {
         url = data.fcmOptions.link;
       }
@@ -177,7 +249,6 @@ self.addEventListener('push', (event: PushEvent) => {
     } catch { }
   }
 
-  // Ensure url is at least the path if url is not absolute
   if (url === '/' && path !== '/') {
     url = `/#${path}`;
   }
@@ -186,7 +257,7 @@ self.addEventListener('push', (event: PushEvent) => {
     body,
     icon: ICON_URL,
     badge: ICON_URL,
-    data: { url, path }, // Store both for click handler
+    data: { url, path },
     tag: `navas-${Date.now()}`,
     renotify: true,
   };
@@ -205,19 +276,25 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList: readonly Client[]) => {
-      // 1. Try to find an existing window client that is already open
       for (const client of clientList) {
         const windowClient = client as WindowClient;
-        // Check if the client is one of ours (matches origin)
         if (windowClient.url.startsWith(self.location.origin)) {
           console.log('[SW] Found existing client, navigating and focusing.');
           return windowClient.navigate(urlToOpen).then(c => c?.focus());
         }
       }
 
-      // 2. If no window is open, open a new one
       console.log('[SW] No existing client found, opening new window.');
       return self.clients.openWindow(urlToOpen);
     })
   );
+});
+
+// --- Periodic background sync registration ---
+self.addEventListener('periodicsync', (event: ExtendableEvent) => {
+  if (event.tag === 'check-updates') {
+    event.waitUntil(
+      self.registration.update().catch(console.error)
+    );
+  }
 });

@@ -6,8 +6,8 @@ export interface ConnectivityStatus {
 }
 
 export const getConnectivityStatus = (): ConnectivityStatus => {
-  const isOnline = navigator.onLine;
-  const hasServiceWorker = !!navigator.serviceWorker.controller;
+  const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const hasServiceWorker = typeof navigator !== 'undefined' && !!navigator.serviceWorker?.controller;
 
   if (!isOnline) {
     return { text: 'En Caché', color: 'orange', isOffline: true };

@@ -1,70 +1,162 @@
 // src/utils/theme.ts
-// Dynamic theme utilities for multi-tenant branding
+// Dynamic theme utilities for multi-tenant branding - Optimized
 
 import { CompanyConfig } from '../types/company';
 
 /**
+ * Simple LRU cache for theme computations
+ */
+const themeCache = new Map<string, ThemeVariables>();
+
+interface ThemeVariables {
+  primary: string;
+  primaryRgb: string;
+  primaryLight: string;
+  primaryDark: string;
+  primaryLighter: string;
+  primaryDarker: string;
+  contrast: string;
+}
+
+let lastAppliedConfig: CompanyConfig | null = null;
+
+/**
  * Apply a company's theme to the document root as CSS variables.
+ * Optimized: only applies if theme actually changed.
  * Call this whenever the company configuration changes.
  */
 export function applyCompanyTheme(config: CompanyConfig): void {
-  const root = document.documentElement;
-  const primary = config.theme.primaryColor || '#7b1113';
+  // Quick check - skip if same config
+  if (lastAppliedConfig === config ||
+      (lastAppliedConfig && lastAppliedConfig.theme?.primaryColor === config.theme?.primaryColor &&
+       lastAppliedConfig.name === config.name &&
+       lastAppliedConfig.theme?.faviconUrl === config.theme?.faviconUrl &&
+       lastAppliedConfig.theme?.iconUrl === config.theme?.iconUrl)) {
+    return;
+  }
+
+  const primary = config.theme?.primaryColor || '#7b1113';
+
+  // Get or compute theme variables from cache
+  const vars = getThemeVariables(primary);
+
+  // Batch all DOM writes together
+  requestAnimationFrame(() => {
+    const root = document.documentElement;
+
+    // Apply all CSS variables at once
+    root.style.setProperty('--color-primary', vars.primary);
+    root.style.setProperty('--color-primary-rgb', vars.primaryRgb);
+    root.style.setProperty('--color-primary-light', vars.primaryLight);
+    root.style.setProperty('--color-primary-dark', vars.primaryDark);
+    root.style.setProperty('--color-primary-lighter', vars.primaryLighter);
+    root.style.setProperty('--color-primary-darker', vars.primaryDarker);
+
+    // Update meta tags
+    document.title = config.name + ' - Gestión de Mantenimiento';
+    updateMetaTag('theme-color', vars.primary);
+    updateMetaTag('application-name', config.name);
+    updateMetaTag('apple-mobile-web-app-title', config.name);
+
+    // Update favicon if changed
+    if (config.theme?.faviconUrl) {
+      updateFavicon(config.theme.faviconUrl);
+    }
+
+    // Update apple-touch-icon if changed
+    if (config.theme?.iconUrl) {
+      updateAppleTouchIcon(config.theme.iconUrl);
+    }
+
+    lastAppliedConfig = config;
+  });
+}
+
+function getThemeVariables(primary: string): ThemeVariables {
+  if (themeCache.has(primary)) {
+    return themeCache.get(primary)!;
+  }
+
   const primaryRgb = hexToRgb(primary);
+  const vars: ThemeVariables = {
+    primary,
+    primaryRgb,
+    primaryLight: lightenColor(primary, 20),
+    primaryDark: darkenColor(primary, 20),
+    primaryLighter: lightenColor(primary, 40),
+    primaryDarker: darkenColor(primary, 40),
+    contrast: getContrastColor(primary),
+  };
 
-  root.style.setProperty('--color-primary', primary);
-  root.style.setProperty('--color-primary-rgb', primaryRgb);
-
-  // Generate lighter/darker variants
-  root.style.setProperty('--color-primary-light', lightenColor(primary, 20));
-  root.style.setProperty('--color-primary-dark', darkenColor(primary, 20));
-  root.style.setProperty('--color-primary-lighter', lightenColor(primary, 40));
-  root.style.setProperty('--color-primary-darker', darkenColor(primary, 40));
-
-  // Update meta tags
-  document.title = config.name + ' - Gestión de Mantenimiento';
-  const metaTheme = document.querySelector('meta[name="theme-color"]');
-  if (metaTheme) metaTheme.setAttribute('content', primary);
-  const metaAppName = document.querySelector('meta[name="application-name"]');
-  if (metaAppName) metaAppName.setAttribute('content', config.name);
-  const metaAppleTitle = document.querySelector('meta[apple-mobile-web-app-title"]');
-  if (metaAppleTitle) metaAppleTitle.setAttribute('content', config.name);
-
-  // Update favicon if a custom one is provided
-  if (config.theme.faviconUrl) {
-    let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
-    if (!link) {
-      link = document.createElement('link');
-      link.rel = 'icon';
-      link.type = 'image/png';
-      document.head.appendChild(link);
-    }
-    link.href = config.theme.faviconUrl;
+  // Limit cache size
+  if (themeCache.size > 50) {
+    const firstKey = themeCache.keys().next().value;
+    if (firstKey) themeCache.delete(firstKey);
   }
+  themeCache.set(primary, vars);
 
-  // Update apple-touch-icon
-  if (config.theme.iconUrl) {
-    let appleLink = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
-    if (!appleLink) {
-      appleLink = document.createElement('link');
-      appleLink.rel = 'apple-touch-icon';
-      document.head.appendChild(appleLink);
-    }
-    appleLink.href = config.theme.iconUrl;
+  return vars;
+}
+
+function updateMetaTag(name: string, content: string): void {
+  const meta = document.querySelector(`meta[name="${name}"]`);
+  if (meta) meta.setAttribute('content', content);
+}
+
+function updateFavicon(href: string): void {
+  const selector = 'link[rel="icon"]';
+  let link = document.querySelector(selector) as HTMLLinkElement;
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/png';
+    document.head.appendChild(link);
   }
+  if (link.href !== href) link.href = href;
+}
+
+function updateAppleTouchIcon(href: string): void {
+  const selector = 'link[rel="apple-touch-icon"]';
+  let link = document.querySelector(selector) as HTMLLinkElement;
+  if (!link) {
+    link = document.createElement('link');
+    link.rel = 'apple-touch-icon';
+    document.head.appendChild(link);
+  }
+  if (link.href !== href) link.href = href;
 }
 
 /**
  * Convert a hex color to an RGB comma-separated string for rgba(var(--color-primary-rgb), 0.5)
+ * Optimized: no regex, direct parsing
  */
 export function hexToRgb(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return '123, 17, 19';
-  return `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}`;
+  // Remove # if present
+  const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
+
+  // Handle 3-char hex (e.g., #fff)
+  if (cleanHex.length === 3) {
+    const r = parseInt(cleanHex[0] + cleanHex[0], 16);
+    const g = parseInt(cleanHex[1] + cleanHex[1], 16);
+    const b = parseInt(cleanHex[2] + cleanHex[2], 16);
+    return `${r}, ${g}, ${b}`;
+  }
+
+  // Standard 6-char hex
+  if (cleanHex.length === 6) {
+    const r = parseInt(cleanHex.slice(0, 2), 16);
+    const g = parseInt(cleanHex.slice(2, 4), 16);
+    const b = parseInt(cleanHex.slice(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+  }
+
+  // Fallback to default (NavTickets red)
+  return '123, 17, 19';
 }
 
 /**
  * Lighten a hex color by a percentage (0-100)
+ * Optimized: no string manipulation in hot path
  */
 export function lightenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
@@ -76,6 +168,7 @@ export function lightenColor(hex: string, percent: number): string {
 
 /**
  * Darken a hex color by a percentage (0-100)
+ * Optimized: no string manipulation in hot path
  */
 export function darkenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
@@ -92,4 +185,23 @@ export function getContrastColor(hex: string): string {
   const rgb = hexToRgb(hex).split(',').map(Number);
   const luminance = (0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2]) / 255;
   return luminance > 0.5 ? '#1a1a1a' : '#ffffff';
+}
+
+/**
+ * Pre-compute theme variables for a set of colors (useful for color pickers)
+ */
+export function computeThemeVariables(colors: string[]): Map<string, ThemeVariables> {
+  const result = new Map<string, ThemeVariables>();
+  for (const color of colors) {
+    result.set(color, getThemeVariables(color));
+  }
+  return result;
+}
+
+/**
+ * Force clear the theme cache (useful for testing or theme reset)
+ */
+export function clearThemeCache(): void {
+  themeCache.clear();
+  lastAppliedConfig = null;
 }

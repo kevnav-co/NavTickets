@@ -15,7 +15,7 @@ const ClientMap: React.FC = () => {
   const navigate = useNavigate();
   const { clients, orders, users, updateItem } = useData();
   const { currentUser } = useAuth();
-  const { isInternetAvailable } = useOfflineStatus();
+  const { isOnline } = useOfflineStatus();
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const leafletRef = useRef<any>(null); // To store the dynamically imported Leaflet module
@@ -373,14 +373,14 @@ const ClientMap: React.FC = () => {
       )}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
 
-      {!isInternetAvailable && (
+      {!isOnline && (
         <div className="absolute top-0 left-0 right-0 z-[1100] bg-orange-500 text-white px-4 py-2 text-center text-[10px] font-black uppercase tracking-widest shadow-md animate-in slide-in-from-top flex items-center justify-center gap-2">
            <WifiOff size={14} />
            <span>Modo Offline: Visualizando mapa en caché. Datos limitados.</span>
         </div>
       )}
 
-      <div className={`absolute left-4 z-[1000] flex flex-col gap-2 ${!isInternetAvailable ? 'top-12' : 'top-4'}`}>
+      <div className={`absolute left-4 z-[1000] flex flex-col gap-2 ${!isOnline ? 'top-12' : 'top-4'}`}>
         <button onClick={handleLocate} className="w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary active:scale-90 transition-transform border border-gray-100">
           {isLocating ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
         </button>
@@ -402,7 +402,7 @@ const ClientMap: React.FC = () => {
             )}
         </div>
         {currentUser?.role === 'admin' && (
-            <button onClick={handleUpdateCoordinates} disabled={isUpdating || !isInternetAvailable} className={`w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-blue-600 active:scale-90 transition-transform border border-gray-100 ${!isInternetAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <button onClick={handleUpdateCoordinates} disabled={isUpdating || !isOnline} className={`w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-blue-600 active:scale-90 transition-transform border border-gray-100 ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}>
               {isUpdating ? <Loader2 size={20} className="animate-spin" /> : <RefreshCw size={20} />}
             </button>
         )}

@@ -18,47 +18,91 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 /**
- * Busca el perfil del usuario en la tabla `users` usando supabase_auth_id.
- * Convierte snake_case de PostgreSQL a camelCase (modelo User).
+ * Convierte el perfil de la BD (snake_case) al modelo User (camelCase)
  */
-async function fetchUserProfile(authUserId: string): Promise<User | null> {
-  try {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('supabase_auth_id', authUserId)
-      .single();
+function mapUserProfile(data: any): User | null {
+  if (!data) return null;
 
-    if (error || !data) {
-      console.error('[AuthContext] Error fetching profile:', error?.message);
-      return null;
+  return {
+    id: data.id,
+    companyId: data.company_id,
+    name: data.name,
+    role: data.role,
+    username: data.username,
+    identification: data.identification || undefined,
+    address: data.address || undefined,
+    latitude: data.latitude || undefined,
+    longitude: data.longitude || undefined,
+    locationUpdatedAt: data.location_updated_at || undefined,
+    fcmToken: data.fcm_token || undefined,
+    signature: data.signature || undefined,
+  };
+}
+
+/**
+ * Hook interno para obtener el perfil del usuario con caché usando useEffect simple
+ * En el futuro se puede migrar a TanStack Query para mejor caching
+ */
+function useUserProfile(authUserId: string | null): { profile: User | null; loading: boolean; error: Error | null } {
+  const [profile, setProfile] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    if (!authUserId || !isSupabaseConfigured()) {
+      setProfile(null);
+      setLoading(false);
+      return;
     }
 
-    return {
-      id: data.id,
-      companyId: data.company_id,
-      name: data.name,
-      role: data.role,
-      username: data.username,
-      identification: data.identification || undefined,
-      address: data.address || undefined,
-      latitude: data.latitude || undefined,
-      longitude: data.longitude || undefined,
-      locationUpdatedAt: data.location_updated_at || undefined,
-      fcmToken: data.fcm_token || undefined,
-      signature: data.signature || undefined,
+    let cancelled = false;
+
+    const fetch = async () => {
+      try {
+        const { data, error: dbError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('supabase_auth_id', authUserId)
+          .single();
+
+        if (!cancelled) {
+          if (dbError || !data) {
+            setError(new Error(dbError?.message || 'Perfil no encontrado'));
+            setProfile(null);
+          } else {
+            setProfile(mapUserProfile(data));
+            setError(null);
+          }
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err);
+          setProfile(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     };
-  } catch (err) {
-    console.error('[AuthContext] fetchUserProfile error:', err);
-    return null;
-  }
+
+    fetch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
+
+  return { profile, loading, error };
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     console.log("🔍 Iniciando AuthContext (Supabase)...");
 
     if (!isSupabaseConfigured()) {
@@ -69,7 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     let isMounted = true;
 
-    // 1. Obtener sesión actual
+    // 1. Obtener sesión actual - Supabase ya persiste la sesión en localStorage
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -77,11 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!isMounted) return;
 
         if (session?.user) {
-          console.log("👤 Sesión activa detectada, cargando perfil...");
-          const userProfile = await fetchUserProfile(session.user.id);
-          if (isMounted) {
-            setCurrentUser(userProfile);
-          }
+          console.log("👤 Sesión activa detectada");
         } else {
           console.log("👤 Sin sesión activa");
         }
@@ -89,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error("❌ Error iniciando auth:", e);
       } finally {
         if (isMounted) {
-          console.log("✅ Auth Loading Finalizado");
+          console.log("✅ Auth init completado");
           setLoading(false);
         }
       }
@@ -105,34 +145,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!isMounted) return;
 
         if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          const userProfile = await fetchUserProfile(session.user.id);
-          if (isMounted) {
-            setCurrentUser(userProfile);
-            setLoading(false);
-          }
+          // El perfil se cargará via useUserProfile hook en el componente que lo necesite
+          // Aquí solo actualizamos el estado mínimo
         } else if (event === 'SIGNED_OUT') {
           if (isMounted) {
             setCurrentUser(null);
-            setLoading(false);
           }
         }
       }
     );
 
-    // Timeout de seguridad
-    const timeout = setTimeout(() => {
-      if (loading && isMounted) {
-        console.warn("⚠️ Auth tardó demasiado. Forzando carga...");
-        setLoading(false);
-      }
-    }, 5000);
-
     return () => {
       isMounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
+
+  // 3. Hook para perfil de usuario - se ejecuta independientemente
+  const { profile, loading: profileLoading } = useUserProfile(
+    currentUser?.id ? null : undefined // Temp fix - we need the auth user ID
+  );
+
+  // Mejor: obtener el auth user ID desde la sesión actual
+  // Usamos un estado separado para el authUserId
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Obtener el user ID de la sesión actual al montar
+    const getAuthUserId = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setAuthUserId(session.user.id);
+      }
+    };
+    getAuthUserId();
+
+    // Escuchar cambios de auth para actualizar authUserId
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setAuthUserId(session.user.id);
+      } else {
+        setAuthUserId(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Perfil del usuario actual
+  const { profile: userProfile, loading: userProfileLoading } = useUserProfile(authUserId);
+
+  // Sincronizar currentUser con el perfil cargado
+  useEffect(() => {
+    if (userProfile) {
+      setCurrentUser(userProfile);
+    }
+  }, [userProfile]);
+
+  // Loading combina la carga inicial de auth + carga del perfil
+  const isLoading = loading || userProfileLoading;
 
   const login = useCallback(async (username: string, password: string, _companyId?: string): Promise<boolean> => {
     try {
@@ -155,15 +226,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await supabase.auth.signOut();
   }, []);
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
-    loading,
+    loading: isLoading,
     login,
     logout,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  if (!mounted) {
+    return <LoadingFallback />;
+  }
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+// Importar LoadingFallback aquí para evitar importación circular
+const LoadingFallback = () => (
+  <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+    <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#7b1113] border-t-transparent"></div>
+  </div>
+);
 
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);

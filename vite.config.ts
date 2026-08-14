@@ -50,61 +50,18 @@ export default defineConfig(({ mode }) => {
           id: "/",
           categories: ["business", "productivity", "utilities"],
           icons: [
-            {
-              src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "any"
-            },
-            {
-              src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "any"
-            },
-            {
-              src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",
-              sizes: "192x192",
-              type: "image/png",
-              purpose: "maskable"
-            },
-            {
-              src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",
-              sizes: "512x512",
-              type: "image/png",
-              purpose: "maskable"
-            }
+            { src: "/assets/icon-app.png", sizes: "192x192", type: "image/png", purpose: "any" },
+            { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", purpose: "any" },
+            { src: "/assets/icon-app.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+            { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
           ],
           shortcuts: [
-            {
-              name: "Nueva Orden",
-              short_name: "Orden",
-              description: "Crear una nueva orden de servicio",
-              url: "/orders/new",
-              icons: [{ src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d", sizes: "192x192" }]
-            },
-            {
-              name: "Nuevo Cliente",
-              short_name: "Cliente",
-              description: "Registrar un nuevo cliente",
-              url: "/clients/new",
-              icons: [{ src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d", sizes: "192x192" }]
-            }
+            { name: "Nueva Orden", short_name: "Orden", description: "Crear una nueva orden de servicio", url: "/orders/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] },
+            { name: "Nuevo Cliente", short_name: "Cliente", description: "Registrar un nuevo cliente", url: "/clients/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] }
           ],
           screenshots: [
-            {
-              src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",
-              sizes: "512x512",
-              type: "image/png",
-              form_factor: "wide",
-              label: "Pantalla de Inicio"
-            },
-            {
-              src: "https://firebasestorage.googleapis.com/v0/b/navas-33818730-80986.firebasestorage.app/o/Icon-app.png?alt=media&token=11895e56-9aaa-4691-92ca-3b66c4c8417d",
-              sizes: "512x512",
-              type: "image/png",
-              label: "Gestión Móvil"
-            }
+            { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", form_factor: "wide", label: "Pantalla de Inicio" },
+            { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", label: "Gestión Móvil" }
           ]
         },
       }),
@@ -122,22 +79,91 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: true,
       sourcemap: false,
       minify: 'terser',
-      chunkSizeWarningLimit: 2000,
+      chunkSizeWarningLimit: 1000,
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+          passes: 2,
+        },
+        mangle: {
+          safari10: true,
+        },
+        format: {
+          comments: false,
+        },
+      },
       rollupOptions: {
         output: {
           manualChunks: {
-            // Heavy libraries - loaded on demand
-            'vendor-xlsx': ['xlsx'],
-            'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
-            'vendor-html2canvas': ['html2canvas'],
-            'vendor-recharts': ['recharts'],
-            'vendor-leaflet': ['leaflet', 'react-leaflet'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-date-fns': ['date-fns'],
+            // React core - always loaded
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+
+            // State management & data fetching
+            'vendor-tanstack': ['@tanstack/react-query', '@tanstack/react-query-devtools'],
+
+            // Supabase - heavy, load on demand
+            'vendor-supabase': ['@supabase/supabase-js'],
+
+            // UI libraries - split by usage
+            'vendor-lucide': ['lucide-react'],
             'vendor-zod': ['zod'],
+            'vendor-date-fns': ['date-fns'],
+
+            // Charts - only for accounting/admin
+            'vendor-recharts': ['recharts'],
+
+            // Maps - only for client map view
+            'vendor-leaflet': ['leaflet', 'react-leaflet'],
+            'vendor-google-maps': ['@vis.gl/react-google-maps'],
+
+            // PDF/Export - heavy, on demand
+            'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
+            'vendor-xlsx': ['xlsx'],
+
+            // Image/Video processing
+            'vendor-image-compression': ['browser-image-compression'],
+
+            // Offline DB
+            'vendor-dexie': ['dexie'],
+
+            // Notifications
+            'vendor-onesignal': ['react-onesignal'],
+
+            // Form/Input helpers
+            'vendor-forms': ['react-currency-input-field', 'react-textarea-autosize'],
+
+            // OneSignal service worker (auto-loaded)
+            'workbox-runtime': ['workbox-core', 'workbox-routing', 'workbox-strategies', 'workbox-cacheable-response', 'workbox-expiration', 'workbox-precaching'],
+          },
+          // Optimize chunk naming for better caching
+          chunkFileNames: 'assets/js/[name]-[hash].js',
+          entryFileNames: 'assets/js/[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (/\.(png|jpe?g|gif|svg|webp|ico)$/.test(assetInfo.name)) {
+              return `assets/images/[name]-[hash].${ext}`;
+            }
+            if (/\.(woff2?|eot|ttf|otf)$/.test(assetInfo.name)) {
+              return `assets/fonts/[name]-[hash].${ext}`;
+            }
+            return `assets/[ext]/[name]-[hash].${ext}`;
           },
         },
+        // Tree shaking optimizations
+        treeshake: {
+          moduleSideEffects: 'no-external',
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false,
+        },
+      },
+      // CSS code splitting
+      cssCodeSplit: true,
+      // Module preload polyfill
+      modulePreload: {
+        polyfill: true,
       },
     },
     server: {
@@ -148,6 +174,26 @@ export default defineConfig(({ mode }) => {
         'Service-Worker-Allowed': '/',
         'Permissions-Policy': 'geolocation=*',
       }
-    }
+    },
+    // Optimize dependencies
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        '@tanstack/react-query',
+        '@supabase/supabase-js',
+        'lucide-react',
+        'zod',
+        'date-fns',
+        'dexie',
+      ],
+      exclude: ['workbox-window'], // Exclude from pre-bundling
+    },
+    // Esbuild options for faster builds
+    esbuild: {
+      treeShaking: true,
+      legalComments: 'none',
+    },
   };
 });

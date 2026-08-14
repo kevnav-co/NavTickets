@@ -3,9 +3,11 @@ import { useState, useEffect } from 'react';
 import { getConnectivityStatus, ConnectivityStatus } from '../utils/connectivity';
 
 export const useConnectivityStatus = (): ConnectivityStatus => {
-  const [status, setStatus] = useState<ConnectivityStatus>(getConnectivityStatus);
+  const [status, setStatus] = useState<ConnectivityStatus>(() => getConnectivityStatus());
 
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
+
     const updateStatus = () => {
       setStatus(getConnectivityStatus());
     };
@@ -14,7 +16,7 @@ export const useConnectivityStatus = (): ConnectivityStatus => {
     window.addEventListener('offline', updateStatus);
 
     if (navigator.serviceWorker) {
-        navigator.serviceWorker.addEventListener('controllerchange', updateStatus);
+      navigator.serviceWorker.addEventListener('controllerchange', updateStatus);
     }
 
     updateStatus();

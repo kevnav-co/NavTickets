@@ -30,6 +30,8 @@ interface UseSupabaseQueryOptions {
   forceOffline?: boolean;
   /** Función de transformación de snake_case a camelCase */
   transform?: (data: any) => any;
+  /** Habilitar/deshabilitar la query (similar a TanStack Query enabled) */
+  enabled?: boolean;
 }
 
 interface UseSupabaseQueryResult<T> {
@@ -60,6 +62,7 @@ export function useSupabaseQuery<T extends { id: string }>(
     realtime = true,
     forceOffline = false,
     transform,
+    enabled = true,
   } = options;
 
   const { isOnline } = useConnectivityStatus();
@@ -175,7 +178,7 @@ export function useSupabaseQuery<T extends { id: string }>(
   // ─── Realtime subscription ──────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!realtime || !isSupabaseConfigured() || forceOffline || !isOnline) return;
+    if (!enabled || !realtime || !isSupabaseConfigured() || forceOffline || !isOnline) return;
 
     // Limpiar suscripción anterior
     if (channelRef.current) {
@@ -225,17 +228,21 @@ export function useSupabaseQuery<T extends { id: string }>(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [table, realtime, forceOffline, isOnline, transform]);
+  }, [enabled, table, realtime, forceOffline, isOnline, transform]);
 
   // ─── Efecto principal ──────────────────────────────────────────────────────
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
     mountedRef.current = true;
     fetchData();
     return () => {
       mountedRef.current = false;
     };
-  }, [fetchData]);
+  }, [enabled, fetchData]);
 
   // ─── Cleanup de Realtime al desmontar ───────────────────────────────────────
 

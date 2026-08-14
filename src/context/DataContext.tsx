@@ -16,6 +16,8 @@ interface DataContextType {
   error: Error | null;
   isUploading: boolean;
   isRefreshing: boolean;
+  isEquipmentLoaded: boolean;
+  isNotificationsLoaded: boolean;
   getClientById: (id: string) => Client | undefined;
   getOrderById: (id: string) => ServiceOrder | undefined;
   getEquipmentById: (id: string) => Equipment | undefined;
@@ -25,6 +27,8 @@ interface DataContextType {
   uploadFile: (file: File, path: string) => Promise<string>;
   forceRefresh: () => void;
   completeOrderAndUpdateEquipment: (order: ServiceOrder, closingData: Partial<ServiceOrder>) => Promise<void>;
+  loadEquipment: () => Promise<void>;
+  loadNotifications: () => Promise<void>;
   pendingCount: number;
   isSyncing: boolean;
 }
@@ -35,7 +39,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { currentUser } = useAuth();
   const companyId = currentUser?.companyId;
 
-  // ─── Queries reactivas con Supabase + offline cache ────────────────────
+  // ─── State para lazy loading ──────────────────────────────────────────────
+  const [isEquipmentLoaded, setIsEquipmentLoaded] = useState(false);
+  const [isNotificationsLoaded, setIsNotificationsLoaded] = useState(false);
+
+  // ─── Queries críticas: cargar inmediato (necesarias para render inicial) ───
   const hasSession = !!currentUser;
   const clientsQuery = useSupabaseQuery<Client>('clients', {
     table: 'clients',
@@ -49,23 +57,28 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     realtime: true,
     forceOffline: !hasSession,
   });
-  const equipmentQuery = useSupabaseQuery<Equipment>('equipment', {
-    table: 'equipment',
-    filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
-    realtime: true,
-    forceOffline: !hasSession,
-  });
   const usersQuery = useSupabaseQuery<User>('users', {
     table: 'users',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
     forceOffline: !hasSession,
   });
+
+  // ─── Queries no críticas: lazy load (equipment, notifications) ─────────────
+  const equipmentQuery = useSupabaseQuery<Equipment>('equipment', {
+    table: 'equipment',
+    filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
+    realtime: isEquipmentLoaded,
+    forceOffline: !hasSession,
+    enabled: isEquipmentLoaded,
+  });
+
   const notificationsQuery = useSupabaseQuery<AppNotification>('notifications', {
     table: 'notifications',
     filters: [{ column: 'user_id', operator: 'eq', value: companyId }],
-    realtime: true,
+    realtime: isNotificationsLoaded,
     forceOffline: !hasSession,
+    enabled: isNotificationsLoaded,
   });
 
   // ─── CRUD con cola offline ─────────────────────────────────────────────
@@ -73,16 +86,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { uploadFile: uploadFileRaw, isUploading } = useSupabaseStorage({ bucket: 'order-photos' });
   const { pendingCount, isSyncing } = useSyncManager();
 
-  // ─── Loading combinado ──────────────────────────────────────────────────
+  // ─── Loading combinado: SOLO queries críticas ──────────────────────────
   const loading = hasSession && (
-    clientsQuery.loading || ordersQuery.loading || equipmentQuery.loading || usersQuery.loading
+    clientsQuery.loading || ordersQuery.loading || usersQuery.loading
   );
-  const error = clientsQuery.error || ordersQuery.error || equipmentQuery.error || usersQuery.error;
+  const error = clientsQuery.error || ordersQuery.error || usersQuery.error;
 
   // ─── Helpers ────────────────────────────────────────────────────────────
   const getClientById = useCallback((id: string) => clientsQuery.data.find(c => c.id === id), [clientsQuery.data]);
   const getOrderById = useCallback((id: string) => ordersQuery.data.find(o => o.id === id), [ordersQuery.data]);
   const getEquipmentById = useCallback((id: string) => equipmentQuery.data.find(e => e.id === id), [equipmentQuery.data]);
+
+  // ─── Lazy load functions ────────────────────────────────────────────────
+  const loadEquipment = useCallback(async () => {
+    if (!isEquipmentLoaded) {
+      setIsEquipmentLoaded(true);
+      // El hook useSupabaseQuery se reactivará automáticamente al cambiar realtime de false a true
+      // y al tener isEquipmentLoaded = true, el efecto interno disparará fetchData
+      await equipmentQuery.refetch();
+    }
+  }, [isEquipmentLoaded, equipmentQuery]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!isNotificationsLoaded) {
+      setIsNotificationsLoaded(true);
+      await notificationsQuery.refetch();
+    }
+  }, [isNotificationsLoaded, notificationsQuery]);
 
   // ─── Wrappers de CRUD ──────────────────────────────────────────────────
   const addItem = useCallback(async (collectionName: string, data: any): Promise<string> => {
@@ -136,6 +166,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     error: error ? new Error(error) : null,
     isUploading,
     isRefreshing: isSyncing,
+    isEquipmentLoaded,
+    isNotificationsLoaded,
     getClientById,
     getOrderById,
     getEquipmentById,
@@ -145,13 +177,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     uploadFile,
     forceRefresh,
     completeOrderAndUpdateEquipment,
+    loadEquipment,
+    loadNotifications,
     pendingCount,
     isSyncing,
   }), [
     clientsQuery.data, ordersQuery.data, equipmentQuery.data, usersQuery.data, notificationsQuery.data,
     loading, error, isUploading, isSyncing,
+    isEquipmentLoaded, isNotificationsLoaded,
     getClientById, getOrderById, getEquipmentById,
     addItem, updateItem, deleteItem, uploadFile, forceRefresh, completeOrderAndUpdateEquipment,
+    loadEquipment, loadNotifications,
     pendingCount, refreshKey,
   ]);
 
