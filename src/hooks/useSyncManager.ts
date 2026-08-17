@@ -2,6 +2,7 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { offlineCache } from './useOfflineCache';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { toSnakeCase } from '../utils/caseConverter';
 
 interface SyncManagerResult {
   isSyncing: boolean;
@@ -166,61 +167,4 @@ export function useSyncManager(): SyncManagerResult {
     lastSyncResult,
     triggerSync,
   };
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const CAMEL_TO_SNAKE: Record<string, string> = {
-  companyId: 'company_id',
-  clientId: 'client_id',
-  clientName: 'client_name',
-  technicianId: 'technician_id',
-  scheduledDate: 'scheduled_date',
-  timeSlot: 'time_slot',
-  scheduledEndTime: 'scheduled_end_time',
-  actualStartDate: 'actual_start_date',
-  orderType: 'order_type',
-  serviceName: 'service_name',
-  warrantyPeriod: 'warranty_period',
-  warrantyExpiration: 'warranty_expiration',
-  isUnderWarrantyReview: 'is_under_warranty_review',
-  warrantyJobs: 'warranty_jobs',
-  warrantyStartTime: 'warranty_start_time',
-  warrantyEndTime: 'warranty_end_time',
-  closingData: 'closing_data',
-  warrantyNotificationSent: 'warranty_notification_sent',
-  lastUpdatedBy: 'last_updated_by',
-  serialNumber: 'serial_number',
-  gasType: 'gas_type',
-  imageUrl: 'image_url',
-  lastMaintenanceDate: 'last_maintenance_date',
-  maintenanceFrequency: 'maintenance_frequency',
-  nextMaintenanceNotificationSent: 'next_maintenance_notification_sent',
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  completedAt: 'completed_at',
-  dueDate: 'due_date',
-  reminderNotificationSent: 'reminder_notification_sent',
-  dueDateNotificationSent: 'due_date_notification_sent',
-  assignedTo: 'assigned_to',
-  createdBy: 'created_by',
-  fcmToken: 'fcm_token',
-  locationUpdatedAt: 'location_updated_at',
-  supabaseAuthId: 'supabase_auth_id',
-  timeAgo: 'time_ago',
-  orderNumber: 'order_number',
-};
-
-function toSnakeCase(obj: Record<string, any>): Record<string, any> {
-  if (!obj || typeof obj !== 'object') return obj;
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = CAMEL_TO_SNAKE[key] || key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
-    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      result[snakeKey] = JSON.stringify(value);
-    } else {
-      result[snakeKey] = value;
-    }
-  }
-  return result;
 }

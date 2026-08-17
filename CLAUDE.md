@@ -8,48 +8,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — Production build via Vite (output to `dist/`)
 - `npm run preview` — Preview the production build locally
 - `npm test` — Run all tests with Vitest (single test: `npx vitest run src/utils/warranty.test.ts`)
-- `npm run deploy` — Build + `firebase deploy --only hosting`
-- `cd functions && npm run serve` — Run Firebase Cloud Functions emulator
-- `cd functions && npm run deploy` — Deploy only functions
-- `firebase deploy` — Deploy everything (hosting + functions)
+- `npm run deploy` — Build + deploy to Vercel (production)
+- `npm run serve` — Run local Vite dev server (alias for `npm run dev`)
+- `vercel --prod` — Deploy the built app to Vercel (alternative to the `npm run deploy` script)
 
 ## Architecture Overview
 
-This is a **Field Service Management** (FSM) PWA for industrial equipment maintenance, built with React 18 + TypeScript + Vite + Firebase. It is **offline-first** using Firestore persistent local cache + Workbox service worker.
+This is a **Field Service Management** (FSM) PWA for industrial equipment maintenance, built with React 18 + TypeScript + Vite + Supabase (Postgres) + OneSignal. It is **offline-first** using IndexedDB via Dexie and Workbox service worker.
 
 ### Frontend Structure
 
 - **Routing**: `HashRouter` in `App.tsx` with `React.lazy` code-splitting per route. All routes wrapped in `Suspense` with `<LoadingFallback />`.
 - **State Management**: Three React Contexts drive the app:
-  - `AuthContext` — Firebase Auth + mapping to the app's `User` model (login via `username@navas.com` email convention)
+  - `AuthContext` — Supabase Auth + mapping to the app's `User` model (login via `username@navas.com` email convention)
   - `DataContext` — Central data layer exposing all collections (clients, orders, equipment, users, notifications) + CRUD actions + file uploads
   - `ModalContext` — UI modal state management
 - **Styling**: Tailwind CSS v4 (using `@tailwindcss/vite` plugin)
 - **PWA**: `vite-plugin-pwa` with inject-manifest strategy. Service worker at `src/sw.ts` handles push notifications and precaching.
 - **Maps**: Leaflet via `react-leaflet` for client geo-location display
 
-### Backend (Cloud Functions in `functions/`)
+### Backend (Vercel Serverless Functions)
 
-Node.js 20, `firebase-functions/v2`, `firebase-admin`:
+Node.js 20, Vercel Serverless Functions (`api/` directory) using Supabase client for data access.
 
-| Function | Trigger | Purpose |
-|----------|---------|---------|
-| `api` | `onRequest` (Express) | Proxy to Cuenti ERP for client data + test push endpoint |
-| `onorderassigned` | Firestore `onDocumentWritten("orders/{id}")` | Notifies technician on order assignment/change |
-| `ontaskassigned` | Firestore `onDocumentWritten("tasks/{id}")` | Notifies user on task assignment/change |
-| `taskScheduler` | `onSchedule` (cron) | Sends task reminders and due-date alerts (runs every 5 min) |
-| `dailyExpirationCheck` | `onSchedule` (cron, 8:00 AM daily) | Checks warranty/maintenance expirations, sends email/WhatsApp/notification |
-| `triggerExpirationCheck` | `onCall` | Manual trigger for expiration check |
-| `updateUserPassword` | `onCall` | Admin-only password update via Firebase Auth Admin SDK |
-| `sendTestNotification` | `onCall` | Developer/admin sends test push to a specific user |
+| Function | Path | Purpose |
+|----------|------|---------|
+| `api` | `/api/*` | Proxy to Cuenti ERP for client data and test push endpoint |
+| `taskScheduler` | (Supabase Edge Function, schedule `*/5 * * * *`) | Sends task reminders and due‑date alerts every 5 min. Lives in `supabase/functions/task-scheduler/` (migrated off Vercel Cron — Vercel Hobby only allows 1 cron/day) |
+| `dailyExpirationCheck` | (cron via Vercel scheduler, daily `0 8 * * *`) | Checks warranty/maintenance expirations, sends email/WhatsApp/notification (within Vercel Hobby limits, stays on Vercel for now) |
+| `triggerExpirationCheck` | `/api/triggerExpirationCheck` (POST) | Manual trigger for expiration check |
+| `updateUserPassword` | `/api/updateUserPassword` (POST) | Admin‑only password update via Supabase Auth |
+| `sendTestNotification` | `/api/sendTestNotification` (POST) | Developer/admin sends test push (OneSignal) |
 
 ### Communication Channels (`communicationChannels.js`)
 
 - **WhatsApp**: Twilio (stubs out gracefully if no credentials configured)
 - **Email**: Nodemailer via Gmail SMTP with branded HTML templates
-- **Internal Notification**: Firestore `notifications` collection + FCM push
+- **Internal Notification**: Supabase `notifications` table + OneSignal push
 
-### Data Model (Firestore Collections)
+### Data Model (Supabase Collections)
 
 - `users` — Technicians, supervisors, admins, developers. Role-based access control via `src/permissions.ts`.
 - `clients` — Industrial clients with GPS coordinates for mapping
@@ -74,23 +71,24 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 
 | Hook | File | Purpose |
 |------|------|---------|
-| `useDataFetching` | `src/hooks/useDataFetching.ts` | Centralized Firestore collection subscriptions with reactive state |
-| `useFirestoreActions` | `src/hooks/useFirestoreActions.ts` | Generic CRUD (addItem, updateItem, deleteItem) |
-| `useStorage` | `src/hooks/useStorage.ts` | File uploads with browser-image-compression |
+| `useSupabaseQuery` | `src/hooks/useSupabaseQuery.ts` | Reactive Supabase query with offline cache (IndexedDB via Dexie) + Realtime subscriptions |
+| `useSupabaseActions` | `src/hooks/useSupabaseActions.ts` | Generic CRUD (addItem, updateItem, deleteItem) via Supabase |
+| `useSupabaseStorage` | `src/hooks/useSupabaseStorage.ts` | File uploads with browser-image-compression |
+| `useSyncManager` | `src/hooks/useSyncManager.ts` | Offline write queue — drena pendientes al reconectar (máx. 3 reintentos) |
 | `useOfflineStatus` | `src/hooks/useOfflineStatus.ts` | Connectivity detection + sync state |
 | `useOrderActions` | `src/hooks/useOrderActions.ts` | Complex order operations (close, reopen warranty) |
-| `useCollection` | `src/hooks/useCollection.ts` | Reactive Firestore collection subscription hook |
 | `useFileHandler` | `src/hooks/useFileHandler.ts` | Manages evidence files (photos) with online/offline support |
+| `useOneSignal` | `src/hooks/useOneSignal.ts` | Push notifications via OneSignal |
 
 ### Key Services
 
 | File | Purpose |
 |------|---------|
-| `src/services/firebase.ts` | Firebase init with persistent local cache + lazy FCM messaging singleton |
+| `src/services/supabase.ts` | Supabase client init (Postgres + Auth + Realtime + Storage) |
 | `src/services/authService.ts` | Auth helpers |
-| `src/services/userService.ts` | `getUserDataById` — fetches app user from Firestore by UID |
+| `src/services/userService.ts` | `getUserDataById` — fetches app user from Supabase by UID |
 | `src/services/data.ts` | `deleteOrderWithEvidence` — cascading delete of order + storage files |
-| `src/permissions.ts` | RBAC: 5 roles (technician, supervisor, aux_admin, admin, developer) with granular permission strings |
+| `src/permissions.ts` | RBAC: 6 roles (technician, supervisor, aux_admin, admin, super_admin, developer) with granular permission strings |
 
 ### Utility Files
 
@@ -106,16 +104,10 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 ### Environment Variables
 
 ```env
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_FIREBASE_MEASUREMENT_ID=
-VITE_FIREBASE_DATABASE_URL=
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+ONESIGNAL_APP_ID=
 VITE_GOOGLE_MAPS_API_KEY=        # For Maps JavaScript API (currently unused — using Leaflet)
-VITE_VAPID_KEY=                   # For Firebase Cloud Messaging push notifications
 ```
 
 Functions env (in `functions/.env`):
@@ -138,8 +130,7 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 
 ### Known Technical Notes
 
-- Firebase Messaging uses a **lazy singleton** (`getMessagingInstance`) to avoid iOS Safari crashes at module load time — always use this instead of direct `getMessaging()` calls.
-- The service worker (`src/sw.ts`) handles push notifications via the native `push` event, NOT Firebase's `onBackgroundMessage` — the latter doesn't fire reliably on iOS PWA.
-- VAPID key is hardcoded in `App.tsx:45`.
-- Firestore uses `persistentLocalCache({})` for offline support — no pagination on collection queries.
-- Images are compressed client-side before upload to Firebase Storage.
+- The service worker (`src/sw.ts`) handles push notifications via the native `push` event — this works reliably on iOS PWA.
+- Push notifications use **OneSignal**; Firebase Cloud Messaging is no longer used.
+- Supabase keeps data offline-friendly via the client cache (IndexedDB/Dexie) driving `useSupabaseQuery`; no pagination is applied on the main collection queries.
+- Images are compressed client-side before upload to Supabase Storage.

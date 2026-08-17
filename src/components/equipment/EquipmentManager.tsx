@@ -70,9 +70,16 @@ const EquipmentCloneModal: React.FC<{
 };
 
 const EquipmentManager: React.FC = () => {
-  const { equipment, clients, orders } = useData();
+  const { equipment, clients, orders, loadEquipment } = useData();
   const { currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // Cargar equipment al montar (la query está con lazy-load habilitado vía
+  // isEquipmentLoaded). loadEquipment es idempotente: solo dispara la carga la
+  // primera vez.
+  useEffect(() => {
+    loadEquipment();
+  }, [loadEquipment]);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [filter, setFilter] = useState<'all' | 'operational' | 'review' | 'expired'>('all');

@@ -73,9 +73,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     enabled: isEquipmentLoaded,
   });
 
+  // Filtrar por user_id (no company_id): las notificaciones son por usuario.
+  // La política RLS en BD hace user_id = id del usuario autenticado.
   const notificationsQuery = useSupabaseQuery<AppNotification>('notifications', {
     table: 'notifications',
-    filters: [{ column: 'user_id', operator: 'eq', value: companyId }],
+    filters: currentUser?.id ? [{ column: 'user_id', operator: 'eq', value: currentUser.id }] : [],
     realtime: isNotificationsLoaded,
     forceOffline: !hasSession,
     enabled: isNotificationsLoaded,

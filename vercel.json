@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "name": "navtickets",
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
@@ -13,10 +14,6 @@
     }
   },
   "crons": [
-    {
-      "path": "/api/edge/task-scheduler",
-      "schedule": "*/5 * * * *"
-    },
     {
       "path": "/api/edge/daily-expiration-check",
       "schedule": "0 8 * * *"

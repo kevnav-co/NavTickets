@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient, QueryKey } from '@tanstack/react
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
-import { snakeToCamel } from './useSupabaseQuery';
+import { snakeToCamel } from '../utils/caseConverter';
 
 export type QueryFilter = {
   column: string;

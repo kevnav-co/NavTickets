@@ -23,9 +23,16 @@ const colorClasses = {
 export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   const { currentUser, logout } = useAuth();
   const { openModal } = useModal();
-  const { isRefreshing, forceRefresh, notifications, updateItem, deleteItem, loading } = useData();
+  const { isRefreshing, forceRefresh, notifications, updateItem, deleteItem, loading, loadNotifications } = useData();
   const { text: statusText, color: statusColor } = useConnectivityStatus();
   const navigate = useNavigate();
+
+  // Cargar notificaciones del usuario al montar (Header está siempre presente
+  // cuando hay sesión). loadNotifications es idempotente: solo dispara la carga
+  // la primera vez, cuando isNotificationsLoaded aún es false.
+  useEffect(() => {
+    if (currentUser) loadNotifications();
+  }, [currentUser, loadNotifications]);
 
   // OneSignal push notifications
   const { permission, isSupported, isLoading, enableNotifications } = useOneSignal(

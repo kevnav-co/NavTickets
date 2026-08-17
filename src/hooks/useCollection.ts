@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useSupabaseQuery, type QueryFilter, snakeToCamel } from './useSupabaseQuery';
+import { useSupabaseQuery, type QueryFilter } from './useSupabaseQuery';
+import { snakeToCamel } from '../utils/caseConverter';
 
 export interface UseCollectionOptions {
   filters?: QueryFilter[];

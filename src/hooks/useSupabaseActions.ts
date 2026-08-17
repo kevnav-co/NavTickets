@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
+import { toSnakeCase, snakeToCamel } from '../utils/caseConverter';
 
 interface UseSupabaseActionsOptions {
   /** Forzar operaciones offline aunque haya conexión */
@@ -238,85 +239,3 @@ export function useSupabaseActions(
   };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-const CAMEL_TO_SNAKE: Record<string, string> = {};
-// Invertir el mapa de snakeToCamel
-const SNAKE_TO_CAMEL_MAP: Record<string, string> = {
-  company_id: 'companyId',
-  client_id: 'clientId',
-  client_name: 'clientName',
-  technician_id: 'technicianId',
-  scheduled_date: 'scheduledDate',
-  time_slot: 'timeSlot',
-  scheduled_end_time: 'scheduledEndTime',
-  actual_start_date: 'actualStartDate',
-  order_type: 'orderType',
-  service_name: 'serviceName',
-  warranty_period: 'warrantyPeriod',
-  warranty_expiration: 'warrantyExpiration',
-  is_under_warranty_review: 'isUnderWarrantyReview',
-  warranty_jobs: 'warrantyJobs',
-  warranty_start_time: 'warrantyStartTime',
-  warranty_end_time: 'warrantyEndTime',
-  closing_data: 'closingData',
-  warranty_notification_sent: 'warrantyNotificationSent',
-  last_updated_by: 'lastUpdatedBy',
-  serial_number: 'serialNumber',
-  gas_type: 'gasType',
-  image_url: 'imageUrl',
-  last_maintenance_date: 'lastMaintenanceDate',
-  maintenance_frequency: 'maintenanceFrequency',
-  next_maintenance_notification_sent: 'nextMaintenanceNotificationSent',
-  created_at: 'createdAt',
-  updated_at: 'updatedAt',
-  completed_at: 'completedAt',
-  due_date: 'dueDate',
-  reminder_notification_sent: 'reminderNotificationSent',
-  due_date_notification_sent: 'dueDateNotificationSent',
-  assigned_to: 'assignedTo',
-  created_by: 'createdBy',
-  fcm_token: 'fcmToken',
-  location_updated_at: 'locationUpdatedAt',
-  supabase_auth_id: 'supabaseAuthId',
-  time_ago: 'timeAgo',
-  order_number: 'orderNumber',
-};
-
-for (const [snake, camel] of Object.entries(SNAKE_TO_CAMEL_MAP)) {
-  CAMEL_TO_SNAKE[camel] = snake;
-}
-
-function toSnakeCase(obj: Record<string, any>): Record<string, any> {
-  if (!obj || typeof obj !== 'object') return obj;
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const snakeKey = CAMEL_TO_SNAKE[key] || key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
-    // Convertir objetos/arrays a JSON para JSONB columns
-    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      result[snakeKey] = JSON.stringify(value);
-    } else {
-      result[snakeKey] = value;
-    }
-  }
-  return result;
-}
-
-function snakeToCamel(obj: Record<string, any>): Record<string, any> {
-  if (!obj || typeof obj !== 'object') return obj;
-  const result: Record<string, any> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const camelKey = SNAKE_TO_CAMEL_MAP[key] || key.replace(/_([a-z])/g, (_, l) => l.toUpperCase());
-    // Parsear strings JSON
-    if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
-      try {
-        result[camelKey] = JSON.parse(value);
-      } catch {
-        result[camelKey] = value;
-      }
-    } else {
-      result[camelKey] = value;
-    }
-  }
-  return result;
-}
