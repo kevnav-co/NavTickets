@@ -60,6 +60,50 @@ export async function getCompany(companyId: string): Promise<CompanyConfig | nul
   return normalizeCompany(data);
 }
 
+// ─── Bootstrap de empresa completa (Edge Function con service-role) ───
+// Crea la empresa + su perfil de Supabase Auth + la fila `users` vinculada.
+// Requiere que el llamante sea super_admin (lo valida el endpoint).
+export interface BootstrapCompanyPayload {
+  companyName: string;
+  username: string;
+  password: string;
+  displayName?: string;
+  role?: string;
+  slug?: string;
+}
+
+export interface BootstrapCompanyResult {
+  ok: boolean;
+  companyId?: string;
+  authUid?: string;
+  userId?: string;
+  email?: string;
+  error?: string;
+}
+
+export async function bootstrapCompany(
+  payload: BootstrapCompanyPayload
+): Promise<BootstrapCompanyResult> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const { data: { session } } = await supabase.auth.getSession();
+  const response = await fetch(
+    `${supabaseUrl}/functions/v1/create-company`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+  const result = (await response.json()) as BootstrapCompanyResult;
+  if (!response.ok) {
+    return { ok: false, error: result.error || 'Error al crear la empresa' };
+  }
+  return result;
+}
+
 export async function createCompany(company: Omit<CompanyConfig, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }): Promise<string> {
   const now = new Date().toISOString();
   const payload = {

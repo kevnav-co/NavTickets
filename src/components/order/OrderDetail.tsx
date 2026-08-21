@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ServiceOrder, Client, User, Equipment, OrderStatus, WarrantyJob } from '../../types';
-import { Hourglass, Play, ChevronLeft, Loader2, PenLine } from 'lucide-react';
+import { ServiceOrder, Client, User, Equipment, OrderStatus, WarrantyJob, Seguimiento } from '../../types';
+import { Hourglass, Play, ChevronLeft, Loader2, PenLine, History } from 'lucide-react';
 import OrderPendingView from './OrderPendingView';
 import OrderInProgressView from './OrderInProgressView';
 import OrderSummaryView from './OrderSummaryView';
@@ -13,6 +13,7 @@ import { compressImage } from '../../utils/imageCompression';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { blobToBase64 } from '../../utils/blobConverter';
 import { useSupabaseStorage } from '../../hooks/useSupabaseStorage';
+import SeguimientoTimeline from './SeguimientoTimeline';
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
@@ -36,6 +37,7 @@ interface Props {
   users: User[];
   onStartOrder: () => void;
   onCompleteOrder: (updatedOrder: Partial<ServiceOrder>) => Promise<void>;
+  seguimientos: Seguimiento[];
   onAddEquipment?: () => void;
   onRemoveEquipment: (equipmentId: string) => void;
   onAddClient?: () => void;
@@ -58,6 +60,7 @@ interface Props {
 
 const OrderDetail: React.FC<Props> = ({
   order, client, technician, equipmentList, users, onStartOrder, onCompleteOrder,
+  seguimientos,
   onAddEquipment, onRemoveEquipment, onAddClient, onAddTechnician, onUpdateOrder,
   handleDeleteOrderAndImages,
   generatePDF, isGeneratingPdf, isDeleting, pdfProgress, currentUser,
@@ -548,6 +551,14 @@ const OrderDetail: React.FC<Props> = ({
       {showConfirmation && <ConfirmationModal message={confirmationInfo.message} onConfirm={confirmationInfo.action} onCancel={() => setShowConfirmation(false)} />}
       {fileError && <div className="fixed bottom-4 right-4 z-[200] bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow-lg"><p className="font-bold">Error de Archivo</p><p>{fileError}</p></div>}
       {renderContent()}
+
+      {/* ─── Seguimiento (historial del tiquete) ─── */}
+      <section className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <History size={18} className="text-primary" /> Seguimiento
+        </h3>
+        <SeguimientoTimeline seguimientos={seguimientos} users={users} />
+      </section>
     </div>
   );
 };

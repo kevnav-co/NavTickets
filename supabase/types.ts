@@ -438,6 +438,44 @@ export interface Database {
           created_at?: string;
         };
       };
+      seguimientos: {
+        Row: {
+          id: string;
+          company_id: string;
+          order_id: string;
+          user_id: string | null;
+          type: 'creacion' | 'estado' | 'asignacion' | 'cierre' | 'comentario' | 'reabrio_garantia';
+          action: string | null;
+          description: string | null;
+          previous_status: string | null;
+          new_status: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          order_id: string;
+          user_id?: string | null;
+          type: 'creacion' | 'estado' | 'asignacion' | 'cierre' | 'comentario' | 'reabrio_garantia';
+          action?: string | null;
+          description?: string | null;
+          previous_status?: string | null;
+          new_status?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          order_id?: string;
+          user_id?: string | null;
+          type?: 'creacion' | 'estado' | 'asignacion' | 'cierre' | 'comentario' | 'reabrio_garantia';
+          action?: string | null;
+          description?: string | null;
+          previous_status?: string | null;
+          new_status?: string | null;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -450,6 +488,7 @@ export interface Database {
       order_type: 'Correctivo' | 'Preventivo';
       priority_level: 'Baja' | 'Media' | 'Alta' | 'Urgente';
       notification_type: 'info' | 'alert' | 'success';
+      seguimiento_type: 'creacion' | 'estado' | 'asignacion' | 'cierre' | 'comentario' | 'reabrio_garantia';
     };
   };
 }

@@ -129,6 +129,29 @@ export interface User {
   signature?: string;
 }
 
+export enum SeguimientoType {
+  CREACION = 'creacion',
+  ESTADO = 'estado',
+  ASIGNACION = 'asignacion',
+  CIERRE = 'cierre',
+  COMENTARIO = 'comentario',
+  REABRIO_GARANTIA = 'reabrio_garantia'
+}
+
+// Un registro del historial/actividad de un tiquete (orden), aislado por empresa.
+export interface Seguimiento {
+  id: string;
+  companyId: string;
+  orderId: string;
+  userId?: string | null;
+  type: SeguimientoType;
+  action?: string | null;
+  description?: string | null;
+  previousStatus?: string | null;
+  newStatus?: string | null;
+  createdAt: string;
+}
+
 export interface AppNotification {
   id: string;
   companyId: string;      // ← NUEVO

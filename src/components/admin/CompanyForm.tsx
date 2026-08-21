@@ -66,6 +66,10 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   // ─── Form State ───
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminDisplayName, setAdminDisplayName] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [createdCompanyId, setCreatedCompanyId] = useState<string | null>(null);
   const [theme, setTheme] = useState<CompanyTheme>({
     primaryColor: '#7b1113',
     logoUrl: '',
@@ -148,12 +152,12 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
   // ─── Image Upload ───
   const handleImageUpload = async (file: File, type: 'logo' | 'icon' | 'logoWhite') => {
-    if (!companyId && !isEditMode) {
+    const targetId = companyId ?? createdCompanyId;
+    if (!targetId) {
       // For new companies, save first then upload
       alert('Guarda la empresa primero antes de subir imágenes.');
       return;
     }
-    const targetId = companyId!;
     setUploading(type);
     try {
       const url = await adminService.uploadCompanyImage(file, targetId, type);
@@ -194,23 +198,51 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       return;
     }
 
+    // En modo crear, el admin inicial es obligatorio.
+    if (!isEditMode && (!adminUsername.trim() || adminPassword.length < 6)) {
+      setError('Crea el administrador inicial: usuario y contraseña (mínimo 6 caracteres).');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
-      const companyData = {
-        name: name.trim(),
-        slug: slug.trim().toLowerCase(),
-        theme,
-        features,
-        auth,
-        tabs: tabs.filter(t => t.label.trim()), // Only save tabs with a label
-      };
+      if (!isEditMode) {
+        // Bootstrap completo: empresa + perfil Auth + fila users (service-role).
+        const result = await adminService.bootstrapCompany({
+          companyName: name.trim(),
+          slug: slug.trim().toLowerCase(),
+          username: adminUsername.trim().toLowerCase(),
+          password: adminPassword,
+          displayName: adminDisplayName.trim() || 'Administrador',
+          role: 'admin',
+        });
+        if (!result.ok || !result.companyId) {
+          setError(result.error || 'Error al crear la empresa.');
+          return;
+        }
+        setCreatedCompanyId(result.companyId);
 
-      if (isEditMode && companyId) {
+        // Persistir el resto de configuración (tema/features/tabs).
+        await adminService.updateCompany(result.companyId, {
+          theme,
+          features,
+          auth,
+          tabs: tabs.filter(t => t.label.trim()),
+        });
+
+        alert(`Empresa creada. El administrador entra con:\n\nUsuario: ${result.email}\nContraseña: (la que definiste)`);
+      } else if (companyId) {
+        const companyData = {
+          name: name.trim(),
+          slug: slug.trim().toLowerCase(),
+          theme,
+          features,
+          auth,
+          tabs: tabs.filter(t => t.label.trim()), // Only save tabs with a label
+        };
         await adminService.updateCompany(companyId, companyData);
-      } else {
-        await adminService.createCompany(companyData);
       }
       onSaved();
     } catch (err) {
@@ -268,6 +300,51 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
           </div>
         </div>
       </section>
+
+      {/* ─── Initial Admin (solo en modo crear) ─── */}
+      {!isEditMode && (
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <h2 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+            <Shield size={18} className="text-primary" /> Administrador Inicial
+          </h2>
+          <p className="text-xs text-gray-400 mb-4">
+            Se crean la empresa y la cuenta del primer admin. El login usará usuario{'{dominio}'}
+            (ej. {adminUsername || 'admin'}@navas.com).
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Usuario</label>
+              <input
+                type="text"
+                value={adminUsername}
+                onChange={e => setAdminUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
+                placeholder="Ej: admin"
+                className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Nombre</label>
+              <input
+                type="text"
+                value={adminDisplayName}
+                onChange={e => setAdminDisplayName(e.target.value)}
+                placeholder="Ej: Administrador"
+                className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 mb-1 block">Contraseña (mín. 6)</label>
+              <input
+                type="password"
+                value={adminPassword}
+                onChange={e => setAdminPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ─── Theme ─── */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">

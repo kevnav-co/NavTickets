@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ServiceOrder, OrderStatus, Client, User } from '../../types';
+import { ServiceOrder, OrderStatus, Client, User, Seguimiento } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
@@ -43,6 +43,13 @@ const OrderWorkflow: React.FC = () => {
   });
 
   const order = useMemo(() => (orders && orders.length > 0 ? orders[0] : undefined), [orders]);
+
+  // Historial de seguimientos del tiquete, aislado por empresa (RLS).
+  const { data: seguimientos } = useCollection<Seguimiento>('seguimientos', {
+    filters: id ? [{ column: 'order_id', operator: 'eq', value: id }] : [],
+    orderBy: { column: 'created_at', ascending: false },
+    realtime: true,
+  });
 
   const canViewOrder = useMemo(() => {
     if (!order || !currentUser) return false;
@@ -239,6 +246,7 @@ const OrderWorkflow: React.FC = () => {
         users={users || []}
         onStartOrder={handleStartOrder}
         onCompleteOrder={handleCompleteOrder}
+        seguimientos={seguimientos || []}
         onAddEquipment={() => setShowEquipmentSelector(true)}
         onRemoveEquipment={handleRemoveEquipment}
         onAddClient={() => setShowClientSearch(true)}
