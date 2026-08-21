@@ -7,12 +7,6 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "regions": ["iad1"],
-  "functions": {
-    "api/edge/*.ts": {
-      "runtime": "edge",
-      "maxDuration": 30
-    }
-  },
   "crons": [
     {
       "path": "/api/edge/daily-expiration-check",
