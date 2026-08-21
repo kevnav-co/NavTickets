@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { render } from '@react-email/components';
 // We'll use a simple HTML template inline since we can't import the existing templates
 
 export const config = {
@@ -141,7 +140,7 @@ async function sendPushNotification(userId: string, title: string, body: string,
   }
 }
 
-async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+async function sendEmail(to: string, subject: string, _html: string): Promise<boolean> {
   // TODO: Implement email sending via SendGrid, Resend, or similar
   // For now, log and return false to trigger fallback
   console.log(`[Expiration Check] Would send email to ${to}: ${subject}`);
@@ -179,7 +178,7 @@ export default async function handler(req: Request): Promise<Response> {
     // --- 1. CHECK EQUIPMENT MAINTENANCE ---
     const { data: equipment, error: eqError } = await supabase
       .from('equipment')
-      .select('id, name, brand, last_maintenance_date, maintenance_frequency, client_id, company_id, next_maintenance_notification_sent')
+      .select('id, name, brand, serial_number, location, last_maintenance_date, maintenance_frequency, client_id, company_id, next_maintenance_notification_sent')
       .eq('status', 'Activa')
       .eq('next_maintenance_notification_sent', false);
 

@@ -29,6 +29,7 @@ Luego copiar y ejecutar el contenido de:
 - `supabase/migrations/001_schema.sql`
 - `supabase/migrations/002_seed.sql`
 - `supabase/migrations/003_triggers.sql`
+- `supabase/migrations/004_fix_rls_recursion.sql` — **OBLIGATORIO**: corrige la recursión RLS infinita en la policy de `users` (sin esto, ninguna consulta del cliente funciona y el dashboard se queda cargando).
 
 ### 1.3 Configurar Variables de Sesión (para pg_net)
 En **Settings → Database → Session settings**:

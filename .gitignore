@@ -35,3 +35,7 @@ firebase-debug.log
 *.log
 .env.*
 .vercel
+
+# Tooling local (Claude Code / spec-kit)
+.claude/
+.specify/extensions/*/local-config.yml

@@ -17,7 +17,7 @@ interface NotificationPayload {
   companyId?: string;
 }
 
-async function sendOneSignalNotification(userId: string, payload: NotificationPayload, companyName: string, companyLogo: string) {
+async function sendOneSignalNotification(userId: string, payload: NotificationPayload, _companyName: string, companyLogo: string) {
   const oneSignalAppId = process.env.ONESIGNAL_APP_ID;
   const oneSignalApiKey = process.env.ONESIGNAL_API_KEY;
 
@@ -139,7 +139,6 @@ export default async function handler(req: Request): Promise<Response> {
       companyLogo = company.theme?.logoUrl || '/assets/logo-inicio.png';
     }
 
-    const appUrl = process.env.VERCEL_API_BASE || 'https://your-app.vercel.app';
     const title = `🔔 Test Push - ${companyName}`;
     const message = `Notificación de prueba enviada a ${targetUser.name || 'usuario'}. Si ves esto, ¡las notificaciones funcionan correctamente!`;
 
