@@ -220,7 +220,11 @@ function AppContent({
               <Suspense fallback={<LoadingFallback />}>
                 <Routes>
                   {/* --- ROUTES --- */}
-                  <Route path="/" element={<RouteWithLayout title="Inicio"><Dashboard /></RouteWithLayout>} />
+                  <Route path="/" element={
+                    currentUser.role === 'super_admin'
+                      ? <Navigate to="/admin" replace />
+                      : <RouteWithLayout title="Inicio"><Dashboard /></RouteWithLayout>
+                  } />
                   <Route path="/tasks" element={<RouteWithLayout title="Tareas"><Tasks /></RouteWithLayout>} />
                   {currentUser && currentUser.role === 'developer' && (
                       <Route path="/accounting" element={<RouteWithLayout title="Contable"><Accounting /></RouteWithLayout>} />
@@ -262,7 +266,7 @@ function AppContent({
                     />
                   ))}
 
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<Navigate to={currentUser.role === 'super_admin' ? '/admin' : '/'} replace />} />
                 </Routes>
               </Suspense>
             </main>
