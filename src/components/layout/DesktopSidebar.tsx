@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, WifiOff, Key, LogOut, PenLine, Shield,
+  Home, WifiOff, Key, LogOut, PenLine, Shield, BarChart3,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -106,15 +106,24 @@ export const DesktopSidebar: React.FC = React.memo(() => {
         })}
       </div>
       {showAdmin && (
-        <div className="px-3 py-2 border-t border-gray-100">
+        <div className="px-3 py-2 border-t border-gray-100 space-y-2">
           <button
             onClick={() => navigate('/admin')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-              location.pathname.startsWith('/admin') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
+              location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
-            <Shield size={20} className={location.pathname.startsWith('/admin') ? 'text-primary' : 'text-gray-400'} />
+            <Shield size={20} className={location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') ? 'text-primary' : 'text-gray-400'} />
             <span className="text-sm">Panel Admin</span>
+          </button>
+          <button
+            onClick={() => navigate('/admin/stats')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+              location.pathname.startsWith('/admin/stats') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <BarChart3 size={20} className={location.pathname.startsWith('/admin/stats') ? 'text-primary' : 'text-gray-400'} />
+            <span className="text-sm">Estadísticas</span>
           </button>
         </div>
       )}

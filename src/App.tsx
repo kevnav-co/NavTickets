@@ -42,6 +42,7 @@ const ClientForm = React.lazy(() => import('./components/client/ClientForm'));
 const EquipmentForm = React.lazy(() => import('./components/equipment/EquipmentForm'));
 const ClientMap = React.lazy(() => import('./components/map/ClientMap'));
 const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
+const CompanyStats = React.lazy(() => import('./components/admin/CompanyStats'));
 
 // --- CONSTANTS AND INTERFACES ---
 const GPS_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutes
@@ -230,7 +231,10 @@ function AppContent({
                       <Route path="/accounting" element={<RouteWithLayout title="Contable"><Accounting /></RouteWithLayout>} />
                   )}
                   {currentUser && currentUser.role === 'super_admin' && (
-                      <Route path="/admin" element={<RouteWithLayout title="Panel Admin"><AdminPanel /></RouteWithLayout>} />
+                      <>
+                          <Route path="/admin" element={<RouteWithLayout title="Panel Admin"><AdminPanel /></RouteWithLayout>} />
+                          <Route path="/admin/stats" element={<RouteWithLayout title="Estadísticas"><CompanyStats /></RouteWithLayout>} />
+                      </>
                   )}
                   <Route path="/orders" element={<RouteWithLayout title="Órdenes"><OrderList /></RouteWithLayout>} />
                   <Route path="/orders/new" element={<RouteWithLayout title="Nueva Orden"><NewOrder /></RouteWithLayout>} />
