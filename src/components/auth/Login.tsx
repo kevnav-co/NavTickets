@@ -13,7 +13,7 @@ const NavasLogo = ({ variant = 'default', size = "large", center = false }: { va
   return (
     <div className={`flex flex-col ${center ? 'items-center' : 'items-start'} gap-2`}>
       <img
-        src="/assets/logo-inicio.png"
+        src="/assets/logo-inicio.png?v=blancot3"
         alt="Logo de la empresa"
         className={`${heightClass} w-auto object-contain transition-all duration-300 ${variant === 'white' ? 'brightness-0 invert drop-shadow-md' : ''}`}
       />
@@ -74,7 +74,7 @@ const Login: React.FC = () => {
 
         <div className="relative z-10">
             <img
-              src="/assets/logo-blanco.png"
+              src="/assets/logo-blanco.png?v=blancot3"
               alt="Logo de la empresa"
               className="w-full h-auto object-contain"
             />
