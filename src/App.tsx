@@ -43,6 +43,7 @@ const EquipmentForm = React.lazy(() => import('./components/equipment/EquipmentF
 const ClientMap = React.lazy(() => import('./components/map/ClientMap'));
 const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
 const CompanyStats = React.lazy(() => import('./components/admin/CompanyStats'));
+const SupportAdmin = React.lazy(() => import('./components/admin/SupportAdmin'));
 
 // --- CONSTANTS AND INTERFACES ---
 const GPS_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutes
@@ -234,6 +235,7 @@ function AppContent({
                       <>
                           <Route path="/admin" element={<RouteWithLayout title="Panel Admin"><AdminPanel /></RouteWithLayout>} />
                           <Route path="/admin/stats" element={<RouteWithLayout title="Estadísticas"><CompanyStats /></RouteWithLayout>} />
+                          <Route path="/admin/support" element={<RouteWithLayout title="Soporte"><SupportAdmin /></RouteWithLayout>} />
                       </>
                   )}
                   <Route path="/orders" element={<RouteWithLayout title="Órdenes"><OrderList /></RouteWithLayout>} />

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Bell, Inbox, Trash2 } from 'lucide-react';
+import { X, Bell, Inbox, Trash2, LifeBuoy } from 'lucide-react';
 import { AppNotification } from '../../types';
 
 interface NotificationsModalProps {
@@ -10,6 +10,7 @@ interface NotificationsModalProps {
   onNotificationClick: (notificationId?: string) => void;
   onDeleteNotification: (notificationId: string) => void;
   onClearAll: () => void;
+  onOpenSupport?: () => void;
 }
 
 // Helper function to safely convert Firestore timestamps
@@ -32,6 +33,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
   onNotificationClick,
   onDeleteNotification,
   onClearAll,
+  onOpenSupport,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -109,13 +111,29 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               <Inbox size={40} className="mb-3" />
               <h3 className="text-lg font-bold text-gray-500">Bandeja vacía</h3>
               <p className="text-sm">No tienes notificaciones nuevas.</p>
+              {onOpenSupport && (
+                <button
+                  onClick={() => { onOpenSupport(); onClose(); }}
+                  className="mt-4 flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-primary/30 text-sm font-bold text-primary hover:bg-red-50/50 transition-colors"
+                >
+                  <LifeBuoy size={16} /> Enviar consulta a soporte
+                </button>
+              )}
             </div>
           )}
         </div>
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="p-3 border-t border-gray-100">
+          <div className="p-3 border-t border-gray-100 space-y-2">
+            {onOpenSupport && (
+              <button
+                onClick={() => { onOpenSupport(); onClose(); }}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border-2 border-dashed border-primary/30 text-sm font-bold text-primary hover:bg-red-50/50 transition-colors"
+              >
+                <LifeBuoy size={15} /> Enviar consulta a soporte
+              </button>
+            )}
             <div className="flex justify-center items-center gap-6">
               {notifications.some(n => !n.read) && (
                 <button onClick={() => onNotificationClick()} className="text-sm font-bold text-gray-600 hover:text-black">

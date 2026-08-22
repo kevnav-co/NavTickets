@@ -195,3 +195,30 @@ export interface Task {
   reminderNotificationSent?: boolean;
   dueDateNotificationSent?: boolean;
 }
+
+// ─── Soporte interno (tickets) ───────────────────────────────────────────────
+export enum SupportTicketStatus {
+  OPEN = 'abierto',
+  IN_PROGRESS = 'en_progreso',
+  CLOSED = 'cerrado',
+}
+
+export interface SupportTicket {
+  id: string;
+  companyId: string;
+  userId?: string | null;      // solicitante
+  subject: string;
+  message: string;             // mensaje de apertura
+  status: SupportTicketStatus;
+  createdAt: string;
+  updatedAt?: string | null;
+}
+
+export interface SupportMessage {
+  id: string;
+  ticketId: string;
+  userId?: string | null;      // autor
+  role: 'empresa' | 'admin';
+  message: string;
+  createdAt: string;
+}

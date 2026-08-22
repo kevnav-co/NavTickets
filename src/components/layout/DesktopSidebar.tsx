@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, WifiOff, Key, LogOut, PenLine, Shield, BarChart3,
+  Home, WifiOff, Key, LogOut, PenLine, Shield, BarChart3, LifeBuoy,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -110,11 +110,20 @@ export const DesktopSidebar: React.FC = React.memo(() => {
           <button
             onClick={() => navigate('/admin')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-              location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
+              location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') && !location.pathname.startsWith('/admin/support') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
-            <Shield size={20} className={location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') ? 'text-primary' : 'text-gray-400'} />
+            <Shield size={20} className={location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') && !location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-gray-400'} />
             <span className="text-sm">Panel Admin</span>
+          </button>
+          <button
+            onClick={() => navigate('/admin/support')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
+              location.pathname.startsWith('/admin/support') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <LifeBuoy size={20} className={location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-gray-400'} />
+            <span className="text-sm">Soporte</span>
           </button>
           <button
             onClick={() => navigate('/admin/stats')}

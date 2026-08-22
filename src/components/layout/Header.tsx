@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, Users2 } from 'lucide-react';
+import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, Users2, LifeBuoy } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext.tsx';
 import { NotificationsModal } from './NotificationsModal';
+import SupportModal from '../support/SupportModal';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useOneSignal } from '../../hooks/useOneSignal';
 import PERMISSIONS, { hasPermission } from '../../permissions';
@@ -42,6 +43,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const [timeAgo, setTimeAgo] = useState('Hace un momento');
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -144,6 +146,14 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Soporte interno (consulta al super_admin) */}
+        <button
+          onClick={() => setIsSupportOpen(true)}
+          title="Soporte de la app"
+          className="p-2 text-gray-500 hover:bg-gray-100 hover:text-primary rounded-full transition-colors"
+        >
+          <LifeBuoy size={22} />
+        </button>
         {/* Notification bell or enable-notifications button */}
         {notifPermission === 'granted' ? (
           <button onClick={handleOpenNotifications} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
@@ -206,7 +216,9 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
         onNotificationClick={handleMarkAsRead}
         onDeleteNotification={handleDeleteNotification}
         onClearAll={handleClearAll}
+        onOpenSupport={() => { setIsNotificationsOpen(false); setIsSupportOpen(true); }}
       />
+      <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
     </header>
   );
 });

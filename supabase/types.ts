@@ -476,6 +476,64 @@ export interface Database {
           created_at?: string;
         };
       };
+      support_tickets: {
+        Row: {
+          id: string;
+          company_id: string;
+          user_id: string | null;
+          subject: string;
+          message: string;
+          status: 'abierto' | 'en_progreso' | 'cerrado';
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          user_id?: string | null;
+          subject: string;
+          message: string;
+          status?: 'abierto' | 'en_progreso' | 'cerrado';
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          user_id?: string | null;
+          subject?: string;
+          message?: string;
+          status?: 'abierto' | 'en_progreso' | 'cerrado';
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      support_messages: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          user_id: string | null;
+          role: 'empresa' | 'admin';
+          message: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ticket_id: string;
+          user_id?: string | null;
+          role: 'empresa' | 'admin';
+          message: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ticket_id?: string;
+          user_id?: string | null;
+          role?: 'empresa' | 'admin';
+          message?: string;
+          created_at?: string;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -489,6 +547,7 @@ export interface Database {
       priority_level: 'Baja' | 'Media' | 'Alta' | 'Urgente';
       notification_type: 'info' | 'alert' | 'success';
       seguimiento_type: 'creacion' | 'estado' | 'asignacion' | 'cierre' | 'comentario' | 'reabrio_garantia';
+      support_status: 'abierto' | 'en_progreso' | 'cerrado';
     };
   };
 }
