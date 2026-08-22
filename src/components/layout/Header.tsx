@@ -128,6 +128,17 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
     }
   }
 
+  // El super_admin gestiona el soporte en su panel (/admin/support), NO en el
+  // modal de empresa. Los demás abren el modal para crear sus consultas.
+  const handleOpenSupport = useCallback(() => {
+    setIsNotificationsOpen(false);
+    if (currentUser?.role === 'super_admin') {
+      navigate('/admin/support');
+    } else {
+      setIsSupportOpen(true);
+    }
+  }, [currentUser?.role, navigate]);
+
   return (
     <header className="bg-white/80 backdrop-blur-md px-5 py-4 flex items-center justify-between sticky top-0 z-50 border-b border-gray-100 shadow-sm">
       <div className="flex items-center gap-3">
@@ -148,8 +159,8 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
       <div className="flex items-center gap-4">
         {/* Soporte interno (consulta al super_admin) */}
         <button
-          onClick={() => setIsSupportOpen(true)}
-          title="Soporte de la app"
+          onClick={handleOpenSupport}
+          title={currentUser?.role === 'super_admin' ? 'Gestionar soporte' : 'Soporte de la app'}
           className="p-2 text-gray-500 hover:bg-gray-100 hover:text-primary rounded-full transition-colors"
         >
           <LifeBuoy size={22} />
@@ -216,7 +227,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
         onNotificationClick={handleMarkAsRead}
         onDeleteNotification={handleDeleteNotification}
         onClearAll={handleClearAll}
-        onOpenSupport={() => { setIsNotificationsOpen(false); setIsSupportOpen(true); }}
+        onOpenSupport={handleOpenSupport}
       />
       <SupportModal isOpen={isSupportOpen} onClose={() => setIsSupportOpen(false)} />
     </header>
