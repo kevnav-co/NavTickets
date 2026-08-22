@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
 import { useModal } from '../../context/ModalContext';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
+import { useSupportUnread } from '../../hooks/useSupportUnread';
 import CompanyLogo from '../shared/CompanyLogo';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 
@@ -44,6 +45,7 @@ export const DesktopSidebar: React.FC = React.memo(() => {
   const { isOffline } = useConnectivityStatus();
   const navigate = useNavigate();
   const location = useLocation();
+  const supportUnread = useSupportUnread();
 
   const navItems = useMemo(() => {
     if (!currentUser) return [];
@@ -124,6 +126,11 @@ export const DesktopSidebar: React.FC = React.memo(() => {
           >
             <LifeBuoy size={20} className={location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-gray-400'} />
             <span className="text-sm">Soporte</span>
+            {(!location.pathname.startsWith('/admin/support') && supportUnread > 0) && (
+              <span className="ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white flex items-center justify-center text-[11px] font-bold shadow-sm">
+                {supportUnread > 99 ? '99+' : supportUnread}
+              </span>
+            )}
           </button>
           <button
             onClick={() => navigate('/admin/stats')}

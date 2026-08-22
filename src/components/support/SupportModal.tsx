@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useCollection } from '../../hooks/useCollection';
 import { SupportTicket, SupportMessage, SupportTicketStatus } from '../../types';
+import { notifySupportNewTicket } from '../../services/supportNotify';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -76,6 +77,8 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
     setSelectedId(data?.id ?? null);
     setSubject(''); setMessage('');
     setView('detail');
+    // Avisa al super_admin (push + contador) de que llegó una consulta nueva.
+    void notifySupportNewTicket({ companyId: currentUser.companyId, subject: subject.trim(), message: message.trim() });
   };
 
   const handleReply = async () => {

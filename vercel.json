@@ -61,6 +61,10 @@
     {
       "source": "/api/admin/send-test-notification",
       "destination": "/api/edge/send-test-notification"
+    },
+    {
+      "source": "/api/support-notify",
+      "destination": "/api/edge/support-notify"
     }
   ]
 }
