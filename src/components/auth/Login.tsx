@@ -13,7 +13,7 @@ const NavasLogo = ({ variant = 'default', size = "large", center = false }: { va
   return (
     <div className={`flex flex-col ${center ? 'items-center' : 'items-start'} gap-2`}>
       <img
-        src="/assets/logo-inicio.png?v=fondoblanco4"
+        src="/assets/logo-inicio-movil.jpg?v=1"
         alt="Logo de la empresa"
         className={`${heightClass} w-auto object-contain transition-all duration-300 ${variant === 'white' ? 'brightness-0 invert drop-shadow-md' : ''}`}
       />
