@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Shield, type LucideIcon
+  Home, Shield, BarChart3, LifeBuoy, type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
+import { useSupportUnread } from '../../hooks/useSupportUnread';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 
 // Dynamic icon resolution
@@ -30,14 +31,26 @@ interface NavItem {
   label: string;
   path: string;
   requiresOnline?: boolean;
+  badge?: number; // contador de no-leídos (p.ej. soporte del super_admin)
 }
+
+// Barra dedicada del super_admin en móvil: áreas de administración, no las pestañas
+// de empresa. Espejo del bloque "admin" del desktop sidebar.
+const ADMIN_ITEMS: NavItem[] = [
+  { icon: Shield, label: 'Admin', path: '/admin' },
+  { icon: BarChart3, label: 'Stats', path: '/admin/stats' },
+  { icon: LifeBuoy, label: 'Soporte', path: '/admin/support' },
+];
 
 export const MobileNavigation: React.FC = React.memo(() => {
   const { currentUser } = useAuth();
   const { company } = useCompany();
   const { isOffline } = useConnectivityStatus();
+  const supportUnread = useSupportUnread();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const showAdmin = currentUser?.role === 'super_admin';
 
   const navItems = useMemo(() => {
     if (!currentUser) return [];
@@ -68,22 +81,38 @@ export const MobileNavigation: React.FC = React.memo(() => {
     return items;
   }, [currentUser, company.tabs]);
 
-  // Add admin link for super_admin in mobile nav
-  const showAdmin = currentUser?.role === 'super_admin';
+  // Para el super_admin usamos las áreas de admin (con el conteo de soporte);
+  // para el resto, las pestañas de la empresa.
+  const items: NavItem[] = useMemo(() => {
+    if (showAdmin) {
+      return ADMIN_ITEMS.map(it => ({
+        ...it,
+        badge: it.path === '/admin/support' ? supportUnread : undefined,
+      }));
+    }
+    return navItems;
+  }, [showAdmin, navItems, supportUnread]);
+
+  if (items.length === 0) return null;
+
+  const isActiveFor = (item: NavItem): boolean =>
+    location.pathname === item.path ||
+    (item.path !== '/' && item.path !== '/admin' && location.pathname.startsWith(item.path));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/60 z-50 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 4px)' }}>
       <div className="flex items-stretch">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-          const isDisabled = item.requiresOnline && isOffline;
+        {items.map((item) => {
+          const isActive = isActiveFor(item);
+          const isDisabled = !!item.requiresOnline && isOffline;
+          const showingBadge = !!item.badge && item.badge > 0 && !isActive;
 
           return (
             <button
               key={item.label}
               disabled={isDisabled}
               onClick={() => navigate(item.path)}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 relative transition-all duration-200 ${isDisabled
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative transition-all duration-200 ${isDisabled
                   ? 'opacity-30 cursor-not-allowed'
                   : isActive
                     ? 'text-primary'
@@ -92,12 +121,17 @@ export const MobileNavigation: React.FC = React.memo(() => {
             >
               {/* Active top accent line */}
               {isActive && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2.5px] rounded-full bg-primary" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-[3px] rounded-full bg-gradient-to-r from-primary to-red-400 shadow-sm" />
               )}
 
-              {/* Icon with active pill */}
-              <span className={`flex items-center justify-center w-9 h-7 rounded-full transition-colors duration-200 ${isActive ? 'bg-primary/10' : ''}`}>
-                <item.icon size={18} strokeWidth={isActive ? 2.5 : 1.8} />
+              {/* Icon with badge */}
+              <span className={`relative flex items-center justify-center w-10 h-8 rounded-2xl transition-all duration-200 ${isActive ? 'bg-primary/10 scale-105' : ''}`}>
+                <item.icon size={19} strokeWidth={isActive ? 2.5 : 1.8} />
+                {showingBadge && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold ring-2 ring-white shadow-sm">
+                    {item.badge! > 99 ? '99+' : item.badge}
+                  </span>
+                )}
               </span>
 
               <span className={`text-[9px] tracking-wide leading-none ${isActive ? 'font-extrabold' : 'font-semibold'}`}>{item.label}</span>
@@ -105,22 +139,6 @@ export const MobileNavigation: React.FC = React.memo(() => {
           );
         })}
       </div>
-      {showAdmin && (
-        <button
-          onClick={() => navigate('/admin')}
-          className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 relative transition-all duration-200 ${
-            location.pathname.startsWith('/admin') ? 'text-primary' : 'text-gray-400'
-          }`}
-        >
-          {location.pathname.startsWith('/admin') && (
-            <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2.5px] rounded-full bg-primary" />
-          )}
-          <span className={`flex items-center justify-center w-9 h-7 rounded-full transition-colors duration-200 ${location.pathname.startsWith('/admin') ? 'bg-primary/10' : ''}`}>
-            <Shield size={18} strokeWidth={location.pathname.startsWith('/admin') ? 2.5 : 1.8} />
-          </span>
-          <span className="text-[9px] tracking-wide leading-none font-semibold">Admin</span>
-        </button>
-      )}
     </nav>
   );
 });
