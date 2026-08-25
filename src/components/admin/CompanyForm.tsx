@@ -9,6 +9,8 @@ import {
 import { CompanyTheme, CompanyFeatures, CompanyAuth, TabConfig } from '../../types/company';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
 import * as adminService from '../../services/adminService';
+import Toast from '../ui/Toast';
+import InfoTip from '../ui/InfoTip';
 
 interface CompanyFormProps {
   companyId: string | null;
@@ -88,8 +90,14 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   const [tabs, setTabs] = useState<TabConfig[]>([]);
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null); // Errors de carga (banner superior)
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string; admin?: string }>({});
+  const [saveErrorToast, setSaveErrorToast] = useState<string | null>(null); // Feedback elegante al guardar
   const [uploading, setUploading] = useState<'logo' | 'icon' | 'logoWhite' | null>(null);
+
+  // Refs para enfocar el primer campo con error.
+  const nameRef = useRef<HTMLInputElement>(null);
+  const slugRef = useRef<HTMLInputElement>(null);
 
   // Load existing company data
   useEffect(() => {
@@ -189,21 +197,26 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
   // ─── Save ───
   const handleSave = async () => {
-    if (!name.trim()) {
-      setError('El nombre de la empresa es obligatorio.');
-      return;
-    }
-    if (!slug.trim()) {
-      setError('El slug es obligatorio.');
-      return;
-    }
+    // ── Validación por campo: marca el error en el campo + toast elegante + foco al primero ──
+    const newErrors: typeof fieldErrors = {};
+    if (!name.trim()) newErrors.name = 'El nombre de la empresa es obligatorio.';
+    if (!slug.trim()) newErrors.slug = 'El slug es obligatorio.';
 
     // En modo crear, el admin inicial es obligatorio.
     if (!isEditMode && (!adminUsername.trim() || adminPassword.length < 6)) {
-      setError('Crea el administrador inicial: usuario y contraseña (mínimo 6 caracteres).');
+      newErrors.admin = 'Crea el administrador inicial: usuario y contraseña (mínimo 6 caracteres).';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors);
+      setSaveErrorToast(Object.values(newErrors)[0]);
+      if (newErrors.name) nameRef.current?.focus();
+      else if (newErrors.slug) slugRef.current?.focus();
       return;
     }
 
+    setFieldErrors({});
+    setSaveErrorToast(null);
     setSaving(true);
     setError(null);
 
@@ -247,7 +260,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       onSaved(isEditMode ? 'Empresa actualizada correctamente.' : 'Empresa creada correctamente.');
     } catch (err) {
       console.error('[AdminForm] Error saving company:', err);
-      setError('Error al guardar la empresa.');
+      setSaveErrorToast('No se pudo guardar la empresa. Revisa tu conexión e inténtalo de nuevo.');
     } finally {
       setSaving(false);
     }
@@ -263,7 +276,10 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
-      {/* Error */}
+      {/* Feedback elegante al intentar guardar (validación/error de servidor) */}
+      <Toast message={saveErrorToast} variant="error" onDismiss={() => setSaveErrorToast(null)} />
+
+      {/* Error de carga (banner) */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-sm text-red-700">
           <AlertTriangle size={16} />
@@ -278,24 +294,48 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Nombre de la Empresa</label>
+            <div className="flex items-center gap-2 mb-1">
+              <label className="text-xs font-bold text-gray-500">Nombre de la Empresa</label>
+              <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
+              <InfoTip text="Nombre comercial de la empresa, tal como lo verán los usuarios al iniciar sesión y en la barra de navegación." />
+            </div>
             <input
+              ref={nameRef}
               type="text"
               value={name}
-              onChange={e => handleNameChange(e.target.value)}
+              onChange={e => { handleNameChange(e.target.value); if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: undefined })); }}
               placeholder="Ej: NavTickets"
-              className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className={`w-full h-11 px-4 border rounded-xl focus:outline-none focus:ring-2 ${
+                fieldErrors.name ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200 focus:ring-primary/20'
+              }`}
             />
+            {fieldErrors.name && (
+              <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1 font-semibold">
+                <AlertTriangle size={12} /> {fieldErrors.name}
+              </p>
+            )}
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Slug (URL)</label>
+            <div className="flex items-center gap-2 mb-1">
+              <label className="text-xs font-bold text-gray-500">Slug (URL)</label>
+              <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
+              <InfoTip text="Identificador único de la empresa para la URL. Solo minúsculas, números y guiones, sin espacios. No debe repetirse entre empresas." side="top" />
+            </div>
             <input
+              ref={slugRef}
               type="text"
               value={slug}
-              onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              onChange={e => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); if (fieldErrors.slug) setFieldErrors(prev => ({ ...prev, slug: undefined })); }}
               placeholder="Ej: navtickets"
-              className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className={`w-full h-11 px-4 border rounded-xl focus:outline-none focus:ring-2 ${
+                fieldErrors.slug ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200 focus:ring-primary/20'
+              }`}
             />
+            {fieldErrors.slug && (
+              <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1 font-semibold">
+                <AlertTriangle size={12} /> {fieldErrors.slug}
+              </p>
+            )}
             <p className="text-[10px] text-gray-400 mt-1">Identificador único para la URL. Sin espacios.</p>
           </div>
         </div>
@@ -313,7 +353,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-bold text-gray-500 mb-1 block">Usuario</label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="text-xs font-bold text-gray-500">Usuario</label>
+                <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
+                <InfoTip text="Nombre de usuario con el que el administrador iniciará sesión. Sin espacios; ejemplo: admin. El login se hará como usuario@dominio." side="bottom" />
+              </div>
               <input
                 type="text"
                 value={adminUsername}
@@ -323,7 +367,10 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-500 mb-1 block">Nombre</label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="text-xs font-bold text-gray-500">Nombre</label>
+                <InfoTip text="Nombre visible del administrador en la app. Si lo dejas vacío se usará 'Administrador'." side="bottom" />
+              </div>
               <input
                 type="text"
                 value={adminDisplayName}
@@ -333,7 +380,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-gray-500 mb-1 block">Contraseña (mín. 6)</label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="text-xs font-bold text-gray-500">Contraseña (mín. 6)</label>
+                <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
+                <InfoTip text="La contraseña inicial del administrador. Mínimo 6 caracteres. Se usa junto con el usuario para el primer ingreso." side="bottom" />
+              </div>
               <input
                 type="password"
                 value={adminPassword}
@@ -343,6 +394,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
               />
             </div>
           </div>
+          {fieldErrors.admin && (
+            <div className="mt-3 flex items-center gap-2 text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              <AlertTriangle size={16} /> {fieldErrors.admin}
+            </div>
+          )}
         </section>
       )}
 
@@ -546,6 +602,16 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                       placeholder="Nombre de la pestaña"
                       className="font-bold text-sm bg-transparent border-b border-transparent focus:border-primary focus:outline-none px-1 py-0.5 min-w-[120px]"
                     />
+                    {/* Indicador de obligatoriedad: el título es el campo obligatorio de cada pestaña */}
+                    <span
+                      title="Título obligatorio: sin él la pestaña no se guarda."
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                        tab.label.trim() ? 'bg-emerald-50 text-emerald-600' : 'bg-red-100 text-red-600'
+                      }`}
+                    >
+                      {tab.label.trim() ? 'Obligatoria ✓' : 'Obligatoria · falta título'}
+                    </span>
+                    <InfoTip side="bottom" text={'Nombre de la pestaña que verán los usuarios en la barra de navegación. Es obligatorio: las pestañas sin título se descartan al guardar. Puedes renombrarla como quieras (p. ej. "Órdenes" → "Trabajos"). El resto de campos de esta pestaña (icono, ruta, roles) son opcionales y puedes ignorarlos si no los necesitas.'} />
                   </div>
                   <div className="flex items-center gap-1">
                     <button type="button" onClick={() => moveTab(index, -1)} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveUp size={14} /></button>
@@ -576,7 +642,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* Icon Name */}
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Icono (lucide-react)</label>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Icono (lucide-react)</span>
+                      <span className="text-[9px] font-bold text-gray-300 uppercase">Opcional</span>
+                      <InfoTip text="Icono de la pestaña en la barra de navegación, usando un nombre válido de lucide-react (p. ej. Home, Users, Settings2, Map, ClipboardList). Si no lo sabes, déjalo vacío: se usará un icono por defecto." side="top" />
+                    </div>
                     <input
                       type="text"
                       value={tab.icon}
@@ -587,7 +657,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                   </div>
                   {/* Route */}
                   <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Ruta</label>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Ruta</span>
+                      <span className="text-[9px] font-bold text-gray-300 uppercase">Opcional</span>
+                      <InfoTip text="Ruta dentro de la app a la que navega la pestaña (debe empezar con '/'). Para componentes internos (Órdenes, Clientes, etc.) usa la ruta real del proyecto: /, /orders, /clients, /equipment, /users, /map, /tasks. No la cambies por algo que no exista o la pestaña no abrirá." side="top" />
+                    </div>
                     <input
                       type="text"
                       value={tab.route}
