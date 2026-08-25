@@ -66,6 +66,10 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
       alert('Nombre, usuario y contraseña son obligatorios.');
       return;
     }
+    if (formData.password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
     setSaving(true);
     try {
       const id = await adminService.adminCreateUser({

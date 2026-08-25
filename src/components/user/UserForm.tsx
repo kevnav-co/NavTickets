@@ -5,6 +5,7 @@ import { User } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
+import * as adminService from '../../services/adminService';
 import { UserSchema } from '../../schemas/user.schema';
 import PERMISSIONS, { hasPermission, ROLES } from '../../permissions';
 import SignatureField from '../ui/SignatureField';
@@ -32,7 +33,7 @@ const initialFormData: Partial<User> = {
 const UserForm: React.FC<Props> = ({ users }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addValidated, updateValidated } = useValidatedActions();
+  const { updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const isEditMode = !!id;
 
@@ -185,13 +186,19 @@ const UserForm: React.FC<Props> = ({ users }) => {
             navigate(`/users/${id}`);
 
         } else {
-            const {id: formId, ...restOfData} = formData;
-            await addValidated('users', {
+            const { id: formId, password: _pw, ...restOfData } = formData;
+            // Crear a través de la Edge Function create-user: crea la cuenta de
+            // Supabase Auth + la fila `users` vinculada (supabase_auth_id), para
+            // que el usuario SÍ pueda iniciar sesión. Un INSERT directo en
+            // `users` no basta (la app loguea contra auth.users).
+            await adminService.adminCreateUser({
                 ...restOfData,
+                companyId: currentUser?.companyId as string,
+                password: formData.password,
                 latitude: formData.latitude !== 0 ? formData.latitude : undefined,
                 longitude: formData.longitude !== 0 ? formData.longitude : undefined,
                 locationUpdatedAt: new Date().toISOString()
-            }, UserSchema.omit({ id: true, companyId: true }));
+            });
             alert('Usuario registrado con éxito');
             window.localStorage.removeItem(localStorageKey);
             navigate('/users');

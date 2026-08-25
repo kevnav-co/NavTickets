@@ -152,10 +152,23 @@ export async function listUsersByCompany(companyId: string): Promise<User[]> {
   return (data || []).map(normalizeUser);
 }
 
+// Crea un usuario con su cuenta de Supabase Auth (para que SÍ pueda iniciar
+// sesión) vía la Edge Function `create-user`. Un simple INSERT en `users` no
+// basta: la app loguea contra auth.users (AuthContext → signInWithPassword).
 export async function adminCreateUser(data: Omit<Record<string, any>, 'id'>): Promise<string> {
-  const { data: inserted, error } = await (supabase as any).from('users').insert(toSnakeCase(data)).select('id').single();
-  if (error) throw new Error(error.message);
-  return inserted.id;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const { data: { session } } = await supabase.auth.getSession();
+  const response = await fetch(
+    `${supabaseUrl}/functions/v1/create-user`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ ...data }),
+    }
+  );
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Error al crear el usuario');
+  return result.userId;
 }
 
 export async function adminUpdateUser(userId: string, data: Partial<Record<string, any>>): Promise<void> {
