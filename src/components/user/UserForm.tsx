@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { User } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { authAccessToken } from '../../services/supabase';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
 import * as adminService from '../../services/adminService';
 import { UserSchema } from '../../schemas/user.schema';
@@ -157,12 +158,16 @@ const UserForm: React.FC<Props> = ({ users }) => {
 
             if (formData.password && formData.password.trim() !== '') {
                 try {
-                    // Call Supabase Edge Function instead of Firebase Cloud Function
+                    // Edge Function de Supabase Auth: reset de admin. Manda el
+                    // access_token de sesión (identifica quién pide el reset).
+                    const token = await authAccessToken();
+                    if (!token) throw new Error('Sin sesión activa.');
+
                     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-password`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+                            'Authorization': `Bearer ${token}`,
                         },
                         body: JSON.stringify({ userId: id, newPassword: formData.password }),
                     });

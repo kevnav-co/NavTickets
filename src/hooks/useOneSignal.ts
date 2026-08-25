@@ -20,7 +20,7 @@ export interface OneSignalState {
  * Hook for OneSignal push notifications
  * Replaces Firebase messaging logic
  */
-export const useOneSignal = (currentUser?: { id: string; fcmToken?: string } | null, updateUserFcmToken?: (userId: string, token: string) => Promise<void>) => {
+export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; onesignalPlayerId?: string } | null, updateUserFcmToken?: (userId: string, token: string) => Promise<void>) => {
   const [state, setState] = useState<OneSignalState>({
     permission: 'default',
     pushToken: null,
@@ -63,14 +63,16 @@ export const useOneSignal = (currentUser?: { id: string; fcmToken?: string } | n
 
     try {
       const token = getOneSignalToken();
-      if (token && token !== currentUser.fcmToken && updateUserFcmToken) {
+      // Nuevo hogar del player id: onesignal_player_id (fallback a fcm_token legado).
+      const storedPlayerId = currentUser.onesignalPlayerId ?? currentUser.fcmToken;
+      if (token && token !== storedPlayerId && updateUserFcmToken) {
         await updateUserFcmToken(currentUser.id, token);
         setState(prev => ({ ...prev, pushToken: token }));
       }
     } catch (error) {
       console.warn('[OneSignal] Silent token refresh failed:', error);
     }
-  }, [currentUser?.id, currentUser?.fcmToken, isOnline, state.isSupported, updateUserFcmToken]);
+  }, [currentUser?.id, currentUser?.onesignalPlayerId, currentUser?.fcmToken, isOnline, state.isSupported, updateUserFcmToken]);
 
   // Run silent token refresh when user/online status changes
   useEffect(() => {

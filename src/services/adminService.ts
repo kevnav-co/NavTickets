@@ -170,8 +170,32 @@ export async function adminCreateUser(data: Omit<Record<string, any>, 'id'>): Pr
 }
 
 export async function adminUpdateUser(userId: string, data: Partial<Record<string, any>>): Promise<void> {
-  const { error } = await (supabase as any).from('users').update(toSnakeCase(data)).eq('id', userId);
+  // No debe llegar `password` aquí: la clave vive en Supabase Auth, no en la
+  // tabla `users` (columna eliminada en migración 010). Usar adminUpdateUserPassword.
+  const { password, ...rest } = data;
+  if (password) {
+    console.warn('[adminUpdateUser] `password` ignorado: usar adminUpdateUserPassword');
+  }
+  const { error } = await (supabase as any).from('users').update(toSnakeCase(rest)).eq('id', userId);
   if (error) throw new Error(error.message);
+}
+
+// Ruta de reset de clave para otro usuario (Edge Function update-user-password):
+// actualiza Supabase Auth y marca must_reset_password=true para forzar el cambio
+// en el próximo login. Identifica al admin por su access_token de sesión.
+export async function adminUpdateUserPassword(userId: string, newPassword: string): Promise<void> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const { data: { session } } = await supabase.auth.getSession();
+  const response = await fetch(
+    `${supabaseUrl}/functions/v1/update-user-password`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ userId, newPassword }),
+    }
+  );
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || 'Error al resetear la contraseña');
 }
 
 export async function adminDeleteUser(userId: string): Promise<void> {

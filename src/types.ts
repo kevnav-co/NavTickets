@@ -119,14 +119,21 @@ export interface User {
   name: string;
   role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin' | 'super_admin';
   username: string;
-  password?: string;
   identification?: string;
   address?: string;
   latitude?: number;
   longitude?: number;
   locationUpdatedAt?: string;
   fcmToken?: string;
+  onesignalPlayerId?: string;
+  mustResetPassword?: boolean;
   signature?: string;
+  /**
+   * SOLO campo de formulario/payload (UserForm, CompanyUserManager, create-user).
+   * NUNCA se guarda en la tabla `users` (columna eliminada en migración 010);
+   * la clave vive en Supabase Auth.
+   */
+  password?: string;
 }
 
 export enum SeguimientoType {

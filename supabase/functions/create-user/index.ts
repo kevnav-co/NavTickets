@@ -21,8 +21,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-// Convención de login de la app (AuthContext): username@navas.com
-const EMAIL_DOMAIN = "navas.com";
+// Convención de login de la app (AuthContext): username@<EMAIL_DOMAIN>.
+// Configurable por env (edge secret EMAIL_DOMAIN); fallback histórico "navas.com".
+const EMAIL_DOMAIN = Deno.env.get("EMAIL_DOMAIN") ?? "navas.com";
 // Roles que pueden crear usuarios (tienen CREAR_USER en src/permissions.ts).
 const CREATOR_ROLES = ["super_admin", "admin", "developer"];
 

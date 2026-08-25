@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useCompany } from '../../context/CompanyContext';
+import { authAccessToken } from '../../services/supabase';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -9,8 +9,7 @@ interface ChangePasswordModalProps {
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen, onClose }) => {
-  const { currentUser } = useAuth();
-  const { company } = useCompany();
+  const { currentUser, refreshProfile } = useAuth();
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
@@ -49,15 +48,18 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
     setIsSaving(true);
 
     try {
-      // Call Supabase Edge Function to update password
+      // Edge Function de Supabase Auth real. El destino se deriva del
+      // access_token de sesión (nunca de un userId enviado por el cliente).
+      const token = await authAccessToken();
+      if (!token) throw new Error('Sin sesión activa.');
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({
-          userId: currentUser.id,
           newPassword: newPass,
           currentPassword: oldPass // For verification
         }),
@@ -69,6 +71,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
       }
 
       setSuccess(true);
+      refreshProfile(); // re-fetch perfil: limpia must_reset_password si estaba
       setTimeout(() => {
         onClose();
       }, 2000);

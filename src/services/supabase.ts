@@ -35,3 +35,14 @@ export const supabase = createClient<Database>(
 export const isSupabaseConfigured = (): boolean => {
   return !!(supabaseUrl && supabaseAnonKey);
 };
+
+/**
+ * Devuelve el access_token de la sesión activa (para enviar como `Bearer`
+ * a las Edge Functions y que identifiquen al usuario real), o null si no hay
+ * sesión. Nunca usar la anon key como identidad.
+ */
+export const authAccessToken = async (): Promise<string | null> => {
+  if (!isSupabaseConfigured()) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
+};

@@ -5,14 +5,15 @@
 
 import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { EMAIL_DOMAIN } from '../config';
 import type { User } from '../types';
-import type { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   login: (username: string, password: string, companyId?: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  refreshProfile: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +36,8 @@ function mapUserProfile(data: any): User | null {
     longitude: data.longitude || undefined,
     locationUpdatedAt: data.location_updated_at || undefined,
     fcmToken: data.fcm_token || undefined,
+    onesignalPlayerId: data.onesignal_player_id || undefined,
+    mustResetPassword: data.must_reset_password === true,
     signature: data.signature || undefined,
   };
 }
@@ -43,7 +46,7 @@ function mapUserProfile(data: any): User | null {
  * Hook interno para obtener el perfil del usuario con caché usando useEffect simple
  * En el futuro se puede migrar a TanStack Query para mejor caching
  */
-function useUserProfile(authUserId: string | null): { profile: User | null; loading: boolean; error: Error | null } {
+function useUserProfile(authUserId: string | null, profileVersion: number): { profile: User | null; loading: boolean; error: Error | null } {
   const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -91,7 +94,7 @@ function useUserProfile(authUserId: string | null): { profile: User | null; load
     return () => {
       cancelled = true;
     };
-  }, [authUserId]);
+  }, [authUserId, profileVersion]);
 
   return { profile, loading, error };
 }
@@ -100,6 +103,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [profileVersion, setProfileVersion] = useState(0);
+
+  // Refetch del perfil (p. ej. tras un cambio de contraseña forzado, para que
+  // must_reset_password se entere de que ya se cambió y desbloquee la app).
+  const refreshProfile = useCallback(() => setProfileVersion(v => v + 1), []);
 
   useEffect(() => {
     setMounted(true);
@@ -161,13 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  // 3. Hook para perfil de usuario - se ejecuta independientemente
-  const { profile, loading: profileLoading } = useUserProfile(
-    currentUser?.id ? null : undefined // Temp fix - we need the auth user ID
-  );
-
-  // Mejor: obtener el auth user ID desde la sesión actual
-  // Usamos un estado separado para el authUserId
+  // Obtener el auth user ID desde la sesión actual
   const [authUserId, setAuthUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -193,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Perfil del usuario actual
-  const { profile: userProfile, loading: userProfileLoading } = useUserProfile(authUserId);
+  const { profile: userProfile, loading: userProfileLoading } = useUserProfile(authUserId, profileVersion);
 
   // Sincronizar currentUser con el perfil cargado
   useEffect(() => {
@@ -207,7 +209,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = useCallback(async (username: string, password: string, _companyId?: string): Promise<boolean> => {
     try {
-      const email = `${username}@navas.com`;
+      // Permite que el usuario escriba "usuario" o "usuario@dominio".
+      const email = username.includes('@') ? username : `${username}@${EMAIL_DOMAIN}`;
       const { error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
@@ -231,6 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading: isLoading,
     login,
     logout,
+    refreshProfile,
   };
 
   if (!mounted) {

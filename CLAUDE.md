@@ -84,10 +84,9 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 
 | File | Purpose |
 |------|---------|
-| `src/services/supabase.ts` | Supabase client init (Postgres + Auth + Realtime + Storage) |
-| `src/services/authService.ts` | Auth helpers |
-| `src/services/userService.ts` | `getUserDataById` — fetches app user from Supabase by UID |
+| `src/services/supabase.ts` | Supabase client init (Postgres + Auth + Realtime + Storage) + `authAccessToken()` |
 | `src/services/data.ts` | `deleteOrderWithEvidence` — cascading delete of order + storage files |
+| `src/config.ts` | `EMAIL_DOMAIN` — dominio de login extraído a env (`VITE_EMAIL_DOMAIN`, fallback `navas.com`) |
 | `src/permissions.ts` | RBAC: 6 roles (technician, supervisor, aux_admin, admin, super_admin, developer) with granular permission strings |
 
 ### Utility Files
@@ -106,9 +105,16 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 ```env
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
+VITE_EMAIL_DOMAIN=navas.com        # Dominio de login (username@dominio). Fallback "navas.com"
 ONESIGNAL_APP_ID=
 VITE_GOOGLE_MAPS_API_KEY=        # For Maps JavaScript API (currently unused — using Leaflet)
 ```
+
+Edge Functions (Supabase) leen `EMAIL_DOMAIN` (fallback "navas.com"). `users.password`
+(texto plano) fue eliminada en la migración 010 — la autenticación vive 100% en Supabase
+Auth (`auth.users`), vinculado por `users.supabase_auth_id`. Cambio/reset de clave va por
+la Edge Function `update-user-password` (identifica al usuario por su access_token, nunca
+por la anon key).
 
 Functions env (in `functions/.env`):
 ```env

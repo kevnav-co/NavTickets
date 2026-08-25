@@ -92,8 +92,11 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
     setSaving(true);
     try {
       const updates: Partial<User> = { name: formData.name, username: formData.username, role: formData.role };
-      if (formData.password) (updates as any).password = formData.password;
       await adminService.adminUpdateUser(editUserId, updates);
+      // La clave vive en Supabase Auth (no en users) → reset por Edge Function.
+      if (formData.password) {
+        await adminService.adminUpdateUserPassword(editUserId, formData.password);
+      }
       setUsers(prev => prev.map(u => u.id === editUserId ? { ...u, ...updates } : u));
       setEditUserId(null);
       setShowForm(false);

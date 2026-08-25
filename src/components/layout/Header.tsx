@@ -38,7 +38,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   // OneSignal push notifications
   const { permission, isSupported, isLoading, enableNotifications } = useOneSignal(
     currentUser,
-    async (userId, token) => updateItem('users', userId, { fcmToken: token })
+    async (userId, token) => updateItem('users', userId, { onesignalPlayerId: token })
   );
 
   const [showUserMenu, setShowUserMenu] = useState(false);

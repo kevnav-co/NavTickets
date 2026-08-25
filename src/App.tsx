@@ -12,6 +12,7 @@ import { MobileNavigation } from './components/layout/MobileNavigation';
 import { InstallPWA } from './components/ui/InstallPWA';
 import UpdateNotification from './components/ui/UpdateNotification';
 import Login from './components/auth/Login';
+import { ForcePasswordChange } from './components/auth/ForcePasswordChange';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { useBackgroundSync } from './hooks/useBackgroundSync';
 import { RefreshCw, Save } from 'lucide-react';
@@ -185,6 +186,11 @@ function AppContent({
   }, [company?.name]);
 
   if (companyLoading) return <LoadingFallback />;
+
+  // Reset forzado de contraseña (Fase 2): sin cambio de clave no se usa la app.
+  if (currentUser?.mustResetPassword) {
+    return <ForcePasswordChange />;
+  }
 
   return (
     <div className="h-[100dvh] bg-gray-50 flex flex-col md:flex-row">

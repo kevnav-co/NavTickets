@@ -44,6 +44,8 @@ export const SNAKE_TO_CAMEL: Record<string, string> = {
   assigned_to: 'assignedTo',
   created_by: 'createdBy',
   fcm_token: 'fcmToken',
+  onesignal_player_id: 'onesignalPlayerId',
+  must_reset_password: 'mustResetPassword',
   location_updated_at: 'locationUpdatedAt',
   supabase_auth_id: 'supabaseAuthId',
   time_ago: 'timeAgo',
