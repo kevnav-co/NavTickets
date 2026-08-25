@@ -378,6 +378,20 @@ enabled = true
 verify_jwt = true
 schedule = "*/5 * * * *"
 
+# Daily Expiration Check — mismo day-check de Vercel cron, ahora en Supabase
+# (0 8 * * *). Invocación programada lleva JWT válido del scheduler.
+[functions.daily-expiration-check]
+enabled = true
+verify_jwt = true
+schedule = "0 8 * * *"
+
+# Support Notify — lo dispara un trigger de la BD (pg_net, migración 011) sin
+# JWT de sesión, por eso verify_jwt = false. El control de acceso es la cabecera
+# x-webhook-secret (si se define el secret WEBHOOK_SECRET en la función).
+[functions.support-notify]
+enabled = true
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

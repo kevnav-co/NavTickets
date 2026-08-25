@@ -70,9 +70,11 @@ export function useSyncManager(): SyncManagerResult {
 
           switch (write.action) {
             case 'create': {
+              // Upsert idempotente: el id de `write.data` es el UUID del cliente
+              // (ver addItem offline en useSupabaseActions) → retry sin duplicar.
               const { error: e } = await supabase
                 .from(table)
-                .insert(toSnakeCase(write.data));
+                .upsert(toSnakeCase(write.data), { onConflict: 'id' });
               error = e;
               break;
             }

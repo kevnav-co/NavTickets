@@ -27,18 +27,20 @@ This is a **Field Service Management** (FSM) PWA for industrial equipment mainte
 - **PWA**: `vite-plugin-pwa` with inject-manifest strategy. Service worker at `src/sw.ts` handles push notifications and precaching.
 - **Maps**: Leaflet via `react-leaflet` for client geo-location display
 
-### Backend (Vercel Serverless Functions)
+### Backend — Schedules y Edge Functions
 
-Node.js 20, Vercel Serverless Functions (`api/` directory) using Supabase client for data access.
+**Single source of schedules = Supabase Edge Functions programadas** (no hay crons en Vercel).
+Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), sin stubs muertos.
 
-| Function | Path | Purpose |
-|----------|------|---------|
-| `api` | `/api/*` | Proxy to Cuenti ERP for client data and test push endpoint |
-| `taskScheduler` | (Supabase Edge Function, schedule `*/5 * * * *`) | Sends task reminders and due‑date alerts every 5 min. Lives in `supabase/functions/task-scheduler/` (migrated off Vercel Cron — Vercel Hobby only allows 1 cron/day) |
-| `dailyExpirationCheck` | (cron via Vercel scheduler, daily `0 8 * * *`) | Checks warranty/maintenance expirations, sends email/WhatsApp/notification (within Vercel Hobby limits, stays on Vercel for now) |
-| `triggerExpirationCheck` | `/api/triggerExpirationCheck` (POST) | Manual trigger for expiration check |
-| `updateUserPassword` | `/api/updateUserPassword` (POST) | Admin‑only password update via Supabase Auth |
-| `sendTestNotification` | `/api/sendTestNotification` (POST) | Developer/admin sends test push (OneSignal) |
+| Función | Plataforma | Cadencia / Trigger | Propósito |
+|---------|-----------|--------------------|-----------|
+| `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`) |
+| `dailyExpirationCheck` | Supabase Edge | Diaria `0 8 * * *` | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
+| `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Push OneSignal a super_admin de consulta nueva (`supabase/functions/support-notify/`) |
+| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Vercel edge | En INSERT/UPDATE de orders/tasks (migración 003) | Notificación interna de asignación (`api/edge/on-*.ts`) |
+| `cuentiProxy` | Vercel edge | GET | Proxy de clientes Cuenti ERP (`api/edge/cuenti-proxy.ts`) |
+| `sendTestNotification` | Vercel edge | POST (admin/dev) | Push OneSignal de prueba (`api/edge/send-test-notification.ts`) |
+| `updateUserPassword` | Vercel edge | POST | Reset/self-service de clave vía Supabase Auth (`api/edge/update-user-password.ts`) |
 
 ### Communication Channels (`communicationChannels.js`)
 
@@ -140,3 +142,5 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 - Push notifications use **OneSignal**; Firebase Cloud Messaging is no longer used.
 - Supabase keeps data offline-friendly via the client cache (IndexedDB/Dexie) driving `useSupabaseQuery`; no pagination is applied on the main collection queries.
 - Images are compressed client-side before upload to Supabase Storage.
+- **Sync offline idempotente (Fase 3):** los creates offline ya no usan PK `offline_<timestamp>` sino un **UUID estable generado por el cliente** (`crypto.randomUUID()`), que viaja dentro de `data` y se inserta con `upsert(onConflict:'id')`. Así los retries no duplican y los vínculos/evidencia que referencian ese id sobreviven al sync (`useSupabaseActions.ts` + `useSyncManager.ts`).
+- **Todos los schedules viven en Supabase Edge Functions** (task-scheduler cada 5 min, daily-expiration-check a las 08:00). Vercel `api/*` no tiene crons ni stubs; solo endpoints vivos (webhooks de triggers y proxies).

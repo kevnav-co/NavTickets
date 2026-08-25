@@ -183,10 +183,19 @@ VALUES ('xxx', 9999, 'Test', '<user-id>', ...);
 -- Debería crear notificación en tabla notifications
 ```
 
-### 6.4 Test Cron Jobs
-En Vercel Dashboard → Cron Jobs → "Run Now" para:
-- `/api/edge/task-scheduler`
-- `/api/edge/daily-expiration-check`
+### 6.4 Tareas programadas (schedules)
+> **Fuente única de schedules = Supabase Edge Functions programadas.** No hay crons en Vercel.
+> El endpoint de Vercel `daily-expiration-check` se movió a una Supabase Edge Function nativa
+> (`supabase/functions/daily-expiration-check`, programada `0 8 * * *`), que convive con
+> `task-scheduler` (`*/5 * * * *`) en la misma plataforma.
+
+| Función | Cadencia | En | Ejecutar a mano |
+|---------|----------|----|-----------------|
+| `task-scheduler` (recordatorios/vencimientos/recurrentes) | Cada 5 min | Supabase Edge | `curl -X POST "$(supabase functions deploy ...)"` |
+| `daily-expiration-check` (mantenimiento/garantías) | Diaria 08:00 | Supabase Edge | Dashboard → Edge Functions → Invoke |
+
+Los webhooks por eventos (`on-order-assigned`, `on-task-assigned`, `support-notify`) se disparan
+desde triggers de la BD (pg_net), no son crons.
 
 ---
 

@@ -43,8 +43,13 @@ export function useSupabaseActions(
 
       // ─── Modo offline: encolar ───────────────────────────────────────────
       if (forceOffline || !isOnline) {
-        const tempId = `offline_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-        await offlineCache.enqueueWrite(collection, 'create', tempId, data);
+        // PK estable generado por el cliente (UUID v4), NO `offline_<timestamp>`.
+        // Razón: guardamos el id DENTRO de `data` y el sync lo inserta con ese
+        // mismo id → los vínculos/evidencia que referencian este pk sobreviven
+        // al sync y el re-envío es idempotente (upsert onConflict:'id').
+        const tempId = crypto.randomUUID?.()
+          ?? `gen_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+        await offlineCache.enqueueWrite(collection, 'create', tempId, { ...data, id: tempId });
         setPendingCount(prev => prev + 1);
         return { data: { ...data, id: tempId }, error: null };
       }
@@ -180,9 +185,11 @@ export function useSupabaseActions(
 
           switch (write.action) {
             case 'create': {
+              // Upsert idempotente: write.data ya trae el id del cliente (UUID),
+              // así que un retry no duplica y los vínculos por id se mantienen.
               const { error: e } = await supabase
                 .from(targetTable)
-                .insert(toSnakeCase(write.data));
+                .upsert(toSnakeCase(write.data), { onConflict: 'id' });
               error = e;
               break;
             }
