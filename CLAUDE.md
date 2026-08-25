@@ -108,9 +108,16 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_EMAIL_DOMAIN=navas.com        # Dominio de login (username@dominio). Fallback "navas.com"
-ONESIGNAL_APP_ID=
+VITE_ONESIGNAL_APP_ID=            # App ID de push (frontend). Sin esta, oneSignal.ts no suscribe
 VITE_GOOGLE_MAPS_API_KEY=        # For Maps JavaScript API (currently unused — using Leaflet)
 ```
+
+Push **OneSignal**: `VITE_ONESIGNAL_APP_ID` (cliente) se hornea al buildar (Vercel).
+Los secrets `ONESIGNAL_APP_ID` / `ONESIGNAL_API_KEY` (REST API key `os_v2_app_…`,
+server-side, para los edges) están seteados a nivel de **proyecto Supabase**
+(`npx supabase secrets set …`) — los lee `support-notify`. Para el botón de push de
+prueba del panel admin, `send-test-notification` (edge Vercel) también los usa, pero
+desde las env vars de **Vercel**, no de Supabase.
 
 Edge Functions (Supabase) leen `EMAIL_DOMAIN` (fallback "navas.com"). `users.password`
 (texto plano) fue eliminada en la migración 010 — la autenticación vive 100% en Supabase
@@ -139,7 +146,7 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 ### Known Technical Notes
 
 - The service worker (`src/sw.ts`) handles push notifications via the native `push` event — this works reliably on iOS PWA.
-- Push notifications use **OneSignal**; Firebase Cloud Messaging is no longer used.
+- Push notifications use **OneSignal**; Firebase Cloud Messaging is no longer used. **Flujo completo cableado (Fase 3):** el cliente suscribe con `VITE_ONESIGNAL_APP_ID` y guarda `onesignal_player_id` en `users` (`useOneSignal`→`Header`); el edge `support-notify` (disparado por trigger BD, migración 011) manda el push con `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` seteados como secrets de proyecto Supabase. El push solo alcanza a super_admins **suscritos** por PWA instalada.
 - Supabase keeps data offline-friendly via the client cache (IndexedDB/Dexie) driving `useSupabaseQuery`; no pagination is applied on the main collection queries.
 - Images are compressed client-side before upload to Supabase Storage.
 - **Sync offline idempotente (Fase 3):** los creates offline ya no usan PK `offline_<timestamp>` sino un **UUID estable generado por el cliente** (`crypto.randomUUID()`), que viaja dentro de `data` y se inserta con `upsert(onConflict:'id')`. Así los retries no duplican y los vínculos/evidencia que referencian ese id sobreviven al sync (`useSupabaseActions.ts` + `useSyncManager.ts`).

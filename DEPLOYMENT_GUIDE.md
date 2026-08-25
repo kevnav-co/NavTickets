@@ -104,11 +104,19 @@ vercel --prod
 4. Configurar Site URL: `https://tu-proyecto.vercel.app`
 5. Copiar **App ID** y **REST API Key** (Settings → Keys & IDs)
 
-### 3.2 Configurar en Vercel
-Agregar `ONESIGNAL_APP_ID` y `ONESIGNAL_API_KEY` como variables de entorno.
+### 3.2 Configurar secrets de OneSignal
+Los secrets que los **edges de Supabase** necesitan para mandar push (`support-notify`) viven
+a nivel de proyecto Supabase:
+```bash
+npx supabase secrets set ONESIGNAL_APP_ID=<App ID> ONESIGNAL_API_KEY=<REST API Key os_v2_app_…>
+```
+En Vercel solo se requieren `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` **si** usas el botón de push
+de prueba (`send-test-notification`, edge Vercel).
 
 ### 3.3 Configurar en Frontend
-En `src/services/oneSignal.ts`, el `appId` se toma de `import.meta.env.VITE_ONESIGNAL_APP_ID`.
+En `src/services/oneSignal.ts`, el `appId` se toma de `import.meta.env.VITE_ONESIGNAL_APP_ID`
+(se hornea al buildar; setearla como env var en Vercel). Sin ella, el cliente no se suscribe y
+`support-notify` responde `NO_SUPER_ADMIN_PLAYER_IDS` (notified: 0).
 
 ---
 
@@ -195,7 +203,9 @@ VALUES ('xxx', 9999, 'Test', '<user-id>', ...);
 | `daily-expiration-check` (mantenimiento/garantías) | Diaria 08:00 | Supabase Edge | Dashboard → Edge Functions → Invoke |
 
 Los webhooks por eventos (`on-order-assigned`, `on-task-assigned`, `support-notify`) se disparan
-desde triggers de la BD (pg_net), no son crons.
+desde triggers de la BD (pg_net), no son crons. `support-notify` necesita los secrets de proyecto
+Supabase `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` (ver §3.2) y solo entrega a super_admins con
+`onesignal_player_id` guardado (PWA instalada + permiso concedido).
 
 ---
 
