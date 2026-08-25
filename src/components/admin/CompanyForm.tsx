@@ -120,9 +120,13 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         if (company) {
           setName(company.name || '');
           setSlug(company.slug || '');
-          setTheme(company.theme || theme);
-          setFeatures(company.features || features);
-          setAuth(company.auth || auth);
+          // Merge con defaults: las columnas jsonb (theme/features/auth) pueden
+          // venir como {} vacío (migración 007) → de lo contrario subcampos como
+          // auth.allowedRoles quedan undefined y p.ej. el .includes() del render
+          // de roles revienta (pantalla blanca).
+          setTheme(prev => ({ ...prev, ...(company.theme || {}) }));
+          setFeatures(prev => ({ ...prev, ...(company.features || {}) }));
+          setAuth(prev => ({ ...prev, ...(company.auth || {}) }));
           setTabs(company.tabs?.length ? company.tabs : DEFAULT_BUILT_IN_TABS.map((t, i) => ({ ...t, id: `tab_${i}`, order: i })));
         } else {
           setError('Empresa no encontrada.');
