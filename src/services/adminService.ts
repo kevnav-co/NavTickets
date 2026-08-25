@@ -12,21 +12,19 @@ function toSnakeCase(obj: Record<string, any>): Record<string, any> {
   return result;
 }
 
-/** Normalizes a company row from Supabase (snake_case) to the app's camelCase shape. */
+/** Normalizes a company row from Supabase (snake_case) to the app's camelCase shape.
+ *  Las columnas jsonb (`theme`, `features`, `auth`, `tabs`) ya vienen parseadas
+ *  por el cliente Supabase. `slug` puede venir vacío en empresas sembradas. */
 function normalizeCompany(row: any): CompanyConfig {
   if (!row) return row as any;
   return {
     id: row.id,
     name: row.name,
-    logo: row.logo,
-    icon: row.icon,
-    logoWhite: row.logo_white ?? row.logoWhite,
-    email: row.email,
-    phone: row.phone,
-    address: row.address,
-    colors: typeof row.colors === 'string' ? JSON.parse(row.colors) : (row.colors || {}),
-    notificationConfig: typeof row.notification_config === 'string' ? JSON.parse(row.notification_config) : (row.notification_config || {}),
-    customScripts: typeof row.custom_scripts === 'string' ? JSON.parse(row.custom_scripts) : (row.custom_scripts || {}),
+    slug: row.slug || '',
+    theme: row.theme || {},
+    features: row.features || {},
+    auth: row.auth || {},
+    tabs: row.tabs || [],
     createdAt: row.created_at ?? row.createdAt,
     updatedAt: row.updated_at ?? row.updatedAt,
   } as CompanyConfig;

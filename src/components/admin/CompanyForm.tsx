@@ -271,7 +271,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       onSaved(isEditMode ? 'Empresa actualizada correctamente.' : 'Empresa creada correctamente.');
     } catch (err) {
       console.error('[AdminForm] Error saving company:', err);
-      setSaveErrorToast('No se pudo guardar la empresa. Revisa tu conexión e inténtalo de nuevo.');
+      const detail = err instanceof Error ? err.message : 'error desconocido';
+      setSaveErrorToast(`No se pudo guardar la empresa: ${detail}`);
     } finally {
       setSaving(false);
     }
