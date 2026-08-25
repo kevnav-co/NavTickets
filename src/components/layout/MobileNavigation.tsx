@@ -8,6 +8,7 @@ import { useCompany } from '../../context/CompanyContext';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useSupportUnread } from '../../hooks/useSupportUnread';
 import PERMISSIONS, { hasPermission } from '../../permissions';
+import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
 
 // Dynamic icon resolution
 import * as LucideIcons from 'lucide-react';
@@ -56,26 +57,27 @@ export const MobileNavigation: React.FC = React.memo(() => {
     if (!currentUser) return [];
     const items: NavItem[] = [];
 
-    // Build from company tabs if available
-    if (company.tabs && company.tabs.length > 0) {
-      const sortedTabs = [...company.tabs]
-        .filter(t => t.enabled && t.roles.includes(currentUser.role))
-        .sort((a, b) => a.order - b.order);
+    // Build from company tabs if available. If the company has none configured
+    // (e.g. freshly seeded tenants), fall back to the original default nav:
+    // Inicio, Tareas, Órdenes, Clientes, Máquinas, Mapa.
+    const sourceTabs = company.tabs && company.tabs.length > 0 ? company.tabs : DEFAULT_BUILT_IN_TABS;
+    const sortedTabs = [...sourceTabs]
+      .filter(t => t.enabled && t.roles.includes(currentUser.role))
+      .sort((a, b) => a.order - b.order);
 
-      for (const tab of sortedTabs) {
-        if (tab.type === 'built-in' && tab.builtInComponent) {
-          const requiredPerm = TAB_PERMISSION_MAP[tab.builtInComponent];
-          if (requiredPerm && !hasPermission(currentUser.role, requiredPerm)) {
-            continue;
-          }
+    for (const tab of sortedTabs) {
+      if (tab.type === 'built-in' && tab.builtInComponent) {
+        const requiredPerm = TAB_PERMISSION_MAP[tab.builtInComponent];
+        if (requiredPerm && !hasPermission(currentUser.role, requiredPerm)) {
+          continue;
         }
-        items.push({
-          icon: resolveIcon(tab.icon),
-          label: tab.label,
-          path: tab.route,
-          requiresOnline: tab.requiresOnline,
-        });
       }
+      items.push({
+        icon: resolveIcon(tab.icon),
+        label: tab.label,
+        path: tab.route,
+        requiresOnline: tab.requiresOnline,
+      });
     }
 
     return items;
