@@ -6,6 +6,7 @@ import { Shield, ArrowLeft } from 'lucide-react';
 import CompanyList from './CompanyList';
 import CompanyForm from './CompanyForm';
 import CompanyUserManager from './CompanyUserManager';
+import Toast from '../ui/Toast';
 
 type AdminView = 'list' | 'form' | 'users';
 
@@ -13,6 +14,7 @@ const AdminPanel: React.FC = () => {
   const [view, setView] = useState<AdminView>('list');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const handleEdit = (companyId: string) => {
     setEditingCompanyId(companyId);
@@ -29,8 +31,9 @@ const AdminPanel: React.FC = () => {
     setView('users');
   };
 
-  const handleFormSaved = () => {
+  const handleFormSaved = (message: string) => {
     setView('list');
+    setToast(message);
   };
 
   const handleFormCancel = () => {
@@ -85,6 +88,9 @@ const AdminPanel: React.FC = () => {
           onBack={handleBackToList}
         />
       )}
+
+      {/* Toast de confirmación (sobrevive al volver a la lista) */}
+      <Toast message={toast} onDismiss={() => setToast(null)} />
     </div>
   );
 };

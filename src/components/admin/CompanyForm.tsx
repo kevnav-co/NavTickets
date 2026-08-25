@@ -12,7 +12,7 @@ import * as adminService from '../../services/adminService';
 
 interface CompanyFormProps {
   companyId: string | null;
-  onSaved: () => void;
+  onSaved: (message: string) => void;
   onCancel: () => void;
 }
 
@@ -244,7 +244,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         };
         await adminService.updateCompany(companyId, companyData);
       }
-      onSaved();
+      onSaved(isEditMode ? 'Empresa actualizada correctamente.' : 'Empresa creada correctamente.');
     } catch (err) {
       console.error('[AdminForm] Error saving company:', err);
       setError('Error al guardar la empresa.');
@@ -687,7 +687,9 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       </section>
 
       {/* ─── Action Buttons ─── */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-20">
+      {/* z-[60]: por encima de la barra de navegación inferior (z-50) para que el
+          botón de guardar siempre sea visible en móvil. — 2026-08-25 */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-[60]">
         <div className="max-w-4xl mx-auto flex items-center justify-end gap-3">
           <button
             type="button"
