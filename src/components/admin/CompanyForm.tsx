@@ -59,6 +59,13 @@ const EMPTY_TAB: TabConfig = {
   requiresOnline: false,
 };
 
+// Genera un slug seguro a partir de un nombre.
+// Se usa para que una empresa editada sin slug (p. ej. las sembradas) pueda
+// guardar cambios parciales sin bloquear por un campo "obligatorio" vacío.
+function slugify(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel }) => {
   const isEditMode = !!companyId;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -198,9 +205,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   // ─── Save ───
   const handleSave = async () => {
     // ── Validación por campo: marca el error en el campo + toast elegante + foco al primero ──
+    // Solo el nombre se exige de verdad: el slug, si falta (p. ej. empresas
+    // sembradas), se deriva del nombre automáticamente para permitir guardar
+    // actualizaciones parciales sin completar toda la información obligatoria.
     const newErrors: typeof fieldErrors = {};
     if (!name.trim()) newErrors.name = 'El nombre de la empresa es obligatorio.';
-    if (!slug.trim()) newErrors.slug = 'El slug es obligatorio.';
 
     // En modo crear, el admin inicial es obligatorio.
     if (!isEditMode && (!adminUsername.trim() || adminPassword.length < 6)) {
@@ -211,12 +220,14 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       setFieldErrors(newErrors);
       setSaveErrorToast(Object.values(newErrors)[0]);
       if (newErrors.name) nameRef.current?.focus();
-      else if (newErrors.slug) slugRef.current?.focus();
       return;
     }
 
     setFieldErrors({});
     setSaveErrorToast(null);
+
+    // Slug resuelto: usa el escrito, o si está vacío lo deriva del nombre.
+    const resolvedSlug = slug.trim().toLowerCase() || slugify(name.trim());
     setSaving(true);
     setError(null);
 
@@ -225,7 +236,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         // Bootstrap completo: empresa + perfil Auth + fila users (service-role).
         const result = await adminService.bootstrapCompany({
           companyName: name.trim(),
-          slug: slug.trim().toLowerCase(),
+          slug: resolvedSlug,
           username: adminUsername.trim().toLowerCase(),
           password: adminPassword,
           displayName: adminDisplayName.trim() || 'Administrador',
@@ -249,7 +260,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       } else if (companyId) {
         const companyData = {
           name: name.trim(),
-          slug: slug.trim().toLowerCase(),
+          slug: resolvedSlug,
           theme,
           features,
           auth,
@@ -318,8 +329,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
           <div>
             <div className="flex items-center gap-2 mb-1">
               <label className="text-xs font-bold text-gray-500">Slug (URL)</label>
-              <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
-              <InfoTip text="Identificador único de la empresa para la URL. Solo minúsculas, números y guiones, sin espacios. No debe repetirse entre empresas." side="top" />
+              <span className="text-[10px] font-bold text-sky-500 px-1.5 py-0.5 rounded-full bg-sky-50">Auto</span>
+              <InfoTip text="Identificador único de la empresa para la URL. Opcional: si lo dejas vacío se genera solo a partir del nombre. Solo minúsculas, números y guiones." side="top" />
             </div>
             <input
               ref={slugRef}
