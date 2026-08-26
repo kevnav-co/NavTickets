@@ -79,8 +79,11 @@ export const DesktopSidebar: React.FC = React.memo(() => {
     return items;
   }, [currentUser, company.tabs]);
 
-  // Add admin link for super_admin
-  const showAdmin = currentUser?.role === 'super_admin';
+  // Admin areas: /admin es role-aware (Fase 4) — super_admin gestiona multi-tenant,
+  // admin/developer hacen self-serve de SU propia empresa. Soporte/Estadísticas
+  // son exclusivos del super_admin.
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const canManageOwnCompany = hasPermission(currentUser?.role, PERMISSIONS.MANAGE_COMPANIES);
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0 z-50 shadow-xl">
@@ -109,7 +112,7 @@ export const DesktopSidebar: React.FC = React.memo(() => {
           );
         })}
       </div>
-      {showAdmin && (
+      {(isSuperAdmin || canManageOwnCompany) && (
         <div className="px-3 py-2 border-t border-gray-100 space-y-2">
           <button
             onClick={() => navigate('/admin')}
@@ -118,9 +121,11 @@ export const DesktopSidebar: React.FC = React.memo(() => {
             }`}
           >
             <Shield size={20} className={location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') && !location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-gray-400'} />
-            <span className="text-sm">Panel Admin</span>
+            <span className="text-sm">{isSuperAdmin ? 'Panel Admin' : 'Configuración'}</span>
           </button>
-          <button
+          {isSuperAdmin && (
+            <>
+            <button
             onClick={() => navigate('/admin/support')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
               location.pathname.startsWith('/admin/support') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
@@ -143,6 +148,8 @@ export const DesktopSidebar: React.FC = React.memo(() => {
             <BarChart3 size={20} className={location.pathname.startsWith('/admin/stats') ? 'text-primary' : 'text-gray-400'} />
             <span className="text-sm">Estadísticas</span>
           </button>
+            </>
+          )}
         </div>
       )}
       <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-3">

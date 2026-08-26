@@ -51,7 +51,10 @@ export const MobileNavigation: React.FC = React.memo(() => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const showAdmin = currentUser?.role === 'super_admin';
+  const isSuperAdmin = currentUser?.role === 'super_admin';
+  const canManageOwnCompany = currentUser && hasPermission(currentUser.role, PERMISSIONS.MANAGE_COMPANIES);
+  // El super_admin usa una barra dedicada de áreas admin (ADMIN_ITEMS abajo).
+  const showAdmin = isSuperAdmin;
 
   const navItems = useMemo(() => {
     if (!currentUser) return [];
@@ -80,8 +83,14 @@ export const MobileNavigation: React.FC = React.memo(() => {
       });
     }
 
+    // Self-serve (Fase 4): el admin/developer del tenant alcanza /admin
+    // (CompanyForm de su empresa) desde la barra, sin la barra del super_admin.
+    if (canManageOwnCompany && !isSuperAdmin) {
+      items.push({ icon: Shield, label: 'Configuración', path: '/admin' });
+    }
+
     return items;
-  }, [currentUser, company.tabs]);
+  }, [currentUser, company.tabs, canManageOwnCompany, isSuperAdmin]);
 
   // Para el super_admin usamos las áreas de admin (con el conteo de soporte);
   // para el resto, las pestañas de la empresa.
