@@ -1,5 +1,6 @@
 
 import { User } from './types';
+import type { CompanyFeatures } from './types/company';
 
 // 1. Definir los roles de la aplicación
 export const ROLES = {
@@ -153,3 +154,36 @@ export const getUserPermissions = (user: User | null) => {
 
 // Exportar los permisos para usarlos en los componentes
 export default PERMISSIONS;
+
+// ─── Fuente única de visibilidad de pestañas (Fase 5) ────────────────
+// Cualquier nav (mobile/desktop) que filtre pestañas built-in debe usar ESTAS
+// dos tablas, no duplicarlas. `TAB_PERMISSION_MAP`: permiso que debe tener el
+// rol del usuario. `TAB_FEATURE_MAP`: flag de la empresa que debe estar activo.
+export const TAB_PERMISSION_MAP: Record<string, string> = {
+  orders: PERMISSIONS.VIEW_ALL_ORDERS,
+  clients: PERMISSIONS.VIEW_CLIENTS,
+  equipment: PERMISSIONS.VIEW_EQUIPMENT,
+  users: PERMISSIONS.VIEW_USERS,
+  map: PERMISSIONS.VIEW_MAP,
+  accounting: PERMISSIONS.VIEW_REPORTS,
+};
+
+export const TAB_FEATURE_MAP: Record<string, keyof CompanyFeatures> = {
+  equipment: 'equipmentManagement',
+  map: 'maps',
+  accounting: 'accounting',
+};
+
+// Dado un tab built-in, ¿es visible para este rol con estas features?
+export const isTabVisible = (
+  builtInComponent: string | undefined,
+  role: User['role'] | undefined,
+  features: Partial<CompanyFeatures> | undefined
+): { visible: boolean } => {
+  if (!builtInComponent) return { visible: true };
+  const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
+  if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+  const requiredFeature = TAB_FEATURE_MAP[builtInComponent];
+  if (requiredFeature && features?.[requiredFeature] === false) return { visible: false };
+  return { visible: true };
+};

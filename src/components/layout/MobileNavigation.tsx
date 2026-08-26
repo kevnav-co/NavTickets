@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useCompany } from '../../context/CompanyContext';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useSupportUnread } from '../../hooks/useSupportUnread';
-import PERMISSIONS, { hasPermission } from '../../permissions';
+import PERMISSIONS, { hasPermission, isTabVisible } from '../../permissions';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
 
 // Dynamic icon resolution
@@ -17,15 +17,6 @@ function resolveIcon(iconName: string): LucideIcon {
   const icons = LucideIcons as unknown as Record<string, LucideIcon>;
   return icons[iconName] || Home;
 }
-
-const TAB_PERMISSION_MAP: Record<string, string> = {
-  orders: PERMISSIONS.VIEW_ALL_ORDERS,
-  clients: PERMISSIONS.VIEW_CLIENTS,
-  equipment: PERMISSIONS.VIEW_EQUIPMENT,
-  users: PERMISSIONS.VIEW_USERS,
-  map: PERMISSIONS.VIEW_MAP,
-  accounting: PERMISSIONS.VIEW_REPORTS,
-};
 
 interface NavItem {
   icon: LucideIcon;
@@ -69,11 +60,11 @@ export const MobileNavigation: React.FC = React.memo(() => {
       .sort((a, b) => a.order - b.order);
 
     for (const tab of sortedTabs) {
-      if (tab.type === 'built-in' && tab.builtInComponent) {
-        const requiredPerm = TAB_PERMISSION_MAP[tab.builtInComponent];
-        if (requiredPerm && !hasPermission(currentUser.role, requiredPerm)) {
-          continue;
-        }
+      // Fase 5: visibilidad centralizada en permissions.ts — oculta la pestaña si
+      // el rol no tiene permiso O si la empresa apagó su flag de feature.
+      if (tab.type === 'built-in' && tab.builtInComponent
+          && !isTabVisible(tab.builtInComponent, currentUser.role, company.features).visible) {
+        continue;
       }
       items.push({
         icon: resolveIcon(tab.icon),
