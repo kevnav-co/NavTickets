@@ -28,10 +28,14 @@ let lastAppliedConfig: CompanyConfig | null = null;
 export function applyCompanyTheme(config: CompanyConfig): void {
   // Quick check - skip if same config
   if (lastAppliedConfig === config ||
-      (lastAppliedConfig && lastAppliedConfig.theme?.primaryColor === config.theme?.primaryColor &&
+      (lastAppliedConfig &&
        lastAppliedConfig.name === config.name &&
+       lastAppliedConfig.theme?.primaryColor === config.theme?.primaryColor &&
+       lastAppliedConfig.theme?.accentColor === config.theme?.accentColor &&
+       lastAppliedConfig.theme?.secondaryColor === config.theme?.secondaryColor &&
        lastAppliedConfig.theme?.faviconUrl === config.theme?.faviconUrl &&
-       lastAppliedConfig.theme?.iconUrl === config.theme?.iconUrl)) {
+       lastAppliedConfig.theme?.iconUrl === config.theme?.iconUrl &&
+       lastAppliedConfig.theme?.titleSuffix === config.theme?.titleSuffix)) {
     return;
   }
 
@@ -39,6 +43,10 @@ export function applyCompanyTheme(config: CompanyConfig): void {
 
   // Get or compute theme variables from cache
   const vars = getThemeVariables(primary);
+
+  // Sufijo del nombre de app: editable por empresa (Fase 4). Si no se define,
+  // se usa ' - Gestión de Mantenimiento' (comportamiento previo).
+  const suffix = config.theme?.titleSuffix ?? ' - Gestión de Mantenimiento';
 
   // Batch all DOM writes together
   requestAnimationFrame(() => {
@@ -52,8 +60,15 @@ export function applyCompanyTheme(config: CompanyConfig): void {
     root.style.setProperty('--color-primary-lighter', vars.primaryLighter);
     root.style.setProperty('--color-primary-darker', vars.primaryDarker);
 
+    // Colores de marca adicionales (Fase 4): acento y secundario. Fallback a
+    // variantes del primary si la empresa no los define.
+    const accent = config.theme?.accentColor ?? vars.primary;
+    const secondary = config.theme?.secondaryColor ?? vars.primaryDark;
+    root.style.setProperty('--color-accent', accent);
+    root.style.setProperty('--color-secondary', secondary);
+
     // Update meta tags
-    document.title = config.name + ' - Gestión de Mantenimiento';
+    document.title = config.name + suffix;
     updateMetaTag('theme-color', vars.primary);
     updateMetaTag('application-name', config.name);
     updateMetaTag('apple-mobile-web-app-title', config.name);

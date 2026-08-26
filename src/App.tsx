@@ -237,11 +237,17 @@ function AppContent({
                   {currentUser && currentUser.role === 'developer' && (
                       <Route path="/accounting" element={<RouteWithLayout title="Contable"><Accounting /></RouteWithLayout>} />
                   )}
-                  {currentUser && currentUser.role === 'super_admin' && (
+                  {/* /admin: super_admin → panel multi-tenant; admin/developer →
+                      self-serve de su propia empresa (Fase 4). */}
+                  {currentUser && (currentUser.role === 'super_admin' || hasPermission(currentUser.role, PERMISSIONS.MANAGE_COMPANIES)) && (
                       <>
                           <Route path="/admin" element={<RouteWithLayout title="Panel Admin"><AdminPanel /></RouteWithLayout>} />
-                          <Route path="/admin/stats" element={<RouteWithLayout title="Estadísticas"><CompanyStats /></RouteWithLayout>} />
-                          <Route path="/admin/support" element={<RouteWithLayout title="Soporte"><SupportAdmin /></RouteWithLayout>} />
+                          {currentUser.role === 'super_admin' && (
+                              <>
+                                  <Route path="/admin/stats" element={<RouteWithLayout title="Estadísticas"><CompanyStats /></RouteWithLayout>} />
+                                  <Route path="/admin/support" element={<RouteWithLayout title="Soporte"><SupportAdmin /></RouteWithLayout>} />
+                              </>
+                          )}
                       </>
                   )}
                   <Route path="/orders" element={<RouteWithLayout title="Órdenes"><OrderList /></RouteWithLayout>} />

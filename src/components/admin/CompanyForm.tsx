@@ -9,6 +9,7 @@ import {
 import { CompanyTheme, CompanyFeatures, CompanyAuth, TabConfig } from '../../types/company';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
 import * as adminService from '../../services/adminService';
+import { useAuth } from '../../context/AuthContext';
 import Toast from '../ui/Toast';
 import InfoTip from '../ui/InfoTip';
 
@@ -68,9 +69,15 @@ function slugify(value: string): string {
 
 const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel }) => {
   const isEditMode = !!companyId;
+  // Fase 4 (self-serve): un admin/developer del tenant edita SOLO el branding de
+  // su propia empresa. La sección de identidad (nombre/slug/auth) y el admin
+  // inicial quedan reservados a super_admin.
+  const { currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === 'super_admin';
   const fileInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
   const logoWhiteInputRef = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Form State ───
   const [name, setName] = useState('');
@@ -100,7 +107,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   const [error, setError] = useState<string | null>(null); // Errors de carga (banner superior)
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string; admin?: string }>({});
   const [saveErrorToast, setSaveErrorToast] = useState<string | null>(null); // Feedback elegante al guardar
-  const [uploading, setUploading] = useState<'logo' | 'icon' | 'logoWhite' | null>(null);
+  const [uploading, setUploading] = useState<'logo' | 'icon' | 'logoWhite' | 'favicon' | null>(null);
 
   // Refs para enfocar el primer campo con error.
   const nameRef = useRef<HTMLInputElement>(null);
@@ -170,7 +177,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   }, []);
 
   // ─── Image Upload ───
-  const handleImageUpload = async (file: File, type: 'logo' | 'icon' | 'logoWhite') => {
+  const handleImageUpload = async (file: File, type: 'logo' | 'icon' | 'logoWhite' | 'favicon') => {
     const targetId = companyId ?? createdCompanyId;
     if (!targetId) {
       // For new companies, save first then upload
@@ -180,10 +187,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     setUploading(type);
     try {
       const url = await adminService.uploadCompanyImage(file, targetId, type);
-      setTheme(prev => ({
-        ...prev,
-        [type === 'logo' ? 'logoUrl' : type === 'icon' ? 'iconUrl' : 'logoWhiteUrl']: url,
-      }));
+      const field = type === 'logo' ? 'logoUrl' : type === 'icon' ? 'iconUrl' : type === 'logoWhite' ? 'logoWhiteUrl' : 'faviconUrl';
+      setTheme(prev => ({ ...prev, [field]: url }));
     } catch (err) {
       console.error(`[AdminForm] Error uploading ${type}:`, err);
       alert(`Error al subir la imagen: ${type}`);
@@ -192,10 +197,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     }
   };
 
-  const triggerFileInput = (type: 'logo' | 'icon' | 'logoWhite') => {
+  const triggerFileInput = (type: 'logo' | 'icon' | 'logoWhite' | 'favicon') => {
     if (type === 'logo') fileInputRef.current?.click();
     else if (type === 'icon') iconInputRef.current?.click();
-    else logoWhiteInputRef.current?.click();
+    else if (type === 'logoWhite') logoWhiteInputRef.current?.click();
+    else faviconInputRef.current?.click();
   };
 
   // ─── Slug auto-generation ───
@@ -262,14 +268,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
         alert(`Empresa creada. El administrador entra con:\n\nUsuario: ${result.email}\nContraseña: (la que definiste)`);
       } else if (companyId) {
-        const companyData = {
-          name: name.trim(),
-          slug: resolvedSlug,
-          theme,
-          features,
-          auth,
-          tabs: tabs.filter(t => t.label.trim()), // Only save tabs with a label
-        };
+        // Self-serve (Fase 4): un admin/developer NO envía name/slug/auth (el DB
+        // los bloquea vía trigger migración 012). Solo branding: theme/features/tabs.
+        const companyData = isSuperAdmin
+          ? { name: name.trim(), slug: resolvedSlug, theme, features, auth, tabs: tabs.filter(t => t.label.trim()) }
+          : { theme, features, tabs: tabs.filter(t => t.label.trim()) };
         await adminService.updateCompany(companyId, companyData);
       }
       onSaved(isEditMode ? 'Empresa actualizada correctamente.' : 'Empresa creada correctamente.');
@@ -303,7 +306,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         </div>
       )}
 
-      {/* ─── Basic Info ─── */}
+      {/* ─── Basic Info (solo super_admin: identidad de la empresa) ─── */}
+      {isSuperAdmin && (
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Building2 size={18} className="text-primary" /> Información General
@@ -356,6 +360,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
           </div>
         </div>
       </section>
+      )}
 
       {/* ─── Initial Admin (solo en modo crear) ─── */}
       {!isEditMode && (
@@ -509,6 +514,71 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
             </div>
             <input ref={iconInputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'icon')} />
           </div>
+
+          {/* Favicon */}
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Favicon</label>
+            <div className="flex items-center gap-3">
+              {theme.faviconUrl && (
+                <img src={theme.faviconUrl} alt="Favicon" className="w-8 h-8 object-contain rounded-lg border border-gray-100" />
+              )}
+              <button
+                type="button"
+                onClick={() => triggerFileInput('favicon')}
+                disabled={uploading === 'favicon'}
+                className="h-11 px-4 bg-gray-100 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                {uploading === 'favicon' ? 'Subiendo...' : theme.faviconUrl ? 'Cambiar' : 'Subir Favicon'}
+              </button>
+              {theme.faviconUrl && (
+                <button onClick={() => setTheme(prev => ({ ...prev, faviconUrl: undefined }))} className="p-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
+              )}
+            </div>
+            <input ref={faviconInputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicon')} />
+          </div>
+
+          {/* Accent Color */}
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Color de Acento</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={theme.accentColor || theme.primaryColor}
+                onChange={e => setTheme(prev => ({ ...prev, accentColor: e.target.value }))}
+                className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
+              />
+              <span className="text-sm font-mono text-gray-600">{theme.accentColor || '— (usa primary)'}</span>
+            </div>
+          </div>
+
+          {/* Secondary Color */}
+          <div>
+            <label className="text-xs font-bold text-gray-500 mb-1 block">Color Secundario</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={theme.secondaryColor || theme.primaryColor}
+                onChange={e => setTheme(prev => ({ ...prev, secondaryColor: e.target.value }))}
+                className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
+              />
+              <span className="text-sm font-mono text-gray-600">{theme.secondaryColor || '— (usa primary oscuro)'}</span>
+            </div>
+          </div>
+
+          {/* Suffix de la app (Fase 4) */}
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <label className="text-xs font-bold text-gray-500">Sufijo del nombre de la app</label>
+              <InfoTip text="Texto que acompaña al nombre de la empresa en el título de la ventana/PWA. Default: ' - Gestión de Mantenimiento'. Déjalo vacío para mostrar solo el nombre." />
+            </div>
+            <input
+              type="text"
+              value={theme.titleSuffix ?? ''}
+              onChange={e => setTheme(prev => ({ ...prev, titleSuffix: e.target.value }))}
+              placeholder=" - Gestión de Mantenimiento"
+              className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
         </div>
       </section>
 
@@ -537,7 +607,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         </div>
       </section>
 
-      {/* ─── Auth ─── */}
+      {/* ─── Auth (solo super_admin: identidad del tenant) ─── */}
+      {isSuperAdmin && (
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Shield size={18} className="text-primary" /> Autenticación
@@ -578,6 +649,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
           </div>
         </div>
       </section>
+      )}
 
       {/* ─── Tabs Editor ─── */}
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">

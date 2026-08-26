@@ -134,7 +134,7 @@ export async function deleteCompany(companyId: string): Promise<void> {
 }
 
 // ─── Image Upload ───
-export async function uploadCompanyImage(file: File, companyId: string, type: 'logo' | 'icon' | 'logoWhite'): Promise<string> {
+export async function uploadCompanyImage(file: File, companyId: string, type: 'logo' | 'icon' | 'logoWhite' | 'favicon'): Promise<string> {
   const ext = file.name.split('.').pop();
   const storagePath = `companies/${companyId}/${type}_${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from('company-assets').upload(storagePath, file, { upsert: true });

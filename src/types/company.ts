@@ -3,10 +3,13 @@
 
 export interface CompanyTheme {
   primaryColor: string;        // "#7b1113"
+  accentColor?: string;        // Color de acento (secundario en la UI)
+  secondaryColor?: string;     // Color secundario / terciario
   logoUrl: string;
   logoWhiteUrl?: string;       // Logo for dark backgrounds
   iconUrl: string;
   faviconUrl?: string;
+  titleSuffix?: string;        // Sufijo del título de la ventana/PWA (default " - Gestión de Mantenimiento")
 }
 
 export interface CompanyFeatures {
