@@ -95,7 +95,13 @@ const InventoryForm: React.FC = () => {
         alert('Repuesto actualizado');
         navigate(`/inventory/${id}`);
       } else {
-        await addValidated('inventory_items', dataToSave, InventoryItemSchema.omit({ id: true, companyId: true }));
+        if (!currentUser?.companyId) {
+          alert('No se pudo determinar la empresa del usuario.');
+          return;
+        }
+        // OJO RLS: addItem NO inyecta companyId; el INSERT exige
+        // company_id = current_company_id(), así que va en el payload.
+        await addValidated('inventory_items', { ...dataToSave, companyId: currentUser.companyId }, InventoryItemSchema.omit({ id: true }));
         alert('Repuesto registrado');
         navigate('/inventory');
       }

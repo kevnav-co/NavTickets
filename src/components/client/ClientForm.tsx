@@ -305,7 +305,13 @@ const ClientForm: React.FC = () => {
         window.localStorage.removeItem(localStorageKey);
         navigate(`/clients/${id}`);
       } else {
-        await addValidated('clients', formData, ClientSchema.omit({ id: true, companyId: true }));
+        if (!currentUser?.companyId) {
+          alert('No se pudo determinar la empresa del usuario.');
+          return;
+        }
+        // OJO RLS: addItem NO inyecta companyId; el INSERT exige
+        // company_id = current_company_id(), así que va en el payload.
+        await addValidated('clients', { ...formData, companyId: currentUser.companyId }, ClientSchema.omit({ id: true }));
         alert(`Cliente creado con éxito`);
         window.localStorage.removeItem(localStorageKey);
         navigate('/clients');

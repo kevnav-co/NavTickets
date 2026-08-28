@@ -197,7 +197,13 @@ const EquipmentForm: React.FC = () => {
                 navigate(`/equipment/${id}`);
             }
         } else {
-            await addValidated('equipment', dataToSave, EquipmentSchema.omit({ id: true, companyId: true }));
+            if (!currentUser?.companyId) {
+                alert('No se pudo determinar la empresa del usuario.');
+                return;
+            }
+            // OJO RLS: addItem NO inyecta companyId; el INSERT exige
+            // company_id = current_company_id(), así que va en el payload.
+            await addValidated('equipment', { ...dataToSave, companyId: currentUser.companyId }, EquipmentSchema.omit({ id: true }));
             alert('Máquina registrada con éxito');
             window.localStorage.removeItem(localStorageKey);
             navigate('/equipment');
