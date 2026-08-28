@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ServiceOrder, OrderStatus, Client, User, Seguimiento } from '../../types';
+import { ServiceOrder, OrderStatus, Client, User, Seguimiento, OrderInventoryLine } from '../../types';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
@@ -10,8 +10,9 @@ import { getWarrantyInfo } from '../../utils/warranty';
 import OrderDetail from './OrderDetail';
 import ClientSearchModal from '../shared/ClientSearchModal';
 import EquipmentSelectorModal from '../shared/EquipmentSelectorModal';
+import InventorySelectorModal from '../shared/InventorySelectorModal';
 import UserSearchModal from '../shared/UserSearchModal';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Package, Plus, X } from 'lucide-react';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
 import { useCollection } from '../../hooks/useCollection';
@@ -24,7 +25,7 @@ const OrderWorkflow: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { clients, equipment, users, loading: dataLoading, error: dataError, deleteItem } = useData();
+  const { clients, equipment, users, loading: dataLoading, error: dataError, deleteItem, addItem, inventoryItems, loadInventory } = useData();
   const { updateValidated } = useValidatedActions();
   const { currentUser } = useAuth();
   const { completeOrderAndUpdateEquipment } = useOrderActions();
@@ -34,8 +35,19 @@ const OrderWorkflow: React.FC = () => {
   const [pdfProgress, setPdfProgress] = useState(0);
   const [notification, setNotification] = useState<{ show: boolean; title: string; message: string }>({ show: false, title: '', message: '' });
   const [showEquipmentSelector, setShowEquipmentSelector] = useState(false);
+  const [showInventorySelector, setShowInventorySelector] = useState(false);
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [showUserSearch, setShowUserSearch] = useState(false);
+
+  // Repuestos usados en esta orden (tabla M:N order_inventory_lines).
+  const { data: orderLines } = useCollection<OrderInventoryLine>('order_inventory_lines', {
+    filters: id ? [{ column: 'order_id', operator: 'eq', value: id }] : [],
+  });
+
+  // Cargar el catálogo de repuestos al entrar a la orden (lazy en DataContext).
+  React.useEffect(() => { loadInventory(); }, [loadInventory]);
+
+  const canEdit = useMemo(() => currentUser && hasPermission(currentUser.role, PERMISSIONS.UPDATE_INVENTORY), [currentUser]);
 
   // Use Supabase QueryFilters instead of Firestore QueryConstraints
   const { data: orders, loading: orderLoading, error: orderError } = useCollection<ServiceOrder>('orders', {
@@ -174,6 +186,42 @@ const OrderWorkflow: React.FC = () => {
     navigate('/equipment/new', { state: { clientId: order.clientId, returnTo: location.pathname } });
   }, [order, navigate, location.pathname]);
 
+  // Guarda las líneas de repuestos de la orden (reemplazo del set completo).
+  const handleInventoryLinesSave = useCallback(async (lines: OrderInventoryLine[]) => {
+    if (!order) return;
+    try {
+      const current = orderLines || [];
+      // 1) Quitar las líneas que ya no estén en el nuevo set.
+      const newKeys = new Set(lines.filter(l => l.inventoryItemId).map(l => l.inventoryItemId));
+      await Promise.all(
+        current
+          .filter(l => !newKeys.has(l.inventoryItemId))
+          .map(l => (l.id ? deleteItem('order_inventory_lines', l) : Promise.resolve()))
+      );
+      // 2) Upsert del set nuevo (offline-idempotente vía upsert onConflict:id).
+      const existing = new Map(current.filter(l => l.id).map(l => [l.inventoryItemId, l.id!]));
+      for (const line of lines) {
+        if (!line.inventoryItemId) continue;
+        await addItem('order_inventory_lines', {
+          orderId: order.id,
+          inventoryItemId: line.inventoryItemId,
+          quantityOut: line.quantityOut || 1,
+          unitCostSnapshot: line.unitCostSnapshot ?? 0,
+          ...(existing.get(line.inventoryItemId) ? { id: existing.get(line.inventoryItemId) } : {}),
+        });
+      }
+    } catch (err) {
+      console.error('Error guardando repuestos:', err);
+      setNotification({ show: true, title: 'Error', message: 'No se pudieron guardar los repuestos.' });
+    }
+    setShowInventorySelector(false);
+  }, [order, orderLines, deleteItem, addItem]);
+
+  const handleRemoveInventoryLine = useCallback(async (line: OrderInventoryLine) => {
+    if (!order || !line.id) return;
+    await deleteItem('order_inventory_lines', line);
+  }, [order, deleteItem]);
+
   const handleGeneratePDF = useCallback(async (action: 'download' | 'share' | 'view') => {
     if (!order || !client || !technician) {
       setNotification({ show: true, title: 'Datos Incompletos', message: 'Falta información de la orden, cliente o técnico.' });
@@ -228,6 +276,15 @@ const OrderWorkflow: React.FC = () => {
       {showClientSearch && <ClientSearchModal clients={clients || []} onSelect={handleClientUpdate} onClose={() => setShowClientSearch(false)} onAddNew={() => navigate('/clients/new')} />}
       {showUserSearch && <UserSearchModal users={users || []} onSelect={handleUserUpdate} onClose={() => setShowUserSearch(false)} />}
       <EquipmentSelectorModal isOpen={showEquipmentSelector} onClose={() => setShowEquipmentSelector(false)} onSelect={handleEquipmentUpdate} onAddNew={handleAddNewEquipment} availableEquipment={availableClientEquipment} currentEquipmentIds={selectedEquips.map(e => e.id)} />
+      {showInventorySelector && (
+        <InventorySelectorModal
+          isOpen
+          inventoryItems={inventoryItems || []}
+          initialLines={orderLines || []}
+          onSave={handleInventoryLinesSave}
+          onClose={() => setShowInventorySelector(false)}
+        />
+      )}
       {notification.show && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center" onClick={() => setNotification({ ...notification, show: false })}>
           <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center border-t-8 border-red-500 animate-in zoom-in-95">
@@ -266,6 +323,68 @@ const OrderWorkflow: React.FC = () => {
         getFileUrl={getFileUrl}
         getWarrantyInfo={getWarrantyInfo}
       />
+
+      {/* ─── Repuestos usados en la orden (Fase 6) ─────────────────────── */}
+      <div className="max-w-2xl mx-auto px-4 pb-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Package size={16} className="text-primary" />
+              <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider">Repuestos Usados</h3>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                {(() => { let n = 0; for (const l of orderLines || []) n += l.quantityOut || 0; return n; })()}
+              </span>
+            </div>
+            {canEdit && (
+              <button
+                onClick={() => setShowInventorySelector(true)}
+                className="h-8 px-3 bg-primary text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm shadow-primary/20 hover:bg-primary/90 active:scale-95 transition-all flex items-center gap-1"
+              >
+                <Plus size={14} /> Agregar
+              </button>
+            )}
+          </div>
+
+          <div className="p-2">
+            {(orderLines || []).length > 0 ? (
+              orderLines!.map(line => {
+                const item = inventoryItems?.find(i => i.id === line.inventoryItemId);
+                return (
+                  <div key={line.id} className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100 last:border-0">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Package size={14} className="text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-gray-800 truncate">{item?.name || 'Repuesto'}</p>
+                      <p className="text-[10px] font-bold text-gray-400">{(item?.sku || '') || ''}</p>
+                    </div>
+                    <span className="text-sm font-black text-gray-800 shrink-0">
+                      x{line.quantityOut || 1}
+                      <span className="text-[10px] font-bold text-gray-400 ml-1">{item?.unit || ''}</span>
+                    </span>
+                    {canEdit && line.id && (
+                      <button
+                        onClick={() => handleRemoveInventoryLine(line)}
+                        className="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 active:scale-90 transition-all shrink-0"
+                        title="Quitar"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <button
+                onClick={() => canEdit && setShowInventorySelector(true)}
+                className={`w-full py-3 text-center text-xs font-bold text-gray-400 ${canEdit ? 'hover:bg-gray-50' : ''} rounded-xl transition-colors`}
+              >
+                {canEdit ? 'Agregar repuestos usados en esta orden...' : 'Sin repuestos registrados'}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 };

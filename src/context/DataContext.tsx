@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo, useCallback, useState } from 'react';
-import { Client, ServiceOrder, Equipment, User, AppNotification, OrderStatus } from '../types';
+import { Client, ServiceOrder, Equipment, User, AppNotification, OrderStatus, InventoryItem } from '../types';
 import { useSupabaseQuery } from '../hooks/useSupabaseQuery';
 import { useSupabaseActions } from '../hooks/useSupabaseActions';
 import { useSupabaseStorage } from '../hooks/useSupabaseStorage';
@@ -10,6 +10,7 @@ interface DataContextType {
   clients: Client[];
   orders: ServiceOrder[];
   equipment: Equipment[];
+  inventoryItems: InventoryItem[];
   users: User[];
   notifications: AppNotification[];
   loading: boolean;
@@ -17,10 +18,12 @@ interface DataContextType {
   isUploading: boolean;
   isRefreshing: boolean;
   isEquipmentLoaded: boolean;
+  isInventoryLoaded: boolean;
   isNotificationsLoaded: boolean;
   getClientById: (id: string) => Client | undefined;
   getOrderById: (id: string) => ServiceOrder | undefined;
   getEquipmentById: (id: string) => Equipment | undefined;
+  getInventoryItemById: (id: string) => InventoryItem | undefined;
   addItem: (collectionName: string, data: any) => Promise<string>;
   updateItem: (collectionName: string, id: string, data: any) => Promise<void>;
   deleteItem: (collectionName: string, item: any) => Promise<void>;
@@ -28,6 +31,7 @@ interface DataContextType {
   forceRefresh: () => void;
   completeOrderAndUpdateEquipment: (order: ServiceOrder, closingData: Partial<ServiceOrder>) => Promise<void>;
   loadEquipment: () => Promise<void>;
+  loadInventory: () => Promise<void>;
   loadNotifications: () => Promise<void>;
   pendingCount: number;
   isSyncing: boolean;
@@ -41,6 +45,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ─── State para lazy loading ──────────────────────────────────────────────
   const [isEquipmentLoaded, setIsEquipmentLoaded] = useState(false);
+  const [isInventoryLoaded, setIsInventoryLoaded] = useState(false);
   const [isNotificationsLoaded, setIsNotificationsLoaded] = useState(false);
 
   // ─── Queries críticas: cargar inmediato (necesarias para render inicial) ───
@@ -73,6 +78,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     enabled: isEquipmentLoaded,
   });
 
+  const inventoryQuery = useSupabaseQuery<InventoryItem>('inventory_items', {
+    table: 'inventory_items',
+    filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
+    realtime: isInventoryLoaded,
+    forceOffline: !hasSession,
+    enabled: isInventoryLoaded,
+  });
+
   // Filtrar por user_id (no company_id): las notificaciones son por usuario.
   // La política RLS en BD hace user_id = id del usuario autenticado.
   const notificationsQuery = useSupabaseQuery<AppNotification>('notifications', {
@@ -98,6 +111,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const getClientById = useCallback((id: string) => clientsQuery.data.find(c => c.id === id), [clientsQuery.data]);
   const getOrderById = useCallback((id: string) => ordersQuery.data.find(o => o.id === id), [ordersQuery.data]);
   const getEquipmentById = useCallback((id: string) => equipmentQuery.data.find(e => e.id === id), [equipmentQuery.data]);
+  const getInventoryItemById = useCallback((id: string) => inventoryQuery.data.find(i => i.id === id), [inventoryQuery.data]);
 
   // ─── Lazy load functions ────────────────────────────────────────────────
   const loadEquipment = useCallback(async () => {
@@ -108,6 +122,13 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await equipmentQuery.refetch();
     }
   }, [isEquipmentLoaded, equipmentQuery]);
+
+  const loadInventory = useCallback(async () => {
+    if (!isInventoryLoaded) {
+      setIsInventoryLoaded(true);
+      await inventoryQuery.refetch();
+    }
+  }, [isInventoryLoaded, inventoryQuery]);
 
   const loadNotifications = useCallback(async () => {
     if (!isNotificationsLoaded) {
@@ -162,6 +183,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     clients: clientsQuery.data,
     orders: ordersQuery.data,
     equipment: equipmentQuery.data,
+    inventoryItems: inventoryQuery.data,
     users: usersQuery.data,
     notifications: notificationsQuery.data,
     loading,
@@ -169,10 +191,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isUploading,
     isRefreshing: isSyncing,
     isEquipmentLoaded,
+    isInventoryLoaded,
     isNotificationsLoaded,
     getClientById,
     getOrderById,
     getEquipmentById,
+    getInventoryItemById,
     addItem,
     updateItem,
     deleteItem,
@@ -180,16 +204,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     forceRefresh,
     completeOrderAndUpdateEquipment,
     loadEquipment,
+    loadInventory,
     loadNotifications,
     pendingCount,
     isSyncing,
   }), [
-    clientsQuery.data, ordersQuery.data, equipmentQuery.data, usersQuery.data, notificationsQuery.data,
+    clientsQuery.data, ordersQuery.data, equipmentQuery.data, inventoryQuery.data, usersQuery.data, notificationsQuery.data,
     loading, error, isUploading, isSyncing,
-    isEquipmentLoaded, isNotificationsLoaded,
-    getClientById, getOrderById, getEquipmentById,
+    isEquipmentLoaded, isInventoryLoaded, isNotificationsLoaded,
+    getClientById, getOrderById, getEquipmentById, getInventoryItemById,
     addItem, updateItem, deleteItem, uploadFile, forceRefresh, completeOrderAndUpdateEquipment,
-    loadEquipment, loadNotifications,
+    loadEquipment, loadInventory, loadNotifications,
     pendingCount, refreshKey,
   ]);
 

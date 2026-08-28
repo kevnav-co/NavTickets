@@ -51,6 +51,29 @@ export interface Equipment {
   nextMaintenanceNotificationSent?: boolean;
 }
 
+// ─── Inventario de repuestos (Fase 6) ──────────────────────────────────────
+export interface InventoryItem {
+  id: string;
+  companyId: string;
+  sku: string;
+  name: string;
+  unit: string;              // unidad de medida: 'unidad', 'lt', 'kg', ...
+  quantity: number;
+  unitCost: number;
+  lowStockThreshold: number; // si `quantity <= threshold` → alerta de stock bajo
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Línea de repuesto usada en una orden (tabla M:N order_inventory_lines).
+export interface OrderInventoryLine {
+  id?: string;
+  orderId: string;
+  inventoryItemId: string;
+  quantityOut: number;
+  unitCostSnapshot?: number;
+}
+
 export interface WarrantyJob {
   reopenedAt: string;
   technicianId?: string; // Estandarizado de userId a technicianId

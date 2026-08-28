@@ -53,6 +53,12 @@ const PERMISSIONS = {
   DELETE_EQUIPMENT: 'delete_equipment',
   VIEW_EQUIPMENT: 'view_equipment',
 
+  // Permisos de Inventario / repuestos (Fase 6)
+  CREATE_INVENTORY: 'create_inventory',
+  UPDATE_INVENTORY: 'update_inventory',
+  DELETE_INVENTORY: 'delete_inventory',
+  VIEW_INVENTORY: 'view_inventory',
+
   // Permisos de Usuarios
   CREATE_USER: 'create_user',
   UPDATE_USER: 'update_user',
@@ -88,6 +94,7 @@ const supervisorPermissions = [
   PERMISSIONS.CREATE_EQUIPMENT,
   PERMISSIONS.UPDATE_EQUIPMENT,
   PERMISSIONS.VIEW_EQUIPMENT,
+  PERMISSIONS.VIEW_INVENTORY,
   PERMISSIONS.UPLOAD_INITIAL_EVIDENCE,
   PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
   PERMISSIONS.RESTART_ORDER,
@@ -111,6 +118,7 @@ const ROLES_PERMISSIONS: Record<User['role'], string[]> = {
     PERMISSIONS.VIEW_EQUIPMENT,
     PERMISSIONS.CREATE_EQUIPMENT,
     PERMISSIONS.UPDATE_EQUIPMENT,
+    PERMISSIONS.VIEW_INVENTORY,
     PERMISSIONS.UPLOAD_INITIAL_EVIDENCE, // Restaurado
     PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
     PERMISSIONS.VIEW_OWN_TASKS,
@@ -166,6 +174,8 @@ export const TAB_PERMISSION_MAP: Record<string, string> = {
   users: PERMISSIONS.VIEW_USERS,
   map: PERMISSIONS.VIEW_MAP,
   accounting: PERMISSIONS.VIEW_REPORTS,
+  inventory: PERMISSIONS.VIEW_INVENTORY,
+  reports: PERMISSIONS.VIEW_REPORTS,
 };
 
 export const TAB_FEATURE_MAP: Record<string, keyof CompanyFeatures> = {

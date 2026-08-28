@@ -34,6 +34,10 @@ const ClientManager = React.lazy(() => import('./components/client/ClientManager
 const ClientDetail = React.lazy(() => import('./components/client/ClientDetail'));
 const EquipmentManager = React.lazy(() => import('./components/equipment/EquipmentManager'));
 const EquipmentDetail = React.lazy(() => import('./components/equipment/EquipmentDetail'));
+const InventoryManager = React.lazy(() => import('./components/inventory/InventoryManager'));
+const InventoryForm = React.lazy(() => import('./components/inventory/InventoryForm'));
+const InventoryDetail = React.lazy(() => import('./components/inventory/InventoryDetail'));
+const Reports = React.lazy(() => import('./components/reports/Reports'));
 const UserManager = React.lazy(() => import('./components/user/UserManager'));
 const UserDetail = React.lazy(() => import('./components/user/UserDetail'));
 const UserForm = React.lazy(() => import('./components/user/UserForm'));
@@ -263,6 +267,19 @@ function AppContent({
                   <Route path="/equipment/new" element={<RouteWithLayout title="Nueva Máquina"><EquipmentForm /></RouteWithLayout>} />
                   <Route path="/equipment/:id" element={<RouteWithLayout title="Detalle de Máquina"><EquipmentDetail /></RouteWithLayout>} />
                   <Route path="/equipment/:id/edit" element={<RouteWithLayout title="Editar Máquina"><EquipmentForm /></RouteWithLayout>} />
+
+                  {currentUser && hasPermission(currentUser.role, PERMISSIONS.VIEW_INVENTORY) && (
+                      <>
+                          <Route path="/inventory" element={<RouteWithLayout title="Inventario"><InventoryManager /></RouteWithLayout>} />
+                          <Route path="/inventory/new" element={<RouteWithLayout title="Nuevo Repuesto"><InventoryForm /></RouteWithLayout>} />
+                          <Route path="/inventory/:id" element={<RouteWithLayout title="Detalle de Repuesto"><InventoryDetail /></RouteWithLayout>} />
+                          <Route path="/inventory/:id/edit" element={<RouteWithLayout title="Editar Repuesto"><InventoryForm /></RouteWithLayout>} />
+                      </>
+                  )}
+
+                  {currentUser && hasPermission(currentUser.role, PERMISSIONS.VIEW_REPORTS) && (
+                      <Route path="/reports" element={<RouteWithLayout title="Informes"><Reports /></RouteWithLayout>} />
+                  )}
 
                   {currentUser && hasPermission(currentUser.role, PERMISSIONS.VIEW_USERS) && (
                       <>
