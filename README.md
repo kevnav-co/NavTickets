@@ -1,386 +1,225 @@
-# NavTickets - Sistema de Gestión Industrial
+# NavTickets — Sistema de Gestión de Mantenimiento Industrial (FSM PWA)
 
-Aplicación profesional para la gestión de mantenimiento industrial, basada en Navas y optimizada como Progressive Web App (PWA).
-
-## 🚀 Despliegue en GitHub y Firebase
-
-Para que la aplicación funcione correctamente y se pueda instalar en dispositivos móviles (Android/iPhone), debes configurar los secretos en GitHub.
-
-### 1. Preparar el Repositorio
-1. **Crear Repositorio:** Crea un nuevo repositorio en GitHub.
-2. **Subir Código:**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial commit"
-   git remote add origin https://github.com/TU_USUARIO/navas-app.git
-   git push -u origin main
-   ```
-
-### 2. Configurar Secretos de GitHub (OBLIGATORIO)
-Para que el despliegue automático funcione y los mapas operen, ve a tu repositorio en GitHub:
-1. Pestaña **Settings** > **Secrets and variables** > **Actions**.
-2. Haz clic en **New repository secret**.
-3. Agrega exactamente estos secretos:
-
-### 3. Configuración en Google Cloud Console
-Para quitar el error "Esta página no ha cargado Google Maps correctamente":
-1. Ve a [Google Cloud Console](https://console.cloud.google.com/).
-2. Selecciona tu proyecto.
-3. Ve a **API y servicios** > **Biblioteca**.
-4. Busca y activa: **Maps JavaScript API**, **Places API** y **Geocoding API**.
-5. Asegúrate de tener una **cuenta de facturación** vinculada (obligatorio para Maps, aunque sea el nivel gratuito).
+Aplicación profesional de **Field Service Management** para mantenimiento de equipos industriales, multi-tenant, offline-first y desplegada como PWA. React 18 + TypeScript + Vite + Tailwind + **Supabase** (Postgres) + OneSignal.
 
 ---
 
-## 📱 Guía de Instalación en Móviles
+## 🚀 Stack y Estado
 
-### En Android (Google Chrome)
-1. Abre la URL de tu app en Chrome.
-2. Toca los **tres puntos** (menú) arriba a la derecha.
-3. Selecciona **"Instalar aplicación"**.
+| Capa | Tecnología |
+|------|-----------|
+| **Frontend** | React 18 + TypeScript + Vite 6 |
+| **Estilos** | Tailwind CSS v4 (`@tailwindcss/vite`) |
+| **Backend / Base de datos** | **Supabase** (Postgres + Auth + Realtime + Storage) |
+| **PWA** | `vite-plugin-pwa` (Workbox, inject-manifest), service worker en `src/sw.ts` |
+| **Push** | OneSignal (server-side vía Edge Functions) |
+| **Mapas** | Leaflet (`react-leaflet`) |
+| **Reportes (PDF)** | jsPDF + jspdf-autotable (import dinámico) |
+| **Export (CSV)** | Helper propio con BOM UTF-8 (`src/utils/csv.ts`) |
+| **Offline-first** | IndexedDB vía Dexie (`useOfflineCache`) + Workbox |
 
-### En iPhone / iOS (Safari)
-1. Abre la URL en **Safari**.
-2. Toca el botón de **Compartir** (cuadrado con flecha hacia arriba).
-3. Selecciona **"Agregar al inicio"**.
-
----
-
-## 🛠️ Tecnologías
-
-- **Frontend:** React 18 + TypeScript + Vite
-- **Estilos:** Tailwind CSS
-- **PWA:** Vite Plugin PWA + Workbox
-- **Backend:** Firebase (Firestore, Auth, Storage, Messaging)
-- **Mapas:** Leaflet
-- **PDF:** jsPDF + html2canvas
-- **Excel:** SheetJS (xlsx)
+> **Nota:** El proyecto migró de Firebase a Supabase. No usa Firestore/Auth/Messaging de Firebase; todo vive en Supabase. Los restos de configuración Firebase (`.firebaserc`, `firestore.*`) son residuos, no se usan.
 
 ---
 
-## 📋 Descripción del Sistema
+## 📱 Instalación en Móviles (PWA)
 
-**NavTickets** es un sistema de gestión de servicios de campo (Field Service Management) para mantenimiento de equipos industriales. Permite gestionar órdenes de servicio, clientes, equipos, técnicos y tareas con soporte offline-first.
-
-### Características Principales
-
-- **Offline-First**: Funciona sin conexión a internet mediante Service Worker y caché Firestore
-- **GPS Tracking**: Actualización de ubicación de técnicos cada 10 minutos
-- **Push Notifications**: Notificaciones push via Firebase Cloud Messaging
-- **Firmas Digitales**: Captura de firma para técnicos y clientes
-- **Workflow de Órdenes**: Pendiente → En Progreso → Cerrado (con garantía)
-- **Dashboard**: KPIs, gráficos de productividad, calendario global
-- **Mapa de Clientes**: Visualización geoespacial con Leaflet
-- **Gestión de Equipos**: Mantenimiento preventivo/correctivo
+- **Android (Chrome):** menú (⋮) → *Instalar aplicación*.
+- **iOS (Safari):** botón Compartir → *Agregar al inicio*.
 
 ---
 
-## 🏗️ Arquitectura
+## 🧠 Multi-tenant y Roles
 
-### Estructura de Carpetas
+Cada **empresa** (`companies`) aísla sus datos por `company_id`. La seguridad a nivel de base de datos (RLS) es la fuente de verdad:
 
-```
-src/
-├── components/
-│   ├── account/         # Módulo contable (solo developer)
-│   ├── auth/            # Login y autenticación
-│   ├── client/          # Gestión de clientes (CRUD)
-│   ├── dashboard/      # Dashboard, KPIs, gráficos
-│   ├── equipment/      # Gestión de máquinas/equipos
-│   ├── layout/         # Header, Sidebar, Navigation
-│   ├── map/            # Mapa de clientes (Leaflet)
-│   ├── order/          # Órdenes de servicio y workflow
-│   ├── shared/         # Componentes reutilizables (modales)
-│   ├── task/           # Tareas personales
-│   ├── ui/             # Componentes UI base
-│   └── user/           # Gestión de usuarios
-├── context/            # React Context (Auth, Data, Modal)
-├── hooks/              # Custom hooks (Firestore, GPS, etc)
-├── services/           # Firebase services
-├── types/              # TypeScript interfaces
-└── utils/              # Utilidades (PDF, fechas, etc)
-```
+- El helper `public.current_company_id()` (SECURITY DEFINER) lee `users.company_id` del usuario autenticado (`supabase_auth_id` → `auth.users`).
+- El helper `public.current_user_role()` y `public.user_can(permiso)` (de la migración 009) controlan la escritura por rol **en la DB**, no solo en la UI.
 
-### Flujo de Datos
+**6 roles:** `technician` · `supervisor` · `aux_admin` · `admin` · `developer` · `super_admin`.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         App.tsx                              │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │ AuthContext │  │ DataContext │  │   ModalContext      │  │
-│  │  (Firebase  │  │ (Firestore  │  │  (UI State)         │  │
-│  │   Auth)     │  │   + Cache)  │  │                     │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-         │                │                     │
-    ┌─────▼─────┐   ┌─────▼─────┐        ┌─────▼─────┐
-    │  Hooks    │   │  Hooks     │        │ Components│
-    │ useAuth   │   │ useData    │        │ (Routes)  │
-    └───────────┘   │ useFirestore│       └───────────┘
-                    │ useCollection│
-                    └─────────────┘
-```
+| Rol | Resumen |
+|-----|---------|
+| `technician` | Ve sus órdenes/tareas, inicia/completa; **lee** inventario (no edita stock) |
+| `supervisor` | Ve/asigna todas las órdenes, gestiona clientes/equipos/mapa de técnicos |
+| `aux_admin` | Igual que supervisor |
+| `admin` | Control total de **SU** empresa (branding self-serve, datos, inventario, informes) |
+| `developer` | Igual que admin + utilidades de depuración |
+| `super_admin` | Multi-empresa: Panel Admin completo, gestión de empresas/usuarios, soporte |
 
-### Modelo de Estados
+### Fuente única de visibilidad de pestañas (Fase 5)
 
-- **AuthContext**: Autenticación de usuarios via Firebase Auth
-- **DataContext**: Datos de Firestore (clientes, órdenes, equipos, usuarios)
-- **ModalContext**: Estado de modales y UI global
+Toda la visibilidad de tabs built-in está centralizada en `src/permissions.ts` (`TAB_PERMISSION_MAP`, `TAB_FEATURE_MAP` y `isTabVisible`). Ambos navs (`MobileNavigation` y `DesktopSidebar`) filtran por **permiso del rol** Y **flag de feature de la empresa**. No dupliques esa lógica en componentes.
+
+Flags de feature de empresa (`companies.features`): `accounting`, `maps`, `equipmentManagement` (+ flags de Fase 6 para inventario/reportes).
 
 ---
 
-## 📦 Entidades Principales
+## 📦 Entidades (Supabase / Postgres)
 
-| Entidad | Descripción | Colección Firestore |
-|---------|-------------|---------------------|
-| **User** | Técnicos, administradores, supervisores | `users` |
-| **Client** | Clientes con ubicación GPS | `clients` |
-| **Equipment** | Máquinas/equipos por cliente | `equipment` |
-| **ServiceOrder** | Órdenes de servicio | `orders` |
-| **Task** | Tareas con recordatorios | `tasks` |
-| **AppNotification** | Notificaciones del sistema | `notifications` |
+| Entidad | Tabla | Notas |
+|---------|-------|-------|
+| **Usuario** | `users` | Vinculado a Supabase Auth por `supabase_auth_id`; `role`, `company_id`, `onesignal_player_id` |
+| **Cliente** | `clients` | Coordenadas GPS para el mapa |
+| **Equipo** | `equipment` | Frecuencia/estado de mantenimiento; pertenece a un `client_id` |
+| **Orden de servicio** | `orders` | Workflow Pendiente → En Progreso → Cerrado (+ reapertura por garantía) |
+| **Tarea personal** | `tasks` | Recordatorios, asignación, archivos |
+| **Repuesto / Inventario** | `inventory_items` | Catálogo por empresa; stock y umbral bajo |
+| **Línea de repuestos en orden** | `order_inventory_lines` | M:N orden↔repuesto con cantidad y costo capturado |
+| **Notificación** | `notifications` | Internas, con deep-link |
+| **Empresa** | `companies` | `name`, `slug`, `theme`, `features`, `tabs`, `auth` |
 
-### Relaciones entre Entidades
-
-```
-Client (1) ──────< Equipment (N)
-                       │
-                       │ (N)
-                 ServiceOrder
-                       │
-                       │ (1)
-                    User (technicianId)
-```
+> Tablas business **no almacenan `company_id` a nivel de línea M:N** (`order_inventory_lines`, `equipment_orders`): el tenant se resuelve por las claves foráneas de la fila padre (clientes/órdenes).
 
 ---
 
-## 🔐 Sistema de Permisos (RBAC)
+## 🔨 Worker flow de Órdenes
 
-### Roles de Usuario
-
-| Rol | Descripción | Permisos |
-|-----|-------------|-----------|
-| `technician` | Técnico de campo | Ver propias órdenes, iniciar/completar tareas |
-| `supervisor` | Supervisor de técnicos | Ver todas las órdenes, asignar, gestionar clientes |
-| `aux_admin` | Admin auxiliar | Same as supervisor |
-| `admin` | Administrador total | Acceso completo |
-| `developer` | Desarrollador | Acceso total + módulo contable |
-
-### Permisos Definidos
-
-```typescript
-// src/permissions.ts
-const PERMISSIONS = {
-  // Dashboard
-  VIEW_DASHBOARD: 'view_dashboard',
-  VIEW_ADMIN_WIDGETS: 'view_admin_widgets',
-  VIEW_REPORTS: 'view_reports',
-  
-  // Órdenes
-  CREATE_ORDER: 'create_order',
-  ASSIGN_ORDER: 'assign_order',
-  UPDATE_ORDER: 'update_order',
-  DELETE_ORDER: 'delete_order',
-  VIEW_ALL_ORDERS: 'view_all_orders',
-  START_FINISH_ORDER: 'start_finish_order',
-  
-  // Clientes/Equipos
-  CREATE_CLIENT: 'create_client',
-  VIEW_CLIENTS: 'view_clients',
-  CREATE_EQUIPMENT: 'create_equipment',
-  VIEW_EQUIPMENT: 'view_equipment',
-  
-  // Usuarios
-  VIEW_USERS: 'view_users',
-  CREATE_USER: 'create_user',
-  UPDATE_USER: 'update_user',
-  
-  // Mapa
-  VIEW_MAP: 'view_map',
-  VIEW_TEAM_LOCATIONS_MAP: 'view_team_locations_map',
-};
 ```
+Pendiente → En Progreso → Cerrado (firmas, fotos, datos de cierre)
+                              ↓
+              Reapertura por garantía (si warrantyPeriod configurado)
+```
+
+Una orden cerrada puede adjuntar **repuestos usados** (`order_inventory_lines`): lista de ítems del inventario con cantidad y costo unitario capturado.
 
 ---
 
-## 🔄 Workflow de Órdenes de Servicio
+## 🧩 Características por Fase (roadmap 1–6, ya integradas en `main`)
 
-### Estados
-
-```typescript
-enum OrderStatus {
-  PENDING = 'Pendiente',
-  OPEN = 'En Progreso',
-  CLOSED = 'Cerrado'
-}
-```
-
-### Flujo
-
-```
-┌────────────┐    ┌──────────┐    ┌────────────┐
-│  Pendiente │───▶│En Progreso│───▶│  Cerrado   │
-└────────────┘    └──────────┘    └────────────┘
-     ↓                 ↓                 ↓
-  Asignar          Iniciar            Cerrar con:
-  técnico          orden              - Firmas
-  Equipos          Evidencia          - Photos
-  Cliente          inicial             - Tasks
-                   Reabrir             Garantía
-                   (warranty)
-```
-
-### Datos de Cierre
-
-```typescript
-closingData?: {
-  tasksPerformed?: string[];           // Tareas realizadas
-  additionalComments?: string;         // Comentarios adicionales
-  approverName?: string;               // Nombre approve
-  approverId?: string;                 // ID approve
-  technicianSignature?: string;       // Firma técnico
-  clientSignature?: string;           // Firma cliente
-  evidenceImages?: (string | Blob)[]; // Fotos evidencia
-  closingDescription?: string;         // Descripción cierre
-};
-```
+| Fase | Qué aportó |
+|------|-----------|
+| **1 — RLS por rol** | Migración 009: control de escritura por rol en la DB (`user_can`, políticas granulares) |
+| **2 — Auth real** | Migración 010: se elimina `users.password` (texto plano); login 100% por Supabase Auth; edge `update-user-password`; campo `must_reset_password` |
+| **3 — Higiene** | Un solo scheduler (Supabase Edge); sync offline idempotente (UUID cliente + upsert); `support-notify` por trigger de BD; push OneSignal end-to-end |
+| **4 — Branding self-serve** | Migración 012: el admin/developer edita solo **su** empresa (theme/tabs/features, nunca identidad) |
+| **5 — Features & tabs** | Migración 013: visibilidad de tabs por permiso Y flag; `isTabVisible` como única fuente |
+| **6 — Informes + Inventario** | Migraciones 014/015/016: tablas `inventory_items`/`order_inventory_lines`; módulo de reportes (CSV/PDF); tabs nuevos |
 
 ---
 
-## 📡 APIs y Servicios
+## 🗄️ Schedules y Edge Functions (Supabase)
 
-### Firebase Services
+| Función | Plataforma | Cadencia / Trigger | Propósito |
+|---------|-----------|--------------------|-----------|
+| `task-scheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes |
+| `daily-expiration-check` | Supabase Edge | Diaria `0 8 * * *` | Mantenimiento/garantías por vencer + notificaciones |
+| `support-notify` | Supabase Edge | pg_net trigger (migración 011) | Push OneSignal al super_admin ante consulta nueva |
+| `create-company` | Supabase Edge | Llamada | Crear empresa nueva (multi-tenant) |
+| `create-user` | Supabase Edge | Llamada | Crea la cuenta Auth + fila `users` vinculada |
+| `update-user-password` | Supabase Edge | Llamada | Cambio/reset de clave por `access_token` |
 
-```typescript
-// src/services/firebase.ts
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = initializeFirestore(app, { 
-  localCache: persistentLocalCache({})  // Offline cache
-});
-export const storage = getStorage(app);
-export const messaging = getMessaging(app);
-export const realtimeDB = getDatabase(app);
-```
-
-### Hooks Personalizados
-
-| Hook | Descripción |
-|------|-------------|
-| `useCollection` | Suscripción reactiva a colección Firestore |
-| `useDataFetching` | Obtención centralizada de datos |
-| `useFirestoreActions` | CRUD genérico |
-| `useStorage` | Subida de archivos con compresión |
-| `useFileHandler` | Manejo de archivos online/offline |
-| `useOfflineStatus` | Detección de conectividad |
-| `useOrderActions` | Acciones complejas de órdenes |
-| `useConnectivityStatus` | Estado de conexión |
+> Los schedules viven **solo en Supabase Edge Functions**. Vercel `api/*` queda únicamente para endpoints live (webhooks de triggers y proxies), sin crons ni stubs.
 
 ---
 
-## 📱 Rutas de la Aplicación
+## 📡 Canales de Comunicación
 
-| Ruta | Componente | Descripción |
-|------|------------|-------------|
-| `/` | Dashboard | KPIs, calendario, gráficos |
-| `/tasks` | Tasks | Tareas personales |
-| `/accounting` | Accounting | Módulo contable (solo developer) |
-| `/orders` | OrderList | Lista de órdenes |
-| `/orders/new` | NewOrder | Crear orden |
-| `/orders/:id` | OrderWorkflow | Workflow de orden |
-| `/clients` | ClientManager | Lista de clientes |
-| `/clients/new` | ClientForm | Crear cliente |
-| `/clients/:id` | ClientDetail | Detalle cliente |
-| `/equipment` | EquipmentManager | Lista de equipos |
-| `/equipment/:id` | EquipmentDetail | Detalle equipo |
-| `/users` | UserManager | Gestión de usuarios |
-| `/map` | ClientMap | Mapa de clientes |
+- **WhatsApp:** Twilio (stubs out si no hay credenciales).
+- **Email:** Nodemailer vía Gmail SMTP con plantillas HTML.
+- **Push:** Supabase `notifications` + **OneSignal** (solo a usuarios suscritos por PWA instalada).
 
 ---
 
-## ⚡ Optimizaciones
-
-### Code Splitting
-```typescript
-// src/App.tsx - Lazy loading
-const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
-const OrderList = React.lazy(() => import('./components/order/OrderList'));
-// ... más componentes
-```
-
-### Compresión de Imágenes
-- Las imágenes se comprimen antes de subir a Firebase Storage
-- Uso de canvas API del navegador
-
-### PWA
-- Service Worker con Workbox
-- 78 archivos precacheados
-- Instalable en Android/iOS
-
----
-
-## 📊 Estadísticas de Build
-
-```
-✓ 2854 modules transformed
-✓ built in 13.96s
-
-dist/index.html                    3.38 kB
-dist/assets/index-BkImQzhZ.js   1,093.38 kB (gzipped: 280.37 kB)
-dist/assets/leaflet-src-*.js      149.60 kB (gzipped: 43.28 kB)
-dist/assets/jspdf.es.min-*.js    356.26 kB (gzipped: 115.64 kB)
-dist/assets/xlsx-*.js             418.91 kB (gzipped: 139.23 kB)
-```
-
----
-
-## 🔧 Configuración de Variables de Entorno
+## 🔐 Variables de Entorno
 
 ```env
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_STORAGE_BUCKET=...
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
-VITE_FIREBASE_MEASUREMENT_ID=...
+# Cliente (se hornea al buildar, p. ej. en Vercel)
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+VITE_EMAIL_DOMAIN=navas.com        # Dominio de login (username@dominio); fallback "navas.com"
+VITE_ONESIGNAL_APP_ID=             # Push (front). Sin esto, oneSignal.ts no suscribe
+VITE_GOOGLE_MAPS_API_KEY=          # No usado actualmente (se usa Leaflet)
+
+# Funciones Supabase (secretos a nivel de proyecto, `npx supabase secrets set`)
+ONESIGNAL_APP_ID=
+ONESIGNAL_API_KEY=                 # REST key os_v2_app_…
+EMAIL_DOMAIN=                      # fallback navas.com
+
+# En `supabase/functions/.env` (ediciones locales)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_WHATSAPP_NUMBER=
+GMAIL_USER=
+GMAIL_APP_PASSWORD=
+CUENTI_API_TOKEN=
+CUENTI_EMPRESA_ID=
+CUENTI_USER_ID=
 ```
 
 ---
 
-## ✅ Lo Que Funciona Bien
+## 🧱 Arquitectura Frontend
 
-- Code splitting con React.lazy
-- Memoización intensiva (useMemo/useCallback)
-- Compresión de imágenes antes de subir
-- PWA con service worker y caché
-- Offline-first con Firestore persistent cache
-- Suscripciones en tiempo real a datos
+### Rutas (HashRouter + `React.lazy` por ruta)
+
+| Ruta | Componente |
+|------|-----------|
+| `/` | Dashboard |
+| `/tasks` · `/orders` · `/orders/new` · `/orders/:id` | Tareas y órdenes |
+| `/clients` · `/clients/new` · `/clients/:id` · `/clients/:id/edit` | Clientes |
+| `/equipment` · `/equipment/new` · `/equipment/:id` · `/equipment/:id/edit` | Equipos |
+| `/inventory` · `/inventory/new` · `/inventory/:id` · `/inventory/:id/edit` | Inventario (gated `VIEW_INVENTORY`) |
+| `/reports` | Informes/Export (gated `VIEW_REPORTS`) |
+| `/accounting` | Módulo contable (flag de feature) |
+| `/map` | Mapa de clientes (Leaflet) |
+| `/users` · `/users/new` · `/users/:id` · `/users/:id/edit` | Usuarios |
+| `/admin` · `/admin/stats` · `/admin/support` | Panel Admin (super_admin; /admin role-aware para admin/dev) |
+
+### Contextos
+
+- **`AuthContext`** — Supabase Auth + mapeo al modelo `User` (login `username@EMAIL_DOMAIN`).
+- **`DataContext`** — capa de datos única: expone las colecciones + acciones CRUD + subidas.
+- **`ModalContext`** — estado de modales globales.
+
+### Hooks clave
+
+| Hook | Propósito |
+|------|-----------|
+| `useValidatedActions` | CRUD con validación Zod (`addValidated`/`updateValidated`) + `useSupabaseActions` |
+| `useSupabaseQuery` | Query reactiva con caché offline (Dexie) + Realtime |
+| `useSyncManager` | Cola de escritura offline, drena al reconectar (máx. 3 reintentos) |
+| `useOfflineStatus` / `useOrderActions` / `useFileHandler` / `useOneSignal` | Conectividad, operaciones complejas, evidencia, push |
+
+> **Regla de creates (crítica para RLS):** `useSupabaseActions.addItem` **no inyecta `companyId`**. La RLS exige `company_id = current_company_id()` en el INSERT, así que **todo create de tabla business debe incluir `companyId` en el payload** y validar contra `Schema.omit({ id: true })` (no contra `omit({ id, companyId })`, que lo descartaría). Ver `ClientForm`, `EquipmentForm`, `InventoryForm`.
 
 ---
 
-## ⚠️ Áreas de Mejora
+## 🧪 Tests
 
-| Prioridad | Problema | Ubicación |
-|-----------|----------|-----------|
-| Alta | No hay pagination en queries Firestore | useCollection.ts |
-| Alta | No hay error boundaries | App.tsx |
-| Media | VAPID key hardcoded | App.tsx:43 |
-| Media | Timeout auth hardcodeado (5s) | AuthContext.tsx |
-| Media | Suscripciones multiples a misma colección | useCollection.ts |
-| Baja | Nombres de constantes en español | types.ts |
-| Baja | No hay tests unitarios | entire codebase |
+Vitest; los `*.test.ts` viven junto a su fuente. Ejemplos: `warranty.test.ts`, `productUtils.test.ts`, `csv.test.ts`, `permissions.test.ts`, `schemas/inventory.schema.test.ts`.
+
+```bash
+npm test                    # toda la suite
+npx vitest run src/utils/warranty.test.ts   # un archivo
+```
+
+---
+
+## 🛠️ Comandos
+
+```bash
+npm run dev       # Vite dev en :8080 (host: true)
+npm run build     # Build de producción a dist/
+npm run preview   # Previsualizar el build
+npm test          # Suíte de tests
+npm run deploy    # Build + deploy a Vercel (producción)
+npm run serve     # Alias de npm run dev
+vercel --prod     # Deploy alternativo
+```
+
+---
+
+## 📚 Documentación adicional
+
+- `CLAUDE.md` — pautas del proyecto para Claude Code (arquitectura, datos, env).
+- `DEPLOYMENT_GUIDE.md` — guía de despliegue (edges, secrets, RLS).
+- `VERCEL_ENV_SETUP.md` — env vars de Vercel.
+- `directivas/` — business rules (órdenes, tareas, evidencia, permisos, offline).
+- Memory del desarrollador: Vault Obsidian (`SecondBrain/`, dentro de `OneDrive\Documentos`).
 
 ---
 
 ## 🏷️ Versión
 
-- **Versión actual**: 1.0.0
-- **Última actualización**: 2026
-
----
-
-## 📄 Licencia
-
-Propiedad de NavTickets - Todos los derechos reservados
+- **Actual:** 1.0.0 — roadmap 1–6 integrado en `main` (2026-08).

@@ -9,7 +9,7 @@
 
 ## 1. Objetivos y Alcance
 - **Objetivo Principal:** Estandarizar la captura, procesamiento y almacenamiento de evidencia fotográfica para asegurar que las imágenes sean ligeras, persistentes y accesibles.
-- **Criterio de Éxito:** Toda imagen guardada debe pasar por el proceso de compresión y estar organizada en carpetas por ID de documento en Firebase Storage.
+- **Criterio de Éxito:** Toda imagen guardada debe pasar por el proceso de compresión y estar organizada en carpetas por ID de documento en Supabase Storage.
 
 ## 2. Especificaciones de Entrada/Salida (I/O)
 
@@ -18,7 +18,7 @@
 - **Path Base:** `orders/`, `clients/`, `equipment/`, etc.
 
 ### Salidas (Outputs)
-- **URL Pública:** Link de Firebase Storage (Modo Online).
+- **URL Pública:** Link de Supabase Storage (Modo Online).
 - **Base64:** String encoded para persistencia temporal (Modo Offline).
 - **Redimensionamiento:** Máximo 1024px de ancho (vía `compressImage`).
 
@@ -27,19 +27,19 @@
 1. **Selección:** El usuario selecciona uno o varios archivos.
 2. **Compresión:** Se ejecuta `compressImage(file)` que reduce el peso y dimensiones sin pérdida excesiva de calidad.
 3. **Detección de Conectividad:**
-   - **Online:** Sube el Blob a Storage -> Obtiene `downloadURL` -> Actualiza document en Firestore.
-   - **Offline:** Convierte Blob a Base64 -> Actualiza document en Firestore local (Firestore Persistence).
+   - **Online:** Sube el Blob a Supabase Storage -> Obtiene `downloadURL` -> Actualiza document en la tabla Supabase correspondiente.
+   - **Offline:** Convierte Blob a Base64 -> Actualiza document en tabla/colección en Supabase local (caché offline en Dexie/IndexedDB, useOfflineCache).
 4. **Sanitización de Datos:** Antes de guardar arrays de archivos, se aplica `.flat(Infinity)` y `new Set()` para evitar duplicados o arreglos anidados corruptos.
 5. **Limpieza de Storage:** Al reemplazar una foto única (no array), el sistema intenta borrar el archivo anterior de Storage para ahorrar espacio.
 
 ## 4. Herramientas y Librerías
-- **Firebase:** `firebase/storage`.
+- **Supabase Storage:** para subidas usa `useSupabaseStorage` (con compresión en cliente).
 - **Canvas:** Utilizado en `imageCompression.ts` para redimensionar.
 - **Hooks:** `useConnectivityStatus`.
 
 ## 5. Restricciones y Casos Borde (Edge Cases)
 - **Archivos Pesados:** Si el archivo excede 5MB post-compresión (raro), el sistema debe alertar al usuario.
-- **Objetos No Encontrados:** Al borrar, si el objeto no existe en Storage (Error 404), se debe ignorar el error y proceder a limpiar Firestore.
+- **Objetos No Encontrados:** Al borrar, si el objeto no existe en Storage (Error 404), se debe ignorar el error y proceder a limpiar la tabla/colección en Supabase.
 - **Pérdida de Contexto:** Si el `id` del documento desaparece durante la subida, se cancela la operación para evitar archivos huérfanos en la raíz de Storage.
 
 ## 6. Protocolo de Errores y Aprendizajes (Memoria Viva)
@@ -58,7 +58,7 @@ orders/ID_ORDEN/beforePhotos/1713214567_antes.jpg
 
 ## 8. Checklist de Pre-Ejecución
 - [ ] Cámara con permisos otorgados en el navegador.
-- [ ] Bucket de Storage configurado con reglas `write` para usuarios autenticados.
+- [ ] Bucket de Supabase Storage configurado con reglas de acceso para usuarios autenticados.
 
 ## 9. Checklist Post-Ejecución
 - [ ] Imagen visible en la previsualización del formulario.

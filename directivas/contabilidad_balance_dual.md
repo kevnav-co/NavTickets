@@ -20,7 +20,7 @@
 - **Participantes:** `senderId` (opcional), `recipientId` (opcional).
 
 ### Salidas (Outputs)
-- **Movimiento Registrado:** Firestore document en `transactions`, `expenses` o `incomes`.
+- **Movimiento Registrado:** document en las tablas `transactions`, `expenses` o `incomes`.
 - **Balances Visuales:** Widgets de saldo en el dashboard financiero.
 
 ## 3. Flujo Lógico (Algoritmo)

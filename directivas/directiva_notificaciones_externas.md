@@ -30,7 +30,7 @@ Esta directiva define el protocolo para el envío de notificaciones automáticas
    - Intentar WhatsApp.
    - Si WhatsApp falla o el destinatario no tiene teléfono, intentar Email.
 3. **Renderizado de Email:** Usar el módulo `emailTemplates.js` para generar el HTML premium basado en el tipo de alerta (Mantenimiento o Garantía).
-4. **Logging:** Registrar éxito o error en la consola de Firebase Functions.
+4. **Logging:** Registrar éxito o error en la consola de Supabase Edge Functions.
 
 ## 4. Herramientas y Librerías
 - `nodemailer`: Para el envío de correos.
@@ -41,7 +41,7 @@ Esta directiva define el protocolo para el envío de notificaciones automáticas
 - **Credenciales:** Gmail requiere "Contraseñas de aplicación" (2FA habilitado). No usar la contraseña normal de la cuenta.
 - **Logo URL:** Asegurar que la URL del logo en Storage sea pública y tenga el token de acceso permanente.
 - **Instrucción de Agendamiento:** Todos los correos de mantenimiento DEBEN incluir el botón de WhatsApp pre-configurado para agendamiento.
-- **Enriquecimiento de Datos:** Antes de renderizar la plantilla, se debe consultar el nombre del cliente y detalles del equipo para personalizar el mensaje. No enviar plantillas con campos vacíos o "N/A" si la información existe en Firestore.
+- **Enriquecimiento de Datos:** Antes de renderizar la plantilla, se debe consultar el nombre del cliente y detalles del equipo para personalizar el mensaje. No enviar plantillas con campos vacíos o "N/A" si la información existe en las tablas de Supabase.
 - **Protocolo No-Reply:** Los correos son informativos y deben incluir el aviso de "no responder".
 - **Límites de Twilio:** Durante el uso de Sandbox, solo se pueden enviar mensajes a números registrados.
 
@@ -62,7 +62,7 @@ node functions/test-email-v2.js usuario@ejemplo.com
 ## 8. Checklist de Pre-Ejecución
 - [ ] Credenciales TWILIO y GMAIL en `functions/.env`.
 - [ ] Dependencias instaladas en `functions/`.
-- [ ] Logo disponible en Firebase Storage.
+- [ ] Logo disponible en Supabase Storage.
 
 ## 9. Checklist Post-Ejecución
 - [ ] Verificar llegada al "Spam" en caso de no ver el correo.

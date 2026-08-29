@@ -14,12 +14,12 @@
 ## 2. Especificaciones de Entrada/Salida (I/O)
 
 ### Entradas (Inputs)
-- **ID de Orden:** `string` (docId de Firestore).
+- **ID de Orden:** `string` (id de fila en tabla Supabase).
 - **Estado Inicial:** `PENDING`, `OPEN`, `IN_PROGRESS`, `DONE`, `CLOSED`, `CANCELLED`.
 - **Datos de Cierre:** `closingData` (tareas realizadas, repuestos, firma del cliente).
 
 ### Salidas (Outputs)
-- **Documento Firestore:** Actualizado con `status: CLOSED` y `endTime`.
+- **Documento:** Actualizado con `status: CLOSED` y `endTime`.
 - **Artefactos PDF:** Acta de servicio generada en `orders/{orderId}/acta_{timestamp}.pdf`.
 - **Equipos:** Actualizados con `lastServiceDate` y `nextServiceDate` (según frecuencia).
 
@@ -50,7 +50,7 @@
 | Fecha | Error Detectado | Causa Raíz | Solución/Parche Aplicado |
 |-------|-----------------|------------|--------------------------|
 | 15/04 | Error al borrar orden | Referencias de Storage huérfanas | Implementada lógica recursiva de `listAll` y `deleteObject` en `OrderWorkflow.tsx`. |
-| 15/04 | Número de orden duplicado | Colisión en creación simultánea | Implementada transacción de Firestore para el contador de órdenes. |
+| 15/04 | Número de orden duplicado | Colisión en creación simultánea | Implementada transacción de Supabase para el contador de órdenes. |
 
 ## 7. Ejemplos de Uso
 

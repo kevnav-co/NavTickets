@@ -1,64 +1,74 @@
-# DIRECTIVA: NOTIFICACIONES_FCM_SOP
+# DIRECTIVA: NOTIFICACIONES_PUSH_SOP (antes FCM)
 
-> **ID:** 20260415_NOTIF_01
-> **Script Asociado:** `src/utils/firebase-messaging-init.ts`, `src/App.tsx`
-> **Última Actualización:** 15/04/2026
+> **ID:** 20260415_NOTIF_01 (revisado)
+> **Script Asociado:** `src/hooks/useOneSignal.ts`, `src/sw.ts`, edge `support-notify`, migraciones 010/011
+> **Última Actualización:** 29/08/2026
 > **Estado:** ACTIVO
+
+> **Cambio de proveedor:** las notificaciones push ya **no** usan Firebase Cloud Messaging. Se migraron a **OneSignal** (cliente + server-side). El campo `users.onesignal_player_id` reemplaza al viejo `fcm_token` (backfill en migración 010). Esta directiva documenta el flujo actual.
 
 ---
 
 ## 1. Objetivos y Alcance
-- **Objetivo Principal:** Garantizar la entrega confiable de notificaciones push a técnicos y administradores para alertas de mantenimiento y asignación de tareas.
-- **Criterio de Éxito:** Cada usuario autenticado en un navegador compatible debe tener un `fcmToken` válido registrado en su documento de Firestore.
+- **Objetivo Principal:** Garantizar la entrega confiable de notificaciones push a técnicos y administradores para alertas de mantenimiento, asignación de tareas y **soporte**.
+- **Criterio de Éxito:** Cada usuario suscrito por PWA instalada recibe el push correspondiente (ej. aviso de consulta de soporte al super_admin).
 
 ## 2. Especificaciones de Entrada/Salida (I/O)
 
 ### Entradas (Inputs)
-- **Llave VAPID:** `BED4eP1e3O95scTlqCDXrsjCwM9FOoD4Z0WURxk7H5QDUgG4v43-ik1Mpt8jqSSr9sD8qpQLko-an14f1obSyTI`.
-- **Navegador:** Requiere soporte para Service Workers y Push API.
+- **OneSignal App ID (cliente):** `VITE_ONESIGNAL_APP_ID` (frontend, horneado al buildar).
+- **Secrets server-side (proyecto Supabase):** `ONESIGNAL_APP_ID` / `ONESIGNAL_API_KEY` (REST key `os_v2_app_…`), leídos por el edge `support-notify`.
+- **Player ID:** `users.onesignal_player_id`, guardado tras la suscripción del dispositivo.
 
 ### Salidas (Outputs)
-- **Token FCM:** String único por dispositivo y navegador.
-- **Notificación UI:** Alerta nativa del sistema o banner en la aplicación.
+- **Notificación push:** alerta nativa entregada por OneSignal al/los dispositivo(s) suscrito(s).
 
 ## 3. Flujo Lógico (Algoritmo)
 
-1. **Permisos:** Al iniciar sesión, el sistema solicita permisos de notificación (`Notification.requestPermission()`).
-2. **Registro:** Si se otorga el permiso, se registra el Service Worker (`firebase-messaging-sw.js`).
-3. **Obtención de Token:** Se llama a `getToken()` usando la llave VAPID configurada.
-4. **Almacenamiento:** El token se guarda en la colección `users/{userId}` bajo el campo `fcmToken`.
-5. **Recepción en Primer Plano:** El hook `onMessage` en `App.tsx` captura el payload y lanza una `new Notification()` nativa.
-6. **Renovación:** Cada vez que el usuario recarga la app con internet, se verifica si el token ha cambiado para actualizar Firestore.
+1. **Suscripción (cliente):** `useOneSignal.ts` (montado desde `Header`) suscribe con `VITE_ONESIGNAL_APP_ID` y guarda `onesignal_player_id` en el `users` del usuario.
+2. **Disparo (server):** un evento de negocio dispara el envío. Soporte usa el edge `support-notify`, activado por un **trigger de BD** (pg_net, migración 011) en `INSERT` de `support_tickets`.
+3. **Envío:** el edge manda el push a OneSignal con sus secrets (`ONEOSIGNAL_APP_ID/API_KEY`) autenticando contra los `player_id` de los destinatarios (super_admins suscritos).
+4. **Recepción (PWA):** el service worker (`src/sw.ts`) maneja el evento `push` nativo — fiable en iOS PWA.
 
 ## 4. Herramientas y Librerías
-- **Firebase:** `firebase/messaging`.
-- **Web API:** `Notification API`.
+- **Cliente:** `@onesignal/react-native` / OneSignal Web SDK (`useOneSignal`).
+- **Server:** Edge Functions de **Supabase** (`fetch` a la REST API de OneSignal) + pg_net para el trigger.
+- **Service Worker:** API nativa `push` (no FCM).
 
-## 5. Restricciones y Casos Borde (Edge Cases)
-- **Incógnito/iOS:** Algunos navegadores en modo incógnito o versiones antiguas de iOS pueden no soportar `isSupported()`. El sistema debe fallar silenciosamente sin bloquear la app.
-- **Tokens Caducados:** Firebase puede invalidar tokens. La app intenta refrescar el token en cada inicio de sesión exitoso.
-- **Multi-dispositivo:** Actualmente solo se guarda un token por usuario. Si el usuario inicia sesión en otro dispositivo, el token anterior se sobrescribe.
+## 5. Restricciones y Casos Borde
+- **Solo PWA instalada:** el push alcanza a usuarios **suscritos** por PWA instalada; quien no suscriba no recibe nada.
+- **iOS:** en iOS la entrega llega vía push nativo del SW, no `isSupported()` de FCM.
+- **Alcance:** el aviso de soporte va dirigido a `super_admin` (selecciona por rol, no a toda la empresa).
+- **Landing de credenciales**: 
+  - Frontend: `VITE_ONESIGNAL_APP_ID` (env var de Vercel, horneada al buildar).
+  - Server: `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` como **secrets de proyecto Supabase** (`npx supabase secrets set`).
+  - Botón de prueba del panel admin: el edge Vercel `send-test-notification` usa las mismas, pero desde las env vars de **Vercel**.
 
 ## 6. Protocolo de Errores y Aprendizajes (Memoria Viva)
 
 | Fecha | Error Detectado | Causa Raíz | Solución/Parche Aplicado |
 |-------|-----------------|------------|--------------------------|
-| 15/04 | Notificaciones duplicadas | Suscripción múltiple en `App.tsx` | Se movió `onMessage` a un `useEffect` con retorno de des-suscripción. |
-| 15/04 | Error VAPID en local | Dominio no autorizado en Firebase | Se agregaron `localhost` y dominios de staging a la configuración de Firebase Console. |
-| 16/04 | Duplicación en Backend | Activación múltiple de triggers de Firestore | Se implementó idempotencia usando IDs deterministas en `sendAndCreateNotification`. |
+| 19/04 | Notificaciones duplicadas | Suscripción múltiple en `App.tsx` | `useEffect` único con des-suscripción |
+| 25/08 | Push de soporte no llegaba | Secrets solo en Vercel, edge en Supabase | Setearse secrets ONESIGNAL a nivel de proyecto Supabase |
+| 25/08 | Player id no avanzaba | Campo `fcm_token` heredado | Renombrar a `onesignal_player_id` (migración 010) + backfill |
 
 ## 7. Ejemplos de Uso
 
 ```typescript
-// Registro manual desde consola para debug
-import { getFCMToken } from './utils/firebase-messaging-init';
-getFCMToken().then(token => console.log(token));
+// Cliente: suscribir y persistir el player id
+const { errors } = useOneSignal();
+// → persiste users.onesignal_player_id
+
+// Server (edge): enviar push a un player id
+// POST a https://api.onesignal.com/notifications con headers:
+//   Authorization: Basic <ONESIGNAL_API_KEY>
 ```
 
 ## 8. Checklist de Pre-Ejecución
-- [ ] HTTPS habilitado (Requerido por Service Workers).
-- [ ] `firebase-messaging-sw.js` presente en la raíz de `/public`.
+- [ ] `VITE_ONESIGNAL_APP_ID` seteadO en el frontend (Vercel) para que suscriba.
+- [ ] `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` seteados como secrets del proyecto Supabase.
+- [ ] PWA instalada en el dispositivo de prueba.
 
 ## 9. Checklist Post-Ejecución
-- [ ] Campo `fcmToken` verificado en Firestore.
-- [ ] Prueba de envío desde Firebase Console exitosa.
+- [ ] `users.onesignal_player_id` verificado tras login.
+- [ ] Edad de prueba: crear un `support_ticket` y confirmar que al super_admin suscrito le llega el push.

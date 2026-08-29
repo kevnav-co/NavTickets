@@ -122,6 +122,8 @@ En `src/services/oneSignal.ts`, el `appId` se toma de `import.meta.env.VITE_ONES
 
 ## 4. MIGRACIÓN DE USUARIOS Y AUTH
 
+> **Nota (2026-08):** el proyecto ya migró a Supabase y esta sección es **referencia histórica** (one-time, ya realizada). No es parte del flujo actual.
+
 ### 4.1 Exportar usuarios de Firebase
 Script para exportar usuarios:
 ```javascript

@@ -1,8 +1,8 @@
 # DIRECTIVA: PWA_OFFLINE_OPERATIONS_SOP
 
 > **ID:** 20260415_PWA_01
-> **Script Asociado:** `public/sw.js`, `src/hooks/useOfflineStatus.ts`, `src/services/messaging.ts`
-> **Última Actualización:** 15/04/2026
+> **Script Asociado:** `public/sw.js`, `src/hooks/useOfflineStatus.ts`, `src/hooks/useOneSignal.ts`
+> **Última Actualización:** 29/08/2026
 > **Estado:** ACTIVO
 
 ---
@@ -15,31 +15,31 @@
 
 ### Entradas (Inputs)
 - **Latitud/Longitud:** Coordenadas GPS del dispositivo.
-- **Push Tokens:** FcmTokens generados por el navegador/OS.
-- **Firestore Cache:** Datos persistidos en el almacenamiento local del navegador.
+- **Push Tokens:** `onesignal_player_id` (OneSignal) por dispositivo/navegador.
+- **Caché offline:** Datos persistidos en Dexie/IndexedDB (`useOfflineCache`).
 
 ### Salidas (Outputs)
-- **Service Worker:** Control del caché de activos estáticos.
-- **Notificaciones:** Mensajes nativos en el dispositivo del técnico/supervisor.
-- **Tracking:** Registro de ubicación en `users/{id}/location`.
+- **Service Worker:** Control del caché de activos estáticos (`src/sw.ts`).
+- **Notificaciones:** Mensajes nativos en el dispositivo del técnico/supervisor (OneSignal).
+- **Tracking:** Registro de ubicación en `users.latitude`/`users.longitude`.
 
 ## 3. Flujo Lógico (Algoritmo)
 
 1. **Instalación de SW:** Al cargar `main.tsx`, se registra el service worker que cachea el bundle de la aplicación.
-2. **Persistence Firestore:** Se habilita `enableIndexedDbPersistence` el inicializar Firebase.
+2. **Persistencia offline:** La caché de datos usa **Dexie/IndexedDB** (`useOfflineCache`); ninguna escritura depende de la conexión.
 3. **Detección de Conexión:** El hook `useOfflineStatus` monitorea `navigator.onLine` y muestra banners de advertencia.
-4. **FCM Subscription:** Si el usuario acepta permisos, se solicita un token a Firebase Messaging y se asocia a su perfil.
-5. **GPS Tracking:** Un interval activo cada X minutos obtiene la posición GPS y la actualiza en tiempo real para visualización en el mapa de supervisores.
+4. **Suscripción push:** Si el usuario acepta permisos, `useOneSignal` suscribe (con `VITE_ONESIGNAL_APP_ID`) y guarda `users.onesignal_player_id`.
+5. **GPS Tracking:** Un interval activo cada 10 minutos (`GPS_UPDATE_INTERVAL`) obtiene la posición GPS y la actualiza para el mapa de supervisores.
 
 ## 4. Herramientas y Librerías
 - **PWA:** `Service Workers API`, `Manifest.json`.
-- **FCM:** `firebase/messaging`.
+- **Push:** OneSignal (no FCM).
 - **Geolocalización:** `navigator.geolocation`.
 
 ## 5. Restricciones y Casos Borde (Edge Cases)
 
 ### Limitaciones:
-- **Imágenes:** Las imágenes capturadas offline se almacenan como `Blob` en IndexedDB hasta que haya conexión para subirlas a Firebase Storage.
+- **Imágenes:** Las imágenes capturadas offline se almacenan como `Blob` en IndexedDB hasta que haya conexión para subirlas a **Supabase Storage** (`useSupabaseStorage`).
 - **Permisos:** La geolocalización y notificaciones requieren aprobación explícita del usuario por seguridad del navegador.
 
 ### Errores Comunes:
@@ -61,11 +61,11 @@ return isOffline ? <OfflineBanner /> : null;
 
 ## 8. Checklist de Pre-Ejecución
 - [ ] Validar que el archivo `public/manifest.json` tenga todos los íconos necesarios.
-- [ ] Configurar el `VAPID_KEY` para Firebase Messaging.
+- [ ] Configurar `VITE_ONESIGNAL_APP_ID` en el frontend para habilitar la suscripción push.
 
 ## 9. Checklist Post-Ejecución
 - [ ] Poner el navegador en "Offline" desde DevTools y verificar que la app sigue funcionando.
-- [ ] Enviar una notificación de prueba desde el panel de Firebase.
+- [ ] Enviar una notificación de prueba desde el panel de OneSignal (o el botón de prueba del admin).
 
 ## 10. Notas Adicionales
 El rastreo GPS consume batería. Se recomienda implementar un "Active Check" que solo rastree si el técnico tiene una orden en progreso (`En Progreso`).

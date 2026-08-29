@@ -8,18 +8,18 @@
 ---
 
 ## 1. Objetivos y Alcance
-- **Objetivo Principal:** Definir la estructura fundamental de la aplicación Navas, basada en React y Firebase, asegurando escalabilidad y soporte PWA.
+- **Objetivo Principal:** Definir la estructura fundamental de la aplicación Navas, basada en React y Supabase, asegurando escalabilidad y soporte PWA.
 - **Criterio de Éxito:** La aplicación debe cargar de forma optimizada mediante lazy loading, manejar estados globales de forma eficiente y persistir datos localmente.
 
 ## 2. Especificaciones de Entrada/Salida (I/O)
 
 ### Entradas (Inputs)
-- **Configuración Firebase:** Credenciales en `src/services/firebase.ts`.
-- **Variables de Entorno:** `.env` con `VITE_FIREBASE_API_KEY`, etc.
+- **Configuración Supabase:** Credenciales en `src/services/supabase.ts`.
+- **Variables de Entorno:** `.env` con `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, etc.
 
 ### Salidas (Outputs)
 - **Renderizado UI:** SPA optimizada con `React.lazy` y `Suspense`.
-- **Persistencia:** Caché de Firestore habilitada para uso offline.
+- **Persistencia:** Caché offline en Dexie/IndexedDB (useOfflineCache) habilitada para uso offline.
 
 ## 3. Flujo Lógico (Algoritmo)
 
@@ -31,12 +31,12 @@
 
 ## 4. Herramientas y Librerías
 - **Frontend:** `React 18+`, `Vite`, `TypeScript`.
-- **BaaS:** `Firebase` (Auth, Firestore, Storage, Messaging).
+- **BaaS:** `Supabase` (Auth, Postgres, Storage, OneSignal para push).
 - **Styling:** `Vanilla CSS` + `Lucide React` (Iconos).
 - **Charts:** `Recharts`.
 
 ## 5. Restricciones y Casos Borde (Edge Cases)
-- **Reactivos:** Firestore debe usarse con `onSnapshot` para reflejar cambios en tiempo real.
+- **Reactivos:** Supabase debe usarse con suscripciones Realtime de Supabase (useSupabaseQuery) para reflejar cambios en tiempo real.
 - **Peso:** Evitar importar librerías pesadas en el bundle principal.
 - **Conexión:** Manejar estados de "Sin Conexión" visualmente para el usuario.
 
@@ -46,7 +46,7 @@
 |-------|-----------------|------------|--------------------------|
 | 15/04 | Carga lenta inicial | Bundle de Accounting pesado | Implementado `React.lazy` para Accounting y Reportes |
 | 15/04 | Pérdida de datos en edición | Refresco de página en formulario | Implementada persistencia en `localStorage` dentro de `useOrderForm.ts` para el modo edición. |
-| 15/04 | Colisión de snapshots | Múltiples suscriptores al mismo path | Centralización obligatoria en `DataContext.tsx` usando un único `onSnapshot` por colección. |
+| 15/04 | Colisión de snapshots | Múltiples suscriptores al mismo path | Centralización obligatoria en `DataContext.tsx` usando una única suscripción Realtime de Supabase por tabla. |
 
 ## 7. Ejemplos de Uso
 
@@ -59,8 +59,8 @@ npm run build
 ```
 
 ## 8. Checklist de Pre-Ejecución
-- [ ] Configurar Firebase project en consola.
-- [ ] Validar que `firebase.ts` no expone secretos directamente (usar .env).
+- [ ] Configurar Supabase project en consola.
+- [ ] Validar que `supabase.ts` no expone secretos directamente (usar .env).
 - [ ] Instalar dependencias con `npm install`.
 
 ## 9. Checklist Post-Ejecución
@@ -69,4 +69,4 @@ npm run build
 - [ ] Validar que el lazy loading funciona en la pestaña Network.
 
 ## 10. Notas Adicionales
-El proyecto utiliza un sistema de `DataContext` que centraliza todas las suscripciones de Firestore para evitar múltiples oyentes innecesarios.
+El proyecto utiliza un sistema de `DataContext` que centraliza todas las suscripciones Realtime de Supabase para evitar múltiples oyentes innecesarios.

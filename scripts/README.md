@@ -1,56 +1,40 @@
 # Scripts de Administración
 
-## seed-company.ts
+> El proyecto migró de **Firebase a Supabase**. La vía soportada para crear empresas hoy es el **edge `create-company`** (y su helper `scripts/create-company.mjs`). `seed-company.ts` es un script **legacy (Firebase)** que se conserva solo como referencia histórica — **no lo uses** para crear empresas nuevas.
 
-Crea una nueva empresa multi-tenant con su usuario admin, configuración de marca, y pestañas por defecto.
+## Legado (no usar)
+- **`seed-company.ts`** — creaba empresa + admin usando Firebase-admin; quedó fuera de la arquitectura actual. Preferir `create-company`.
+
+## Crear una empresa (Supabase)
+El flujo actual va por el edge `create-company` (bootstrap service-role) y, si se quiere verificación, `scripts/verify-selfserve.mjs`.
+
+## Scripts actuales (Node, usan `.env` con `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` + credencial de servicio según el caso)
+
+| Script | Propósito |
+|--------|-----------|
+| `create-company.mjs` | Crear un tenant nuevo e interactuar con el edge `create-company` |
+| `create-superadmin.mjs` | Crear/garantizar la cuenta `super_admin` |
+| `seed-and-verify.mjs` | Sembrar los 3 tenants demo + usuarios ficticios (login `usuario@navas.com`/`Demo#2026`). **NO re-correr**: borra vínculos y deja `supabase_auth_id` en null |
+| `verify-seed.mjs` | Verificar el seed demo (login + aislamiento multi-tenant) |
+| `verify-selfserve.mjs` | Chequear el self-serve de branding cross-tenant (solo login, sin seed) |
+| `verify-inventory-rls.mjs` | Matriz RLS de inventario (select/insert admin/cross-tenant → 4/4) |
+| `diag-rls.mjs` / `fix-users-rls.mjs` / `apply_rls_fix.mjs` | Diagnóstico y correcciones de RLS |
 
 ### Requisitos
-
 ```bash
-npm install -g firebase-tools
-firebase login
-```
-
-O configurar una variable de entorno con la ruta al archivo JSON de la cuenta de servicio:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS=./ruta/a/tu-service-account.json
+npm install          # dependencies del root
+# Variables en .env (gitignored):
+#   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_EMAIL_DOMAIN
 ```
 
 ### Uso
-
 ```bash
-npx ts-node scripts/seed-company.ts
+node scripts/verify-inventory-rls.mjs
+node scripts/verify-selfserve.mjs
 ```
 
-El script te guiará paso a paso:
-1. Nombre de la empresa
-2. Slug (identificador URL)
-3. Dominio de email para login
-4. Nombre del admin
-5. Username del admin
-6. Contraseña del admin
-7. Color primario (tema)
-
-### Lo que crea
-
-1. Documento en `companies/{slug}` con toda la configuración
-2. Usuario en Firebase Auth con email `admin@midominio.com`
-3. Custom claims `companyId` y `role` en el Auth user
-4. Documento en `users/{uid}` con los datos del admin
-5. Pestañas por defecto (Dashboard, Tareas, Órdenes, Clientes, Máquinas, Equipo, Mapa)
-
-### Post-instalación
-
-1. Desplegar reglas de Firestore:
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
-
-2. Iniciar sesión en la app con las credenciales del admin
-
-3. Ir a `/admin` (si tienes rol super_admin) o usar la app normalmente
-
-4. Subir logos y configurar branding desde el panel de administración
-
-5. Crear usuarios adicionales desde el panel
+## Post-instalación de un tenant
+1. Aplicar migraciones con `npx supabase db push` (o regenerar desde `supabase/migrations/`).
+2. Crear la empresa con `create-company` (edge/Función) o `scripts/create-company.mjs`.
+3. Iniciar sesión con el admin del tenant (`username@EMAIL_DOMAIN`).
+4. Configurar branding (theme) y usuarios desde el panel.

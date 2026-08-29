@@ -2,13 +2,13 @@
 
 > **ID:** 20260416_TEST_MAINTENANCE
 > **Script Asociado:** `functions/test-maintenance-specific.js`
-> **Última Actualización:** 2026-04-16
+> **Última Actualización:** 29/08/2026
 > **Estado:** ACTIVO
 
 ---
 
 ## 1. Objetivos y Alcance
-- **Objetivo Principal:** Enviar un correo electrónico de prueba que simule una notificación de mantenimiento preventivo real utilizando datos de la base de datos (Firestore).
+- **Objetivo Principal:** Enviar un correo electrónico de prueba que simule una notificación de mantenimiento preventivo real utilizando datos de la base de datos (Supabase).
 - **Criterio de Éxito:** El script se ejecuta sin errores y el correo llega a `knavasov@gmail.com` con el formato premium diseñado y datos reales de un equipo.
 
 ## 2. Especificaciones de Entrada/Salida (I/O)
@@ -27,14 +27,14 @@
 ## 3. Flujo Lógico (Algoritmo)
 
 1. **Carga de Contexto:** Requerir `dotenv` y las funciones de `communicationChannels`.
-2. **Definición de Datos:** Configurar los datos reales obtenidos de Firestore (Equipo SN-0096, Cliente Maxi Shen Long).
+2. **Definición de Datos:** Configurar los datos reales obtenidos de Supabase (Equipo SN-0096, Cliente Maxi Shen Long).
 3. **Construcción del Mensaje:** Generar el cuerpo HTML con el diseño premium de Navas Máquinas.
 4. **Envío:** Llamar a `sendEmailMessage` con el destinatario `knavasov@gmail.com`.
 5. **Validación:** Informar el resultado en consola.
 
 ## 4. Herramientas y Librerías
 - **Librerías Node.js:** `nodemailer`, `dotenv`.
-- **APIs Externas:** Firebase Firestore (para la obtención previa de datos).
+- **APIs Externas:** Supabase (PostgREST) para la obtención previa de datos.
 
 ## 5. Restricciones y Casos Borde (Edge Cases)
 - **Límites:** Las App Passwords de Gmail pueden expirar o fallar si el 2FA cambia.

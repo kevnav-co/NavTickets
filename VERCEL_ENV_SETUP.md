@@ -39,17 +39,7 @@
 | `CUENTI_EMPRESA_ID` | Cuenti Empresa ID | `14507` |
 | `CUENTI_USER_ID` | Cuenti User ID | `22736` |
 
-### Legacy Firebase (Required for iOS PWA FCM compatibility only)
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_FIREBASE_API_KEY` | Firebase API Key | `AIzaSyAL1DUSVBfy...` |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Auth Domain | `navas-33818730-80986.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase Project ID | `navas-33818730-80986` |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase Storage Bucket | `navas-33818730-80986.firebasestorage.app` |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase Messaging Sender ID | `174914174318` |
-| `VITE_FIREBASE_APP_ID` | Firebase App ID | `1:174914174318:web:c7eb16cc147bad4c51557f` |
-| `VITE_FIREBASE_DATABASE_URL` | Firebase Realtime DB URL | `https://navas-33818730-80986-default-rtdb.firebaseio.com` |
-| `VITE_VAPID_KEY` | Firebase Web Push VAPID Key | `BLxxxxxxxx...` |
+> Las variables `VITE_FIREBASE_*` / `VITE_VAPID_KEY` quedaron **retiradas**: el push ya no usa Firebase Messaging (ver `directivas/directiva_notificaciones_fcm.md`). El push se sirve con **OneSignal** (`VITE_ONESIGNAL_APP_ID` en frontend + `ONESIGNAL_API_KEY`/`ONESIGNAL_APP_ID` como secrets del proyecto Supabase).
 
 ---
 
@@ -77,14 +67,9 @@ vercel env add ONESIGNAL_API_KEY production
 vercel env add CUENTI_API_TOKEN production
 vercel env add CUENTI_EMPRESA_ID production
 vercel env add CUENTI_USER_ID production
-vercel env add VITE_FIREBASE_API_KEY production
-vercel env add VITE_FIREBASE_AUTH_DOMAIN production
-vercel env add VITE_FIREBASE_PROJECT_ID production
-vercel env add VITE_FIREBASE_STORAGE_BUCKET production
-vercel env add VITE_FIREBASE_MESSAGING_SENDER_ID production
-vercel env add VITE_FIREBASE_APP_ID production
-vercel env add VITE_FIREBASE_DATABASE_URL production
-vercel env add VITE_VAPID_KEY production
+
+# NOTA: NO agregues variables VITE_FIREBASE_* ni VITE_VAPID_KEY.
+# Firebase Messaging quedó retirado; el push es OneSignal (solo VITE_ONESIGNAL_APP_ID + ONESIGNAL_API_KEY).
 
 # Then deploy
 vercel --prod

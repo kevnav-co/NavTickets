@@ -1,6 +1,8 @@
 # Despliegue en Dokploy — NavTickets
 
-## Arquitectura
+> **DEPRECADO (2026-08):** el backend ya no usa Firebase Cloud Functions — los schedules/edges viven en **Supabase Edge Functions** y el frontend se despliega por **Vercel** (`npm run deploy`). Esta guía solo aplica al stack legacy de Firebase y se conserva como referencia histórica. No la uses para despliegues nuevos.
+
+## Arquitectura (legacy)
 
 ```
 Dokploy

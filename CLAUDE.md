@@ -48,14 +48,24 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 - **Email**: Nodemailer via Gmail SMTP with branded HTML templates
 - **Internal Notification**: Supabase `notifications` table + OneSignal push
 
-### Data Model (Supabase Collections)
+### Data Model (Supabase Tables)
 
-- `users` — Technicians, supervisors, admins, developers. Role-based access control via `src/permissions.ts`.
+Multi-tenant: every business table is scoped by `company_id`; RLS (helpers `public.current_company_id()` / `public.current_user_role()` / `public.user_can(permiso)`, from migrations 004/005/009) is the real security layer. **`useSupabaseActions.addItem` does NOT inject `companyId` — creates must include it in the payload** or the RLS blocks them (0 rows silently).
+
+- `users` — Technicians, supervisors, admins, developers, super_admin. Login via Supabase Auth (linked by `supabase_auth_id`); `role`, `company_id`, `onesignal_player_id`.
 - `clients` — Industrial clients with GPS coordinates for mapping
 - `equipment` — Machines per client, with maintenance frequency and status tracking
 - `orders` — Service orders with workflow: Pendiente → En Progreso → Cerrado (with warranty tracking)
 - `tasks` — Personal tasks with reminders, assignment, file attachments
+- `inventory_items` — Spare-parts catalog per company (stock + low-stock threshold). Technician is read-only; admin/developer/super_admin edit stock (migration 014)
+- `order_inventory_lines` — M:N order↔part with `quantity_out` and `unit_cost_snapshot` (migration 014; tenant via parent FK)
 - `notifications` — System notifications with deep-link paths
+- `companies` — Tenants: `name`, `slug`, `theme` (branding), `features`, `tabs`, `auth`. Admin/developer edit only their own company (self-serve, migration 012)
+- `support_tickets` — Internal support tickets+chat per company, notified to super_admin (migration 011)
+
+### Multi-tenant visibility (Fase 5) — single source
+
+`src/permissions.ts` is the ONLY place that decides tab visibility: `TAB_PERMISSION_MAP` (permission per built-in tab, incl. `inventory`→`VIEW_INVENTORY`, `reports`→`VIEW_REPORTS`), `TAB_FEATURE_MAP` (feature flag), and `isTabVisible(component, role, features)`. Both navs must use `isTabVisible`, never duplicate it. Feature flags live in `companies.features` (`accounting`, `maps`, `equipmentManagement`). New built-in tabs surface in existing tenants via `default_built_in_tabs()` + the `normalize_company_config` trigger (migrations 015/016).
 
 ### Order Workflow
 
@@ -73,6 +83,7 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 
 | Hook | File | Purpose |
 |------|------|---------|
+| `useValidatedActions` | `src/hooks/useValidatedActions.ts` | Zod-validated CRUD wrapper over `useSupabaseActions` (`addValidated`/`updateValidated`). Reminder: creates must include `companyId` |
 | `useSupabaseQuery` | `src/hooks/useSupabaseQuery.ts` | Reactive Supabase query with offline cache (IndexedDB via Dexie) + Realtime subscriptions |
 | `useSupabaseActions` | `src/hooks/useSupabaseActions.ts` | Generic CRUD (addItem, updateItem, deleteItem) via Supabase |
 | `useSupabaseStorage` | `src/hooks/useSupabaseStorage.ts` | File uploads with browser-image-compression |
@@ -98,6 +109,8 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 | `src/utils/warranty.ts` | Warranty calculation utilities |
 | `src/utils/productUtils.ts` | Excel import helpers (SheetJS) |
 | `src/utils/pdfGenerator.ts` | PDF report generation (jsPDF) |
+| `src/utils/csv.ts` | CSV export helpers (UTF-8 BOM for Excel) |
+| `src/utils/reportPdf.ts` | Generic table→PDF (jsPDF + jspdf-autotable, dynamic import) |
 | `src/utils/imageCompression.ts` | Browser-side image compression |
 | `src/utils/gpsCache.ts` | GPS coordinate caching |
 | `src/utils/date.ts` | Date formatting helpers |
@@ -151,3 +164,5 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 - Images are compressed client-side before upload to Supabase Storage.
 - **Sync offline idempotente (Fase 3):** los creates offline ya no usan PK `offline_<timestamp>` sino un **UUID estable generado por el cliente** (`crypto.randomUUID()`), que viaja dentro de `data` y se inserta con `upsert(onConflict:'id')`. Así los retries no duplican y los vínculos/evidencia que referencian ese id sobreviven al sync (`useSupabaseActions.ts` + `useSyncManager.ts`).
 - **Todos los schedules viven en Supabase Edge Functions** (task-scheduler cada 5 min, daily-expiration-check a las 08:00). Vercel `api/*` no tiene crons ni stubs; solo endpoints vivos (webhooks de triggers y proxies).
+- **Fase 6 — Inventario y Reportes:** módulo de inventario (`src/components/inventory/*`: Manager/Form/Detail + `InventorySelectorModal`) y sección "Repuestos" en `OrderWorkflow` (replace-set sobre `order_inventory_lines`); rutas `/inventory*` gated por `VIEW_INVENTORY` (técnico lee, no edita stock). Reportes (`src/components/reports/Reports.tsx`) con export CSV (`csv.ts`) y PDF (`reportPdf.ts`); ruta `/reports` gated por `VIEW_REPORTS`. Tabs `inventory`/`reports` en `DEFAULT_BUILT_IN_TABS` (`src/types/company.ts`).
+- **Ramificación (2026-08):** el roadmap (Fases 1–6) está **integrado y mergeado en `main`**; las ramas `feat/fase*` locales fueron borradas. `main` en sintonía con `origin/main`. El deploy de producción va por `npm run deploy`.
