@@ -205,6 +205,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  // Hidratar `impersonation` desde el JWT de sesión (migración 018). Un override
+  // de vista previa vive en `auth.users.raw_app_meta_data` y sobrevive al logout,
+  // así que un login nuevo lo vuelve a heredar. Sin esta hidratación, un override
+  // estancado ni siquiera mostraba el banner "Salir de la vista" → el super_admin
+  // quedaba sin forma de limpiarlo desde la UI. Con esto: si el JWT trae
+  // imp_company_id/imp_role se muestra la vista previa (y su salida); si no, no.
+  useEffect(() => {
+    const sync = (session: any) => {
+      const meta: any = session?.user?.app_metadata;
+      const impCompanyId = meta?.imp_company_id;
+      const impRole = meta?.imp_role;
+      if (impCompanyId || impRole) {
+        setImpersonation({ companyId: impCompanyId, role: impRole ?? 'admin' });
+      } else {
+        setImpersonation(null);
+      }
+    };
+    let alive = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (alive) sync(data?.session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setImpersonation(null);
+        return;
+      }
+      sync(session);
+    });
+    return () => { alive = false; subscription.unsubscribe(); };
+  }, []);
+
   // Perfil del usuario actual
   const { profile: userProfile, loading: userProfileLoading } = useUserProfile(authUserId, profileVersion);
 
