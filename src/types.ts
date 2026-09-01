@@ -142,6 +142,8 @@ export interface User {
   name: string;
   role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin' | 'super_admin';
   username: string;
+  /** Correo real de recuperación de contraseña (NO el username@dominio). */
+  email?: string;
   identification?: string;
   address?: string;
   latitude?: number;
@@ -189,7 +191,7 @@ export interface AppNotification {
   body: string;
   timestamp: string;
   read: boolean;
-  type: 'info' | 'alert' | 'success';
+  type: 'info' | 'alert' | 'success' | 'reminder' | 'due_date' | 'expiration';
   path?: string;
   text: string;
   timeAgo: string;

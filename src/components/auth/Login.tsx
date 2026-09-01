@@ -160,7 +160,7 @@ const Login: React.FC = () => {
 
               <div className="flex items-center justify-between pt-4">
                 <div></div>
-                <button type="button" className="text-xs font-bold text-gray-400 cursor-not-allowed">¿Olvidaste tu clave?</button>
+                <button type="button" onClick={() => navigate('/forgot-password')} className="text-xs font-bold text-primary hover:underline">¿Olvidaste tu clave?</button>
               </div>
 
               {error && (

@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, Suspense, useCallback } from 'react';
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { ChangePasswordModal } from './components/layout/ChangePasswordModal';
 import SignatureModal from './components/ui/SignatureModal';
 import { TransferModal } from './components/Account/TransferModal';
@@ -12,10 +12,12 @@ import { MobileNavigation } from './components/layout/MobileNavigation';
 import { InstallPWA } from './components/ui/InstallPWA';
 import UpdateNotification from './components/ui/UpdateNotification';
 import Login from './components/auth/Login';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { useBackgroundSync } from './hooks/useBackgroundSync';
-import { RefreshCw, Save } from 'lucide-react';
+import { RefreshCw, Save, Eye } from 'lucide-react';
 import { LoadingFallback } from './components/ui/LoadingFallback';
 import { useAuth } from './context/AuthContext';
 import { useData } from './context/DataContext';
@@ -174,6 +176,14 @@ function AppContent({
   users: any[];
 }) {
   const { company, loading: companyLoading } = useCompany();
+  const { impersonation, stopImpersonation } = useAuth();
+  const navigate = useNavigate();
+
+  // Café/cierra la vista previa como admin (impersonación) y vuelve al Panel Admin.
+  const exitPreview = async () => {
+    await stopImpersonation();
+    navigate('/admin', { replace: true });
+  };
 
   // Apply company theme when it changes
   useEffect(() => {
@@ -201,11 +211,27 @@ function AppContent({
 
       {!isOnline && <div className="fixed top-0 left-0 right-0 bg-gray-900 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><Save size={14} className="text-orange-400" /><span>Modo En Cache (Offline)</span></div>}
       {isOnline && isSyncing && <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><RefreshCw size={14} className="animate-spin" /><span>Sincronizando con la Nube...</span></div>}
+      {impersonation && (
+        <div className="fixed bottom-0 left-0 right-0 z-[95] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold shadow-[0_-4px_12px_rgba(0,0,0,0.15)]">
+          <Eye size={14} className="flex-shrink-0" />
+          <span className="truncate text-center">
+            Vista previa: estás viendo <span className="underline">{company?.name || company.id || 'la empresa'}</span> como admin
+          </span>
+          <button
+            onClick={exitPreview}
+            className="flex-shrink-0 bg-amber-950 text-white px-3 py-1 rounded-md hover:bg-amber-900 transition-colors"
+          >
+            Salir de la vista
+          </button>
+        </div>
+      )}
       <InstallPWA deferredPrompt={deferredPrompt} forceShow={installBannerOpen} onDismiss={() => setInstallBannerOpen(false)} />
       <UpdateNotification />
 
       {!currentUser ? (
         <Routes>
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Login />} />
         </Routes>
       ) : (

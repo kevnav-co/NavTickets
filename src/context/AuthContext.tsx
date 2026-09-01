@@ -9,11 +9,20 @@ import { EMAIL_DOMAIN } from '../config';
 import type { User } from '../types';
 
 interface AuthContextType {
+  /** Usuario efectivo: si hay una vista previa activa, refleja el rol/empresa
+   *  del tenant impersonado; si no, es el perfil real del usuario. Toda la app
+   *  (DataContext, routing, nav, permissions) consume reales por aquí. */
   currentUser: User | null;
+  /** Estado de vista previa como admin de otra empresa (impersonación de tenant). */
+  impersonation: { companyId: string; role: User['role'] } | null;
   loading: boolean;
   login: (username: string, password: string, companyId?: string) => Promise<boolean>;
   logout: () => Promise<void>;
   refreshProfile: () => void;
+  /** Entra en vista previa como admin de la empresa indicada (solo super_admin). */
+  startImpersonation: (companyId: string) => Promise<boolean>;
+  /** Sale de la vista previa y vuelve al perfil real del usuario. */
+  stopImpersonation: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +39,7 @@ function mapUserProfile(data: any): User | null {
     name: data.name,
     role: data.role,
     username: data.username,
+    email: data.email || undefined,
     identification: data.identification || undefined,
     address: data.address || undefined,
     latitude: data.latitude || undefined,
@@ -104,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [profileVersion, setProfileVersion] = useState(0);
+  const [impersonation, setImpersonation] = useState<{ companyId: string; role: User['role'] } | null>(null);
 
   // Refetch del perfil (p. ej. tras un cambio de contraseña forzado, para que
   // must_reset_password se entere de que ya se cambió y desbloquee la app).
@@ -197,7 +208,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Perfil del usuario actual
   const { profile: userProfile, loading: userProfileLoading } = useUserProfile(authUserId, profileVersion);
 
-  // Sincronizar currentUser con el perfil cargado
+  // Sincronizar currentUser con el perfil cargado.
+  // IMPORTANTE: durante una vista previa (impersonación) el perfil del super_admin
+  // puede quedar "oculto" por RLS (ahora scoupeado a la empresa de destino). Solo
+  // se actualiza si hay perfil real; nunca se anula currentUser a null por eso.
   useEffect(() => {
     if (userProfile) {
       setCurrentUser(userProfile);
@@ -226,15 +240,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
+    setImpersonation(null);
     await supabase.auth.signOut();
   }, []);
 
+  // Vista previa como admin de otra empresa (solo super_admin). El RPC escribe el
+  // override en app_metadata del JWT (migración 018) y refreshSession emite un token
+  // nuevo con él: a partir de ahí el RLS de la DB se re-escala al tenant de destino.
+  const startImpersonation = useCallback(async (companyId: string): Promise<boolean> => {
+    if (!currentUser || currentUser.role !== 'super_admin') return false;
+    try {
+      const { error } = await supabase.rpc('admin_impersonate_start', {
+        target_company: companyId,
+        target_role: 'admin',
+      });
+      if (error) {
+        console.error('[Auth] impersonate start:', error.message);
+        return false;
+      }
+      const { data } = await supabase.auth.refreshSession();
+      const meta = data?.session?.user?.app_metadata as any;
+      setImpersonation({
+        companyId: meta?.imp_company_id ?? companyId,
+        role: meta?.imp_role ?? 'admin',
+      });
+      return true;
+    } catch (e) {
+      console.error('[Auth] impersonate start error:', e);
+      return false;
+    }
+  }, [currentUser]);
+
+  const stopImpersonation = useCallback(async (): Promise<boolean> => {
+    try {
+      const { error } = await supabase.rpc('admin_impersonate_stop');
+      if (error) {
+        console.error('[Auth] impersonate stop:', error.message);
+        return false;
+      }
+      await supabase.auth.refreshSession();
+      setImpersonation(null);
+      return true;
+    } catch (e) {
+      console.error('[Auth] impersonate stop error:', e);
+      return false;
+    }
+  }, []);
+
+  // Usuario efectivo: con vista previa activa, se sobreescribe rol y empresa.
+  const effectiveUser: User | null =
+    impersonation && currentUser
+      ? { ...currentUser, companyId: impersonation.companyId, role: impersonation.role }
+      : currentUser;
+
   const value: AuthContextType = {
-    currentUser,
+    currentUser: effectiveUser,
+    impersonation,
     loading: isLoading,
     login,
     logout,
     refreshProfile,
+    startImpersonation,
+    stopImpersonation,
   };
 
   if (!mounted) {

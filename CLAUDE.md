@@ -41,6 +41,8 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 | `cuentiProxy` | Vercel edge | GET | Proxy de clientes Cuenti ERP (`api/edge/cuenti-proxy.ts`) |
 | `sendTestNotification` | Vercel edge | POST (admin/dev) | Push OneSignal de prueba (`api/edge/send-test-notification.ts`) |
 | `updateUserPassword` | Vercel edge | POST | Reset/self-service de clave vía Supabase Auth (`api/edge/update-user-password.ts`) |
+| `requestPasswordReset` | Supabase Edge | POST (público) | "¿Olvidaste tu clave?": genera token de un solo uso (30 min), lo guarda hasheado en `password_reset_tokens` y manda el link al `users.email` del username (`supabase/functions/request-password-reset/`) |
+| `resetPasswordWithToken` | Supabase Edge | POST (público) | Valida el token y aplica la nueva clave vía `auth.admin.updateUserById` (service_role, nunca anon key) (`supabase/functions/reset-password-with-token/`) |
 
 ### Communication Channels (`communicationChannels.js`)
 
@@ -52,7 +54,7 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 
 Multi-tenant: every business table is scoped by `company_id`; RLS (helpers `public.current_company_id()` / `public.current_user_role()` / `public.user_can(permiso)`, from migrations 004/005/009) is the real security layer. **`useSupabaseActions.addItem` does NOT inject `companyId` — creates must include it in the payload** or the RLS blocks them (0 rows silently).
 
-- `users` — Technicians, supervisors, admins, developers, super_admin. Login via Supabase Auth (linked by `supabase_auth_id`); `role`, `company_id`, `onesignal_player_id`.
+- `users` — Technicians, supervisors, admins, developers, super_admin. Login via Supabase Auth (linked by `supabase_auth_id`); `role`, `company_id`, `email` (correo real de recuperación, migración 019), `onesignal_player_id`. `username` es único **global** desde 019 (antes `UNIQUE(username, company_id)`); Supabase Auth ya lo forzaba vía `username@dominio`.
 - `clients` — Industrial clients with GPS coordinates for mapping
 - `equipment` — Machines per client, with maintenance frequency and status tracking
 - `orders` — Service orders with workflow: Pendiente → En Progreso → Cerrado (with warranty tracking)
@@ -138,6 +140,17 @@ Auth (`auth.users`), vinculado por `users.supabase_auth_id`. Cambio/reset de cla
 la Edge Function `update-user-password` (identifica al usuario por su access_token, nunca
 por la anon key).
 
+**Recuperación de contraseña (migración 019):** el email de auth (`username@dominio`)
+es sintético y NO ruteable, así que Supabase permanecería sin poder mandar un reset.
+Por eso el flujo es propio y pasa por el correo REAL en `users.email`:
+`/forgot-password` (username) → edge público `request-password-reset` → token de un
+solo uso (30 min) guardado HASHED en `password_reset_tokens` + link por Gmail SMTP
+(nodemailer, secrets `GMAIL_USER`/`GMAIL_APP_PASSWORD`; si faltan, hacen stub) →
+`/#/reset-password?token=…` → edge público `reset-password-with-token` (valida y aplica
+clave vía `auth.admin.updateUserById`, service_role). Para el link se usa el env
+`APP_ORIGIN` o el `Origin` del navegador. Además `create-user`/`UserForm`/`CompanyUserManager`
+capturan `users.email` al crear/editar usuarios.
+
 Functions env (in `functions/.env`):
 ```env
 TWILIO_ACCOUNT_SID=
@@ -166,3 +179,4 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 - **Todos los schedules viven en Supabase Edge Functions** (task-scheduler cada 5 min, daily-expiration-check a las 08:00). Vercel `api/*` no tiene crons ni stubs; solo endpoints vivos (webhooks de triggers y proxies).
 - **Fase 6 — Inventario y Reportes:** módulo de inventario (`src/components/inventory/*`: Manager/Form/Detail + `InventorySelectorModal`) y sección "Repuestos" en `OrderWorkflow` (replace-set sobre `order_inventory_lines`); rutas `/inventory*` gated por `VIEW_INVENTORY` (técnico lee, no edita stock). Reportes (`src/components/reports/Reports.tsx`) con export CSV (`csv.ts`) y PDF (`reportPdf.ts`); ruta `/reports` gated por `VIEW_REPORTS`. Tabs `inventory`/`reports` en `DEFAULT_BUILT_IN_TABS` (`src/types/company.ts`).
 - **Ramificación (2026-08):** el roadmap (Fases 1–6) está **integrado y mergeado en `main`**; las ramas `feat/fase*` locales fueron borradas. `main` en sintonía con `origin/main`. El deploy de producción va por `npm run deploy`.
+- **Recuperación de clave (Fase 7, migración 019):** login = solo username (el `@dominio` es interno, la UI nunca lo muestra). `users.email` = correo real para reset. Edge públicos `request-password-reset` / `reset-password-with-token` con `verify_jwt=false` en `config.toml`; componentes `ForgotPassword`/`ResetPassword` + rutas anónimas en `App.tsx`. Al crear un usuario, si el username ya existe globalmente, `auth.admin.createUser` rechaza el email duplicado.

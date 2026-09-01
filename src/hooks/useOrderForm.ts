@@ -303,7 +303,9 @@ export const useOrderForm = () => {
         navigate(`/orders/${id}`);
       } else {
         if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.CREATE_ORDER)) throw new Error('Permiso denegado.');
-        const newOrderId = await addValidated('orders', orderData, ServiceOrderSchema.omit({ id: true, companyId: true }));
+        // OJO RLS: NO omitir companyId — si se quita, `addValidated` inserta el
+        // output parseado del schema (sin company_id) y RLS bloquea en silencio.
+        const newOrderId = await addValidated('orders', orderData, ServiceOrderSchema.omit({ id: true }));
         alert(`Orden ${nextOrderNumber} creada`);
         navigate(`/orders/${newOrderId}`);
       }

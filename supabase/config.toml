@@ -392,6 +392,19 @@ schedule = "0 8 * * *"
 enabled = true
 verify_jwt = false
 
+# Request Password Reset — público (usuario olvidó la clave, no hay sesión).
+# verify_jwt=false; no revela si el username existe. Genera el token y manda el
+# link al correo de recuperación (users.email).
+[functions.request-password-reset]
+enabled = true
+verify_jwt = false
+
+# Reset Password With Token — público; el token de un solo uso es la credencial.
+# Valida el token y aplica la nueva clave vía auth.admin (service_role).
+[functions.reset-password-with-token]
+enabled = true
+verify_jwt = false
+
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
-  ChevronLeft, AtSign, Shield, Trash2, Edit, IdCard,
+  ChevronLeft, AtSign, Shield, Trash2, Edit, IdCard, Mail,
   AlertTriangle, Loader2, UserCheck, Code, Send,
   CheckCircle2, XCircle, Smartphone, Wifi, WifiOff
 } from 'lucide-react';
@@ -126,6 +126,9 @@ const UserDetail: React.FC = () => {
           <div className="space-y-3">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div className="bg-gray-100 p-3 rounded-lg"><AtSign size={18} /></div><div><p className="text-[10px] font-bold uppercase">Usuario</p><p className="font-semibold">{user.username}</p></div></div>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div className="bg-gray-100 p-3 rounded-lg"><IdCard size={18} /></div><div><p className="text-[10px] font-bold uppercase">Identificación</p><p className="font-semibold">{user.identification || 'N/A'}</p></div></div>
+            {user.email && (
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center gap-4"><div className="bg-gray-100 p-3 rounded-lg"><Mail size={18} /></div><div><p className="text-[10px] font-bold uppercase">Correo de Recuperación</p><p className="font-semibold break-all">{user.email}</p></div></div>
+            )}
           </div>
 
           {/* ======= DEVELOPER-ONLY: Push Notification Diagnostics Panel ======= */}

@@ -11,7 +11,7 @@ import { UserSchema } from '../../schemas/user.schema';
 import PERMISSIONS, { hasPermission, ROLES } from '../../permissions';
 import SignatureField from '../ui/SignatureField';
 import {
-  ChevronLeft, Save, AtSign, Shield, HardHat, Lock, IdCard,
+  ChevronLeft, Save, AtSign, Shield, HardHat, Lock, IdCard, Mail,
   User as UserIcon, UserPlus, Loader2, MapPin, Eye, EyeOff
 } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -24,6 +24,7 @@ const initialFormData: Partial<User> = {
   name: '',
   role: 'technician',
   username: '',
+  email: '',
   password: '',
   identification: '',
   latitude: 0,
@@ -117,6 +118,10 @@ const UserForm: React.FC<Props> = ({ users }) => {
         errors.username = 'El nombre de usuario es obligatorio.';
     } else if (users.some(user => user.username === formData.username && user.id !== userToCheckId)) {
         errors.username = 'Este nombre de usuario ya está en uso.';
+    }
+
+    if (formData.email && formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email.trim())) {
+        errors.email = 'Ingresa un correo electrónico válido.';
     }
 
     if (!formData.identification?.trim()) {
@@ -296,6 +301,18 @@ const UserForm: React.FC<Props> = ({ users }) => {
               <input type="text" name="username" value={formData.username || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.username ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             </div>
             {validationErrors.username && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.username}</p>}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Correo de Recuperación</label>
+            <div className="relative flex items-center">
+                <div className="absolute left-0 pl-4 pointer-events-none">
+                    <Mail size={18} className="text-gray-400" />
+                </div>
+              <input type="email" name="email" placeholder="correo@ejemplo.com" value={formData.email || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1 ml-1">Se usa para recuperar tu contraseña si la olvidas. Opcional.</p>
+            {validationErrors.email && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.email}</p>}
           </div>
 
           <div>

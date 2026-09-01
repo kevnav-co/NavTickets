@@ -42,7 +42,7 @@ Deno.serve(async (req: Request) => {
     const { data: reminders, error: remindersError } = await supabase
       .from("tasks")
       .select(
-        "id, title, created_by, assigned_to, reminder, reminder_notification_sent",
+        "id, title, created_by, assigned_to, reminder, reminder_notification_sent, company_id",
       )
       .neq("reminder", null)
       .lte("reminder", now.toISOString())
@@ -57,9 +57,11 @@ Deno.serve(async (req: Request) => {
 
       for (const userId of recipients) {
         await supabase.from("notifications").insert({
+          company_id: task.company_id,
           user_id: userId,
           title: `Recordatorio: ${task.title}`,
           body: `Recuerda la tarea: "${task.title}".`,
+          text: `Recordatorio: ${task.title}`,
           path: "/tasks",
           type: "reminder",
           read: false,
@@ -86,7 +88,7 @@ Deno.serve(async (req: Request) => {
       const { data: dueTasks, error: dueError } = await supabase
         .from("tasks")
         .select(
-          "id, title, created_by, assigned_to, due_date, due_date_notification_sent",
+          "id, title, created_by, assigned_to, due_date, due_date_notification_sent, company_id",
         )
         .gte("due_date", startOfDay.toISOString())
         .lte("due_date", endOfDay.toISOString())
@@ -101,9 +103,11 @@ Deno.serve(async (req: Request) => {
 
         for (const userId of recipients) {
           await supabase.from("notifications").insert({
+            company_id: task.company_id,
             user_id: userId,
             title: `Vencimiento: ${task.title}`,
             body: `La tarea "${task.title}" se vence hoy.`,
+            text: `Vencimiento: ${task.title}`,
             path: "/tasks",
             type: "due_date",
             read: false,

@@ -100,12 +100,14 @@ function getWarrantyEmailHtml(
     </body></html>`;
 }
 
-async function sendPushNotification(userId: string, title: string, body: string, path: string) {
+async function sendPushNotification(userId: string, companyId: string, title: string, body: string, path: string) {
   try {
     await supabase.from("notifications").insert({
+      company_id: companyId,
       user_id: userId,
       title,
       body,
+      text: title,
       path,
       type: "expiration",
       read: false,
@@ -177,7 +179,7 @@ Deno.serve(async () => {
           .eq("company_id", companyId);
         if (adminError) throw adminError;
         for (const admin of admins || []) {
-          await sendPushNotification(admin.id, title, body, path);
+          await sendPushNotification(admin.id, companyId, title, body, path);
         }
 
         if (eq.client_id) {
@@ -237,7 +239,7 @@ Deno.serve(async () => {
           .eq("company_id", companyId);
         if (adminError) throw adminError;
         for (const admin of admins || []) {
-          await sendPushNotification(admin.id, title, body, path);
+          await sendPushNotification(admin.id, companyId, title, body, path);
         }
 
         if (order.client_id) {

@@ -55,6 +55,7 @@ const Tasks: React.FC = () => {
       if (!newTaskTitle.trim() || !currentUser) return;
       const newTask: Partial<Task> = {
           title: newTaskTitle,
+          companyId: currentUser.companyId,
           completed: false,
           important: false,
           createdAt: new Date().toISOString(),
@@ -62,7 +63,7 @@ const Tasks: React.FC = () => {
           assignedTo: currentUser.id,
           participants: [currentUser.id]
       };
-      const result = TaskSchema.omit({ id: true, companyId: true }).safeParse(newTask);
+      const result = TaskSchema.omit({ id: true }).safeParse(newTask);
       if (!result.success) {
           console.error("[Validation] Error al crear tarea:", result.error.issues);
           return;

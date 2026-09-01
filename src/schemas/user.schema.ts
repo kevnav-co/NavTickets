@@ -13,6 +13,7 @@ export const UserSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   role: UserRoleEnum,
   username: z.string().min(1, 'El nombre de usuario es obligatorio'),
+  email: z.union([z.literal(''), z.string().trim().email('Correo electrónico inválido')]).optional().default(''),
   password: z.string().optional(),
   identification: z.string().optional().default(''),
   address: z.string().optional().default(''),

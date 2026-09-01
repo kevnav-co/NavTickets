@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // ─── NotificationType Enum ──────────────────────────────
-export const NotificationTypeEnum = z.enum(['info', 'alert', 'success']);
+export const NotificationTypeEnum = z.enum(['info', 'alert', 'success', 'reminder', 'due_date', 'expiration']);
 export type NotificationTypeType = z.infer<typeof NotificationTypeEnum>;
 
 // ─── Schema ──────────────────────────────────────────────

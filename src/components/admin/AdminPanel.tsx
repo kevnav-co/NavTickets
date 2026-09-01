@@ -6,6 +6,7 @@
 //    name/slug/auth vía trigger migración 012).
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Building2 } from 'lucide-react';
 import CompanyList from './CompanyList';
 import CompanyForm from './CompanyForm';
@@ -16,7 +17,8 @@ import { useAuth } from '../../context/AuthContext';
 type AdminView = 'list' | 'form' | 'users';
 
 const AdminPanel: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, startImpersonation } = useAuth();
+  const navigate = useNavigate();
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const ownCompanyId = currentUser?.companyId ?? null;
 
@@ -38,6 +40,18 @@ const AdminPanel: React.FC = () => {
   const handleManageUsers = (companyId: string) => {
     setSelectedCompanyId(companyId);
     setView('users');
+  };
+
+  // Vista previa: el super_admin entra a la empresa como un admin de esa empresa.
+  // `currentUser` pasa a ser el admin efectivo → DataContext/routing/nav re-escalan
+  // al tenant. Se navega a '/' (con rol 'admin' ya no redirige a /admin).
+  const handlePreview = async (companyId: string) => {
+    const ok = await startImpersonation(companyId);
+    if (ok) {
+      navigate('/', { replace: true });
+    } else {
+      setToast('No se pudo iniciar la vista previa. Verifica tu sesión.');
+    }
   };
 
   const handleFormSaved = (message: string) => {
@@ -89,6 +103,7 @@ const AdminPanel: React.FC = () => {
               onEdit={handleEdit}
               onCreate={handleCreate}
               onManageUsers={handleManageUsers}
+              onPreview={handlePreview}
             />
           )}
 

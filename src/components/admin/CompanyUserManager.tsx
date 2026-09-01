@@ -32,7 +32,7 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
   // New user form
   const [showForm, setShowForm] = useState(false);
   const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', username: '', password: '', role: 'technician' as User['role'] });
+  const [formData, setFormData] = useState({ name: '', username: '', email: '', password: '', role: 'technician' as User['role'] });
   const [saving, setSaving] = useState(false);
 
   const loadData = async () => {
@@ -78,7 +78,7 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
       });
       setUsers(prev => [...prev, { id, ...formData, companyId } as unknown as User]);
       setShowForm(false);
-      setFormData({ name: '', username: '', password: '', role: 'technician' });
+      setFormData({ name: '', username: '', email: '', password: '', role: 'technician' });
     } catch (err) {
       console.error('[AdminUsers] Error creating user:', err);
       alert('Error al crear usuario.');
@@ -91,7 +91,7 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
     if (!editUserId || !formData.name.trim() || !formData.username.trim()) return;
     setSaving(true);
     try {
-      const updates: Partial<User> = { name: formData.name, username: formData.username, role: formData.role };
+      const updates: Partial<User> = { name: formData.name, username: formData.username, email: formData.email, role: formData.role };
       await adminService.adminUpdateUser(editUserId, updates);
       // La clave vive en Supabase Auth (no en users) → reset por Edge Function.
       if (formData.password) {
@@ -100,7 +100,7 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
       setUsers(prev => prev.map(u => u.id === editUserId ? { ...u, ...updates } : u));
       setEditUserId(null);
       setShowForm(false);
-      setFormData({ name: '', username: '', password: '', role: 'technician' });
+      setFormData({ name: '', username: '', email: '', password: '', role: 'technician' });
     } catch (err) {
       console.error('[AdminUsers] Error updating user:', err);
       alert('Error al actualizar usuario.');
@@ -121,7 +121,7 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
   };
 
   const startEdit = (user: User) => {
-    setFormData({ name: user.name, username: user.username, password: '', role: user.role });
+    setFormData({ name: user.name, username: user.username, email: user.email || '', password: '', role: user.role });
     setEditUserId(user.id);
     setShowForm(true);
   };
@@ -129,7 +129,7 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
   const cancelForm = () => {
     setShowForm(false);
     setEditUserId(null);
-    setFormData({ name: '', username: '', password: '', role: 'technician' });
+    setFormData({ name: '', username: '', email: '', password: '', role: 'technician' });
   };
 
   if (loading) {
@@ -176,9 +176,10 @@ const CompanyUserManager: React.FC<CompanyUserManagerProps> = ({ companyId, onBa
       {showForm && (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-4 space-y-3">
           <h3 className="font-bold text-sm text-gray-900">{editUserId ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <input type="text" placeholder="Nombre completo" value={formData.name} onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))} className="h-10 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
             <input type="text" placeholder="Usuario (username)" value={formData.username} onChange={e => setFormData(prev => ({ ...prev, username: e.target.value }))} className="h-10 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <input type="email" placeholder="Correo de recuperación" value={formData.email} onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))} className="h-10 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
             <input type="password" placeholder={editUserId ? 'Nueva contraseña (dejar vacío)' : 'Contraseña'} value={formData.password} onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))} className="h-10 px-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
           <div className="flex flex-wrap gap-2">

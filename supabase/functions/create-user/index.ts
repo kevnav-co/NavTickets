@@ -33,6 +33,7 @@ interface CreateUserPayload {
   username?: string;
   password?: string;
   role?: string;
+  email?: string;
   identification?: string;
   address?: string;
   latitude?: number;
@@ -127,8 +128,9 @@ Deno.serve(async (req: Request) => {
     authUid = createdUser.id;
 
     // ─── Paso 2: fila de negocio en users, vinculada al tenant ─────────────
-    // La tabla `users` NO tiene columna email (el email vive en auth.users).
-    // OJO: el INSERT puede no persistir supabase_auth_id (hay algo en la BD que
+    // `users.email` (desde migración 019) es el correo REAL de recuperación, no
+    // el sintético de auth. OJO: el INSERT puede no persistir supabase_auth_id
+    // (hay algo en la BD que
     // lo deja NULL en el INSERT). Por eso creamos la fila SIN esa columna y la
     // vinculamos con un UPDATE explícito (probado: el UPDATE SÍ lo persiste).
     const row: Record<string, unknown> = {
@@ -137,6 +139,7 @@ Deno.serve(async (req: Request) => {
       role,
       username,
     };
+    if (body.email) row.email = body.email.trim();
     if (body.identification) row.identification = body.identification;
     if (body.address) row.address = body.address;
     if (typeof body.latitude === "number") row.latitude = body.latitude;

@@ -2,7 +2,7 @@
 // Lists all companies with search, create, edit, delete, and user management.
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Building2, Plus, Edit3, Users, Trash2, Palette, Globe, AlertTriangle } from 'lucide-react';
+import { Search, Building2, Plus, Edit3, Users, Trash2, Palette, Globe, AlertTriangle, Eye } from 'lucide-react';
 import { CompanyConfig } from '../../types/company';
 import * as adminService from '../../services/adminService';
 
@@ -10,9 +10,10 @@ interface CompanyListProps {
   onEdit: (companyId: string) => void;
   onCreate: () => void;
   onManageUsers: (companyId: string) => void;
+  onPreview: (companyId: string) => void;
 }
 
-const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUsers }) => {
+const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUsers, onPreview }) => {
   const [companies, setCompanies] = useState<CompanyConfig[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -145,6 +146,13 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
 
                 {/* Actions */}
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    onClick={() => onPreview(company.id)}
+                    className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                    title={`Vista como Admin de "${company.name}" (previsualizar empresa)`}
+                  >
+                    <Eye size={18} />
+                  </button>
                   <button
                     onClick={() => onManageUsers(company.id)}
                     className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
