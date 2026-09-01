@@ -96,6 +96,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     maps: true,
     aiAssistant: false,
     equipmentManagement: true,
+    excelUpload: true,
   });
   const [auth, setAuth] = useState<CompanyAuth>({
     emailDomain: '@empresa.com',
@@ -593,6 +594,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
             { key: 'maps' as const, label: 'Mapas' },
             { key: 'aiAssistant' as const, label: 'Asistente IA' },
             { key: 'equipmentManagement' as const, label: 'Gestión Máquinas' },
+            { key: 'excelUpload' as const, label: 'Subida de datos (Excel)' },
           ]).map(feat => (
             <label key={feat.key} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors">
               <input

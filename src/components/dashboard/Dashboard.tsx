@@ -2,6 +2,7 @@
 import React, { Suspense } from 'react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 import DashboardKPIs from './DashboardKPIs';
 import { Loader2 } from 'lucide-react';
 import PERMISSIONS, { hasPermission } from '../../permissions';
@@ -22,6 +23,7 @@ const LoadingFallback: React.FC<{ height?: string }> = ({ height = 'h-96' }) => 
 const Dashboard: React.FC = () => {
   const { orders, clients, users } = useData();
   const { currentUser } = useAuth();
+  const { company } = useCompany();
 
   return (
     <div className="p-4 md:p-6 space-y-6 pb-20 mx-auto max-w-7xl">
@@ -48,9 +50,11 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <Suspense fallback={null}> 
-            <IntelligenceEngine clients={clients} />
-          </Suspense>
+          {company?.features?.excelUpload !== false && (
+            <Suspense fallback={null}>
+              <IntelligenceEngine clients={clients} />
+            </Suspense>
+          )}
         </>
       )}
       

@@ -17,6 +17,7 @@ export interface CompanyFeatures {
   maps: boolean;
   aiAssistant: boolean;
   equipmentManagement: boolean;
+  excelUpload: boolean; // "Subida de datos (Excel)" en la sección de inicio (Dashboard)
 }
 
 export interface CompanyAuth {
@@ -67,6 +68,7 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
     maps: true,
     aiAssistant: true,
     equipmentManagement: true,
+    excelUpload: true,
   },
   auth: {
     emailDomain: '@navas.com',
