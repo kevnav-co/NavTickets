@@ -8,6 +8,7 @@ import {
   CheckCircle2, XCircle, Smartphone, Wifi, WifiOff
 } from 'lucide-react';
 import PERMISSIONS, { hasPermission } from '../../permissions';
+import { authAccessToken } from '../../services/supabase';
 
 interface TestResult {
   success: boolean;
@@ -72,12 +73,16 @@ const UserDetail: React.FC = () => {
     setIsSendingTest(true);
     setTestResult(null);
     try {
-      // Call Supabase Edge Function instead of Firebase Cloud Function
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-test-notification`, {
+      // Llamar al edge Vercel (rewrite /api/admin/send-test-notification →
+      // /api/edge/send-test-notification) con el access_token real de la sesión.
+      // El edge exige rol admin/developer/super_admin; la anon key no sirve de
+      // identidad (auth.getUser la rechaza).
+      const token = await authAccessToken();
+      const response = await fetch('/api/admin/send-test-notification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${token ?? ''}`,
         },
         body: JSON.stringify({ userId: user.id }),
       });

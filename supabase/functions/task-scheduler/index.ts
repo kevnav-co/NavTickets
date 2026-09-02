@@ -13,22 +13,17 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-Deno.serve(async (req: Request) => {
-  // Usa la service role key (env secret) para privilegios completos.
-  // Fallback: si no está seteada como secret, usa el JWT que el scheduler
-  // pasa en el header Authorization (patrón heredado).
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+// El scheduler ejecuta este function server-to-server: necesita privilegios
+// completos. Usar la service role key como secret, nunca la anon (que no lee
+// nada privilegiado y degradaría el cron a un no-op silencioso).
+const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+if (!serviceRole) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
+}
+const supabase = createClient(SUPABASE_URL, serviceRole);
 
-  const supabase = serviceRole
-    ? createClient(SUPABASE_URL, serviceRole)
-    : createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization") ?? "" },
-        },
-      });
-
+Deno.serve(async () => {
   const now = new Date();
   const results: {
     reminders: number;

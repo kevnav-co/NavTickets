@@ -5,6 +5,26 @@ export const config = {
 };
 
 /**
+ * Comparación timed-safe de strings usando un digest SHA-256, para no filtrar
+ * info vía timing cuando se valida el secreto del webhook. En runtime edge
+ * (Vercel/Deno) `crypto.subtle` está disponible.
+ */
+async function timingSafeEqualStrings(a: string, b: string): Promise<boolean> {
+  const digest = async (s: string) => {
+    const buf = await crypto.subtle.digest(
+      'SHA-256',
+      new TextEncoder().encode(s)
+    );
+    return new Uint8Array(buf);
+  };
+  const [da, db] = await Promise.all([digest(a), digest(b)]);
+  if (da.length !== db.length) return false;
+  let diff = 0;
+  for (let i = 0; i < da.length; i++) diff |= da[i] ^ db[i];
+  return diff === 0;
+}
+
+/**
  * Webhook: Notificar al usuario cuando se le asigna/actualiza una tarea.
  *
  * Se invoca desde un trigger de PostgreSQL cuando se inserta/actualiza una tarea.
@@ -25,6 +45,24 @@ export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Método no permitido' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Validar secreto compartido del webhook (lo manda el trigger BD en
+  // `Authorization: Bearer <app.webhook_secret>`, migración 003). Sin esto
+  // cualquiera que llegue a la URL podría insertar notificaciones arbitrarias
+  // con el client service_role. Si no hay WEBHOOK_SECRET configurado, no se
+  // endurece (compat con setups que aún no lo definen).
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+  const authHeader = req.headers.get('authorization');
+  const provided = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  const authorized = webhookSecret
+    ? provided !== null && (await timingSafeEqualStrings(provided, webhookSecret))
+    : true;
+  if (!authorized) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }

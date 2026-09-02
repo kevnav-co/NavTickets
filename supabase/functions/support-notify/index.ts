@@ -13,9 +13,13 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-const supabase = serviceRole
-  ? createClient(SUPABASE_URL, serviceRole)
-  : createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
+// Sin service role este function no puede leer super_admins ni escribir en la
+// DB de forma privilegiada. Fallar pronto (no degradar silenciosamente a anon):
+// si faltara el secret, un push "exitoso" sería en realidad un no-op sin aviso.
+if (!serviceRole) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
+}
+const supabase = createClient(SUPABASE_URL, serviceRole);
 
 const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
 const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");

@@ -22,6 +22,26 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response('Not Found', { status: 404 });
   }
 
+  // Autenticar: exige una sesión real con rol admin/developer/super_admin.
+  // El endpoint usa client service_role + tokens Cuenti de env, así que no
+  // puede quedar abierto a cualquiera. Mismo patrón que send-test-notification.
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
+  if (authError || !user) {
+    return new Response('Invalid token', { status: 401 });
+  }
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  if (!profile || !['admin', 'developer', 'super_admin'].includes(profile.role)) {
+    return new Response('Forbidden: Admin or Developer only', { status: 403 });
+  }
+
   const cuentiURL = 'https://app.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/ConsultarClientePaginado/1/0';
   console.log(`[Cuenti Proxy] Fetching from: ${cuentiURL}`);
 

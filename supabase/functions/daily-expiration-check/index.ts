@@ -15,9 +15,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-const supabase = serviceRole
-  ? createClient(SUPABASE_URL, serviceRole)
-  : createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
+// Sin service role este cron no puede crear notificaciones para los admins de
+// cada tenant. Fallar pronto en vez de degradar a anon (no-op silencioso).
+if (!serviceRole) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
+}
+const supabase = createClient(SUPABASE_URL, serviceRole);
 
 interface CompanyBranding {
   name: string;

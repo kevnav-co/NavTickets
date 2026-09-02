@@ -19,8 +19,8 @@
 ### Cron & Webhook Security
 | Variable | Description | Generation |
 |----------|-------------|------------|
-| `CRON_SECRET` | Secret for cron job authorization | `openssl rand -hex 32` |
-| `WEBHOOK_SECRET` | Shared secret for Supabase pg_net webhooks | **Same as CRON_SECRET** |
+| `CRON_SECRET` | (Legacy) Secret for Vercel cron job authorization. Ya no hay crons en Vercel; se conserva por compatibilidad. | `openssl rand -hex 32` |
+| `WEBHOOK_SECRET` | Shared secret for Supabase pg_net webhooks. **Sí se valida**: los edges `on-order-assigned`, `on-task-assigned` y `support-notify` comprueban el header `Authorization: Bearer <WEBHOOK_SECRET>` contra esta variable. Sin ella, los dos `on-*` aceptan cualquier POST (endurecerlo: setear este env). | `openssl rand -hex 32` |
 
 ### Application URLs
 | Variable | Description | Example |
@@ -123,14 +123,10 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 After setting variables and deploying:
 
 ```bash
-# Test Supabase connection
-curl https://your-app.vercel.app/api/edge/cuenti-proxy
-
-# Test cron jobs (in Vercel Dashboard → Cron Jobs)
-# Click "Run Now" for:
-# - /api/edge/task-scheduler
-# - /api/edge/daily-expiration-check
+# Test Cuenti proxy (ahora requiere JWT de sesión con rol admin/developer/super_admin)
+curl -H "Authorization: Bearer <access_token>" https://your-app.vercel.app/api/cuenti/clients
 
 # Test OneSignal
 # Login to app → Enable notifications in header → Check device for push
 ```
+Sin header `Authorization` (o con rol no admin), `cuenti-proxy` responde 401/403.
