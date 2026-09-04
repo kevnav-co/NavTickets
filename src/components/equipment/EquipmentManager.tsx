@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { addMonths, differenceInCalendarDays } from 'date-fns';
 import PERMISSIONS, { hasPermission } from '../../permissions';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 type EnrichedEquipment = Equipment & {
   clientName: string;
@@ -228,17 +227,7 @@ const EquipmentManager: React.FC = () => {
     navigate('/equipment/new', { state: { serialNumber: newSerialNumber } });
   };
 
-  // Virtualized list setup
-  const parentRef = useRef<HTMLDivElement>(null);
-  const ITEM_HEIGHT = viewMode === 'list' ? 140 : 50; // Estimate for equipment cards
-
-  const virtualizer = useVirtualizer({
-    count: filteredEquipment.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ITEM_HEIGHT,
-    overscan: 5,
-  });
-
+  
   // Card components
   const EquipmentCardGrid: React.FC<{ item: EnrichedEquipment; onClick: () => void }> = React.memo(({ item, onClick }) => {
     const maintenance = getMaintenanceInfo(item.nextMaintenance);
@@ -298,7 +287,7 @@ const EquipmentManager: React.FC = () => {
   const EquipmentCardList: React.FC<{ item: EnrichedEquipment; onClick: () => void }> = React.memo(({ item, onClick }) => {
     const maintenance = getMaintenanceInfo(item.nextMaintenance);
     return (
-      <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent p-4 pl-5 flex items-center gap-4">
+      <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent p-4 pl-5 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${maintenance.statusBarColor}`} />
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center">
           <Settings className="text-primary" size={18} />
@@ -319,11 +308,11 @@ const EquipmentManager: React.FC = () => {
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-600 md:ml-auto shrink-0">
           <span className="flex items-center gap-1"><Hash size={14} className="text-gray-400" />{item.serialNumber || 'S/N'}</span>
           <span className="flex items-center gap-1"><Building2 size={14} className="text-gray-400" />{item.clientName}</span>
         </div>
-        <div className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.activeOrderCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
+        <div className={`text-xs font-bold px-2 py-0.5 rounded-full w-fit ${item.activeOrderCount > 0 ? 'bg-orange-100 text-orange-800' : 'bg-gray-100 text-gray-800'}`}>
           {item.activeOrderCount > 0 ? `${item.activeOrderCount} Activo(s)` : `${item.orderCount} Total`}
         </div>
       </div>
@@ -378,74 +367,19 @@ const EquipmentManager: React.FC = () => {
         </div>
 
         {filteredEquipment.length > 0 ? (
-             <div
-              ref={parentRef}
-              className="relative"
-              style={{
-                height: '600px',
-                width: '100%',
-              }}
-            >
-              {viewMode === 'grid' ? (
-                <div
-                  className="relative"
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualRow) => (
-                    <div
-                      key={virtualRow.key}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualRow.size}px`,
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-6 pt-3 h-full">
-                        {virtualRow.index < filteredEquipment.length && (
-                          <EquipmentCardGrid item={filteredEquipment[virtualRow.index]} onClick={() => handleItemClick(filteredEquipment[virtualRow.index])} />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="relative"
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualRow) => (
-                    <div
-                      key={virtualRow.key}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualRow.size}px`,
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <div className="grid grid-cols-1 gap-3 p-4 md:p-6 pt-3 h-full">
-                        {virtualRow.index < filteredEquipment.length && (
-                          <EquipmentCardList item={filteredEquipment[virtualRow.index]} onClick={() => handleItemClick(filteredEquipment[virtualRow.index])} />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            viewMode === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {filteredEquipment.map(item => (
+                  <EquipmentCardGrid key={item.id} item={item} onClick={() => handleItemClick(item)} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {filteredEquipment.map(item => (
+                  <EquipmentCardList key={item.id} item={item} onClick={() => handleItemClick(item)} />
+                ))}
+              </div>
+            )
         ) : (
             <div className="text-center py-16 text-gray-400">
                 <Search size={32} className="mx-auto mb-2 opacity-50"/>

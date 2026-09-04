@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Search, UserPlus, Loader2, ServerCrash, Crown, RefreshCw, ListFilter, UploadCloud } from 'lucide-react';
 import { CuentiClient, Client } from '../../types';
 import { useData } from '../../context/DataContext';
+import { authAccessToken } from '../../services/supabase';
 
 interface CuentiClientModalProps {
   isOpen: boolean;
@@ -40,7 +41,13 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
         setIsLoading(true);
         setError(null);
         try {
-          const response = await fetch('https://api-iawzelmu2a-uc.a.run.app/cuenti/clients');
+          // Ir por el edge autenticado (cuenti-proxy): nunca exponer la URL de
+          // Cuenti/GCP en el bundle ni dejar el endpoint abierto. El edge valida
+          // el access_token JWT del usuario y su rol antes de hacer el fetch upstream.
+          const token = await authAccessToken();
+          const response = await fetch('/api/cuenti/clients', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
 
           if (!response.ok) {
             const errorText = await response.text();

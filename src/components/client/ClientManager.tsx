@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { OrderStatus, CuentiClient } from '../../types';
 import { Search, Building2, UserPlus, Phone, MapPin, LayoutGrid, LayoutList, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import { CuentiClientModal } from '../shared/CuentiClientModal';
-import { useVirtualizer } from '@tanstack/react-virtual';
 
 const ClientCard: React.FC<{ client: any; onClick: () => void }> = React.memo(({ client, onClick }) => (
   <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
@@ -68,13 +68,17 @@ const ClientManager: React.FC = () => {
   const navigate = useNavigate();
   const { clients, orders, equipment } = useData();
   const { currentUser } = useAuth();
+  const { company } = useCompany();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'inactive'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isCuentiModalOpen, setIsCuentiModalOpen] = useState(false);
 
   const canCreate = useMemo(() => hasPermission(currentUser?.role, PERMISSIONS.CREATE_CLIENT), [currentUser]);
-  const canImportFromCuenti = useMemo(() => currentUser?.role && ['developer', 'admin'].includes(currentUser.role), [currentUser]);
+  const canImportFromCuenti = useMemo(() =>
+    (currentUser?.role && ['developer', 'admin'].includes(currentUser.role)) &&
+    company?.features?.cuenti !== false, // flag por empresa (default ON; super_admin lo apaga)
+  [currentUser, company]);
 
   const processedClients = useMemo(() => {
     let enrichedClients = clients.map(client => ({
@@ -105,17 +109,6 @@ const ClientManager: React.FC = () => {
     setIsCuentiModalOpen(false);
     navigate('/clients/new', { state: { clientToImport } });
   };
-
-  // Virtualized list setup
-  const parentRef = useRef<HTMLDivElement>(null);
-  const ITEM_HEIGHT = viewMode === 'list' ? 120 : 50; // Smaller estimate for grid items
-
-  const virtualizer = useVirtualizer({
-    count: processedClients.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ITEM_HEIGHT,
-    overscan: 5,
-  });
 
   return (
     <>
@@ -187,74 +180,17 @@ const ClientManager: React.FC = () => {
           </div>
           {processedClients.length === 0 ? (
             <div className="text-center py-16 text-gray-400"><Search size={32} className="mx-auto mb-2"/><p className="font-medium">No se encontraron clientes.</p></div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {processedClients.map(client => (
+                <ClientCard key={client.id} client={client} onClick={() => navigate(`/clients/${client.id}`)} />
+              ))}
+            </div>
           ) : (
-            <div
-              ref={parentRef}
-              className="relative"
-              style={{
-                height: viewMode === 'grid' ? '600px' : '600px',
-                width: '100%',
-              }}
-            >
-              {viewMode === 'grid' ? (
-                <div
-                  className="relative"
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualRow) => (
-                    <div
-                      key={virtualRow.key}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualRow.size}px`,
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4 md:p-6 pt-3 h-full">
-                        {virtualRow.index < processedClients.length && (
-                          <ClientCard client={processedClients[virtualRow.index]} onClick={() => navigate(`/clients/${processedClients[virtualRow.index].id}`)} />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="relative"
-                  style={{
-                    height: `${virtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
-                  }}
-                >
-                  {virtualizer.getVirtualItems().map((virtualRow) => (
-                    <div
-                      key={virtualRow.key}
-                      style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: `${virtualRow.size}px`,
-                        transform: `translateY(${virtualRow.start}px)`,
-                      }}
-                    >
-                      <div className="grid grid-cols-1 gap-3 p-4 md:p-6 pt-3 h-full">
-                        {virtualRow.index < processedClients.length && (
-                          <ClientCardList client={processedClients[virtualRow.index]} onClick={() => navigate(`/clients/${processedClients[virtualRow.index].id}`)} />
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            <div className="flex flex-col gap-3">
+              {processedClients.map(client => (
+                <ClientCardList key={client.id} client={client} onClick={() => navigate(`/clients/${client.id}`)} />
+              ))}
             </div>
           )}
         </div>

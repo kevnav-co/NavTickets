@@ -8,6 +8,10 @@ export interface UseCollectionOptions {
   orderBy?: { column: string; ascending?: boolean };
   limit?: number;
   realtime?: boolean;
+  /** Habilita/deshabilita la query (pare la ejecución de red/offline). Debe
+   *  reenviarse a useSupabaseQuery; sin esto, CompanyContext pedía companies
+   *  incluso sin sesión → bucle de refetch en el login. */
+  enabled?: boolean;
 }
 
 /**
@@ -31,8 +35,9 @@ export const useCollection = <T extends { id: string }>(collectionName: string, 
     orderBy: options.orderBy,
     limit: options.limit,
     realtime: options.realtime ?? true,
+    enabled: options.enabled,
     transform: snakeToCamel,
-  }), [collectionName, options.filters, options.orderBy, options.limit, options.realtime]);
+  }), [collectionName, options.filters, options.orderBy, options.limit, options.realtime, options.enabled]);
 
   const {
     data,

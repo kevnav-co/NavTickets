@@ -16,6 +16,16 @@ export type OrderBy = {
   ascending?: boolean;
 };
 
+// Contador monótono a nivel de módulo para nombres de canal Realtime. NO usar
+// Date.now() como sufijo: supabase.channel() es idempotente por nombre y, si el
+// efecto de suscripción se re-ejecuta dentro del mismo milisegundo (típico tras
+// el login de un tenant con datos: muchas setData de realtime → re-renders
+// seguidos), reutiliza el canal YA suscrito → el .on('postgres_changes') poste-
+// rior lanza "cannot add postgres_changes callbacks for ... after subscribe()"
+// → error que se repite en bucle y traba la app. Un sufijo único siempre nuevo
+// hace imposible reciclar un canal ya 'subscribe()'d.
+let realtimeChannelSeq = 0;
+
 interface UseSupabaseQueryOptions {
   /** Nombre de la tabla en Supabase */
   table: string;
@@ -75,10 +85,24 @@ export function useSupabaseQuery<T extends { id: string }>(
   const mountedRef = useRef(true);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  // Los consumidores pasan `filters: [...]` como array literal (referencia nueva
+  // en CADA render). Si los efectos dependieran de esa identidad, `fetchData`
+  // cambiaría en cada render y el efecto principal re-dispararía el fetch → bucle
+  // infinito de peticiones (visto como tormenta a /rest/v1/companies en el login).
+  // Solución: leer los filtros de un ref (siempre actualizados) y derivar los
+  // efectos de una FIRMA SERIALIZADA, no de la identidad del objeto. Así solo se
+  // re-fetchea cuando el contenido de la query cambia de verdad.
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+  const orderByRef = useRef(orderBy);
+  orderByRef.current = orderBy;
+  const filtersKey = JSON.stringify(filters);
+  const orderByKey = JSON.stringify(orderBy);
+
   const applyFilters = useCallback(
     (query: ReturnType<typeof supabase.from<T>['select']>) => {
       let q = query;
-      for (const f of filters) {
+      for (const f of filtersRef.current) {
         if (f.operator === 'in') {
           q = q.in(f.column, f.value);
         } else if (f.operator === 'is') {
@@ -87,15 +111,15 @@ export function useSupabaseQuery<T extends { id: string }>(
           q = q[f.operator](f.column, f.value);
         }
       }
-      if (orderBy) {
-        q = q.order(orderBy.column, { ascending: orderBy.ascending ?? true });
+      if (orderByRef.current) {
+        q = q.order(orderByRef.current.column, { ascending: orderByRef.current.ascending ?? true });
       }
       if (queryLimit) {
         q = q.limit(queryLimit);
       }
       return q;
     },
-    [filters, orderBy, queryLimit]
+    [queryLimit]
   );
 
   const fetchData = useCallback(async () => {
@@ -174,20 +198,24 @@ export function useSupabaseQuery<T extends { id: string }>(
         setLoading(false);
       }
     }
-  }, [table, collection, filters, orderBy, queryLimit, forceOffline, isOnline, applyFilters, transform]);
+  }, [table, collection, filtersKey, orderByKey, queryLimit, forceOffline, isOnline, applyFilters, transform]);
 
   // ─── Realtime subscription ──────────────────────────────────────────────────
 
   useEffect(() => {
     if (!enabled || !realtime || !isSupabaseConfigured() || forceOffline || !isOnline) return;
 
-    // Limpiar suscripción anterior
+    // Limpiar suscripción anterior (y anular el ref para no dejar un canal
+    // huérfano que supabase.channel() pueda reutilizar por nombre).
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
-    const channelName = `realtime-${table}-${Date.now()}`;
-    const channel = supabase.channel(channelName);
+    // Sufijo único por canal: nunca una réplica ya 'subscribe()'d.
+    const channel = supabase.channel(
+      `realtime-${table}-${realtimeChannelSeq++}-${Date.now()}`
+    );
 
     channel.on(
       'postgres_changes' as any,
@@ -228,6 +256,7 @@ export function useSupabaseQuery<T extends { id: string }>(
 
     return () => {
       supabase.removeChannel(channel);
+      channelRef.current = null;
     };
   }, [enabled, table, realtime, forceOffline, isOnline, transform]);
 

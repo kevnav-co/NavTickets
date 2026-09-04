@@ -18,6 +18,7 @@ export interface CompanyFeatures {
   aiAssistant: boolean;
   equipmentManagement: boolean;
   excelUpload: boolean; // "Subida de datos (Excel)" en la sección de inicio (Dashboard)
+  cuenti: boolean;      // Botón "Cuenti" (importar clientes desde Cuenti ERP) en la sección Clientes
 }
 
 export interface CompanyAuth {
@@ -69,6 +70,7 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
     aiAssistant: true,
     equipmentManagement: true,
     excelUpload: true,
+    cuenti: true,
   },
   auth: {
     emailDomain: '@navas.com',

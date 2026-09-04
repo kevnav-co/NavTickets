@@ -42,7 +42,11 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response('Forbidden: Admin or Developer only', { status: 403 });
   }
 
-  const cuentiURL = 'https://app.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/ConsultarClientePaginado/1/0';
+  // Puente GCP con la lista de clientes Cuenti. Antes el frontend golpeaba ESTA
+  // URL directo (quedaba hardcodeada en el bundle y era alcanzable por cualquiera
+  // sin auth). Ahora la URL vive solo server-side: el browser ve /api/cuenti/clients
+  // y este edge (autenticado por JWT + rol) hace el fetch upstream.
+  const cuentiURL = 'https://api-iawzelmu2a-uc.a.run.app/cuenti/clients';
   console.log(`[Cuenti Proxy] Fetching from: ${cuentiURL}`);
 
   try {
@@ -50,10 +54,6 @@ export default async function handler(req: Request): Promise<Response> {
       method: 'GET',
       headers: {
         'Accept': 'application/json, text/plain, */*',
-        'X-Auth-Token': process.env.CUENTI_API_TOKEN || '',
-        'X-Auth-Token-Empresa': process.env.CUENTI_EMPRESA_ID || '',
-        'X-Auth-Token-Id-Usuario': process.env.CUENTI_USER_ID || '',
-        'X-Auth-Token-Usuario': process.env.CUENTI_USER_ID || '',
       },
     });
 

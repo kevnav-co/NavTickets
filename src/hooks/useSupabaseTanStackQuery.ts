@@ -15,6 +15,11 @@ export type OrderBy = {
   ascending?: boolean;
 };
 
+// Sufijo único por canal Realtime (ver nota en useSupabaseQuery: Date.now()
+// puede colisionar en re-ejecuciones del mismo ms y reutilizar un canal ya
+// suscrito, lanzando "cannot add postgres_changes callbacks after subscribe()").
+let realtimeChannelSeq = 0;
+
 interface UseSupabaseTanStackQueryOptions<T> {
   /** Nombre de la tabla en Supabase */
   table: string;
@@ -131,8 +136,9 @@ export function useSupabaseTanStackQuery<T extends { id: string }>(
   ) => {
     if (!isSupabaseConfigured() || !isOnline) return () => {};
 
-    const channelName = `realtime-${table}-${Date.now()}`;
-    const channel = supabase.channel(channelName);
+    const channel = supabase.channel(
+      `realtime-${table}-${realtimeChannelSeq++}-${Date.now()}`
+    );
 
     channel.on(
       'postgres_changes' as any,

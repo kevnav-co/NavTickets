@@ -27,20 +27,29 @@ const Tasks: React.FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Use useCollection for reactive tasks data
+  // RLS ya acota `tasks` a la empresa del usuario. No filtramos por `participants`
+  // server-side: el operador `contains` sobre jsonb en supabase-js es frágil y, con
+  // `participants` guardado como JSONB string (bug histórico de toSnakeCase), resolvía
+  // vacío → la tarea recién creada se "perdía". Filtramos por participación en el cliente
+  // (snakeToCamel normaliza `participants` a un array al leer, así cubre ambos formatos).
   const { data: tasks, loading } = useCollection<Task>('tasks', {
-    filters: currentUser ? [{ column: 'participants', operator: 'contains', value: currentUser.id }] : [],
     realtime: true,
     enabled: !!currentUser,
   });
 
   // Sort tasks: active first, then by createdAt desc
   const sortedTasks = useMemo(() => {
-    if (!tasks) return [];
-    return [...tasks].sort((a, b) => {
+    if (!tasks || !currentUser) return [];
+    const visible = tasks.filter(t =>
+      t.participants?.includes(currentUser.id) ||
+      t.createdBy === currentUser.id ||
+      t.assignedTo === currentUser.id
+    );
+    return [...visible].sort((a, b) => {
       if (a.completed === b.completed) return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       return a.completed ? 1 : -1;
     });
-  }, [tasks]);
+  }, [tasks, currentUser]);
 
   useEffect(() => {
     // ...
