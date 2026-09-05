@@ -49,13 +49,14 @@ const ADMIN_ITEMS: NavItem[] = [
 ];
 
 // ─── Agrupación (3 pilares + 2 carpetas) ───────────────────────────────────────
-// Orden fijo: Inicio, Tareas, Órdenes (directos) → Catálogo → Gestión (carpetas).
+// Orden fijo: Inicio, Órdenes, Clientes (directos) → Catálogo → Gestión (carpetas).
+// Catálogo: Tareas, Máquinas, Mapa. Gestión: Equipo, Inventario, Informes, Config.
 const DIRECT_GROUPS: { id: string; want: string }[] = [
   { id: 'inicio', want: 'dashboard' },
-  { id: 'tareas', want: 'tasks' },
   { id: 'orders', want: 'orders' },
+  { id: 'clientes', want: 'clients' },
 ];
-const CATALOGO_ITEMS = ['clients', 'equipment', 'map'];
+const CATALOGO_ITEMS = ['tasks', 'equipment', 'map'];
 const GESTION_ITEMS = ['inventory', 'reports', 'users'];
 
 // Mismo matiz de activo por ruta que tenía la barra plana (evita que `/admin`
