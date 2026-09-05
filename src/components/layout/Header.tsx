@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, Users2, LifeBuoy } from 'lucide-react';
+import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, LifeBuoy } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext.tsx';
@@ -9,7 +9,6 @@ import { NotificationsModal } from './NotificationsModal';
 import SupportModal from '../support/SupportModal';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useOneSignal } from '../../hooks/useOneSignal';
-import PERMISSIONS, { hasPermission } from '../../permissions';
 
 interface HeaderProps {
   title: string;
@@ -207,11 +206,6 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
                        <button onClick={() => { openModal('signature'); setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl text-left transition-colors text-xs font-bold text-gray-700">
                           <PenLine size={14} className="text-gray-400" /> Actualizar Firma
                        </button>
-                       {hasPermission(currentUser.role, PERMISSIONS.VIEW_USERS) && (
-                          <button onClick={() => { navigate('/users'); setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl text-left transition-colors text-xs font-bold text-gray-700">
-                             <Users2 size={14} className="text-gray-400" /> Gestionar Equipo
-                          </button>
-                       )}
                        <div className="h-px bg-gray-50 mx-2"></div>
                        <button onClick={() => { logout(); setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-red-50 rounded-xl text-left transition-colors text-xs font-bold text-red-600"><LogOut size={14} className="text-red-400" /> Cerrar Sesión</button>
                     </div>
