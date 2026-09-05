@@ -127,7 +127,12 @@ const AdminPanel: React.FC = () => {
         <CompanyForm
           key={ownCompanyId ?? 'self'}
           companyId={ownCompanyId}
-          onSaved={msg => setToast(msg)}
+          onSaved={msg => {
+            setToast(msg);
+            // Tras guardar la configuración de la propia empresa, volver al
+            // inicio de la app (el toast alcanza a mostrarse ~un segundo).
+            setTimeout(() => navigate('/'), 900);
+          }}
           onCancel={() => {}}
         />
       )}
