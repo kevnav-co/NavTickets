@@ -133,7 +133,7 @@ const AdminPanel: React.FC = () => {
             // inicio de la app (el toast alcanza a mostrarse ~un segundo).
             setTimeout(() => navigate('/'), 900);
           }}
-          onCancel={() => {}}
+          onCancel={() => navigate('/')}
         />
       )}
 
