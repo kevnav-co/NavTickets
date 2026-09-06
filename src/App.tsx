@@ -212,7 +212,7 @@ function AppContent({
       {!isOnline && <div className="fixed top-0 left-0 right-0 bg-gray-900 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><Save size={14} className="text-orange-400" /><span>Modo En Cache (Offline)</span></div>}
       {isOnline && isSyncing && <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><RefreshCw size={14} className="animate-spin" /><span>Sincronizando con la Nube...</span></div>}
       {impersonation && (
-        <div className="fixed bottom-0 left-0 right-0 z-[95] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold shadow-[0_-4px_12px_rgba(0,0,0,0.15)]">
+        <div className="fixed top-0 left-0 right-0 z-[95] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
           <Eye size={14} className="flex-shrink-0" />
           <span className="truncate text-center">
             Vista previa: estás viendo <span className="underline">{company?.name || company.id || 'la empresa'}</span> como admin
