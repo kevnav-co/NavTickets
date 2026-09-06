@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, LifeBuoy } from 'lucide-react';
+import { RefreshCcw, Download, Key, LogOut, PenLine, Bell, BellOff, LifeBuoy, Eye } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
 import { useData } from '../../context/DataContext';
 import { useModal } from '../../context/ModalContext.tsx';
 import { NotificationsModal } from './NotificationsModal';
@@ -21,11 +22,19 @@ const colorClasses = {
 };
 
 export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, impersonation, stopImpersonation, logout } = useAuth();
+  const { company } = useCompany();
   const { openModal } = useModal();
   const { isRefreshing, forceRefresh, notifications, updateItem, deleteItem, loading, loadNotifications } = useData();
   const { text: statusText, color: statusColor } = useConnectivityStatus();
   const navigate = useNavigate();
+
+  // El banner de vista previa vive dentro del Header para que quede ARRIBA de la
+  // barra (mismo bloque sticky) y jamás la tape. Al salir, volvemos al Panel Admin.
+  const handleExitPreview = async () => {
+    await stopImpersonation();
+    navigate('/admin', { replace: true });
+  };
 
   // Cargar notificaciones del usuario al montar (Header está siempre presente
   // cuando hay sesión). loadNotifications es idempotente: solo dispara la carga
@@ -139,7 +148,22 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   }, [currentUser?.role, navigate]);
 
   return (
-    <header className="bg-white/80 backdrop-blur-md px-5 py-4 flex items-center justify-between sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+    <header className="bg-white/80 backdrop-blur-md flex flex-col sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+      {impersonation && (
+        <div className="w-full bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
+          <Eye size={14} className="flex-shrink-0" />
+          <span className="truncate text-center">
+            Vista previa: estás viendo <span className="underline">{company?.name || company.id || 'la empresa'}</span> como admin
+          </span>
+          <button
+            onClick={handleExitPreview}
+            className="flex-shrink-0 bg-amber-950 text-white px-3 py-1 rounded-md hover:bg-amber-900 transition-colors"
+          >
+            Salir de la vista
+          </button>
+        </div>
+      )}
+      <div className="px-5 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <h1 className="text-md font-bold text-gray-800">{title}</h1>
         <button
@@ -213,6 +237,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
                )}
             </div>
          )}
+      </div>
       </div>
       <NotificationsModal
         isOpen={isNotificationsOpen}
