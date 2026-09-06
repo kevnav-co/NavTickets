@@ -65,17 +65,23 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const handleCreate = async () => {
     if (!subject.trim() || !message.trim()) return;
     setBusy(true);
-    const { data, error } = await addItem('support_tickets', {
-      companyId: currentUser.companyId,
-      userId: currentUser.id,
-      subject: subject.trim(),
-      message: message.trim(),
-    });
-    setBusy(false);
-    if (error) { alert('No se pudo enviar la consulta: ' + error); return; }
-    setSelectedId(data?.id ?? null);
-    setSubject(''); setMessage('');
-    setView('detail');
+    try {
+      // addItem devuelve el id nuevo como string y LANZA un Error al fallar
+      // (no `{ data, error }`). Usar el id real para abrir el detalle.
+      const id = await addItem('support_tickets', {
+        companyId: currentUser.companyId,
+        userId: currentUser.id,
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+      setSelectedId(id);
+      setSubject(''); setMessage('');
+      setView('detail');
+    } catch (e) {
+      alert('No se pudo enviar la consulta: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setBusy(false);
+    }
     // El aviso al super_admin (push + contador) lo dispara un trigger de la BD
     // (migración 011 → edge `support-notify`); no hace falta fire desde el front.
   };
@@ -83,15 +89,19 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const handleReply = async () => {
     if (!selectedId || !reply.trim()) return;
     setBusy(true);
-    const { error } = await addItem('support_messages', {
-      ticketId: selectedId,
-      userId: currentUser.id,
-      role: 'empresa',
-      message: reply.trim(),
-    });
-    setBusy(false);
-    if (error) { alert('No se pudo enviar el mensaje: ' + error); return; }
-    setReply('');
+    try {
+      await addItem('support_messages', {
+        ticketId: selectedId,
+        userId: currentUser.id,
+        role: 'empresa',
+        message: reply.trim(),
+      });
+      setReply('');
+    } catch (e) {
+      alert('No se pudo enviar el mensaje: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const btnCls = "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors";

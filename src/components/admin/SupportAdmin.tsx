@@ -67,15 +67,19 @@ const SupportAdmin: React.FC = () => {
   const handleReply = async () => {
     if (!selectedId || !reply.trim() || !currentUser) return;
     setBusy(true);
-    const { error: err } = await addItem('support_messages', {
-      ticketId: selectedId,
-      userId: currentUser.id,
-      role: 'admin',
-      message: reply.trim(),
-    });
-    setBusy(false);
-    if (err) { alert('No se pudo enviar la respuesta: ' + err); return; }
-    setReply('');
+    try {
+      await addItem('support_messages', {
+        ticketId: selectedId,
+        userId: currentUser.id,
+        role: 'admin',
+        message: reply.trim(),
+      });
+      setReply('');
+    } catch (e) {
+      alert('No se pudo enviar la respuesta: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleStatus = async (status: SupportTicketStatus) => {
