@@ -472,6 +472,7 @@ const OrderDetail: React.FC<Props> = ({
             onAddEquipment={onAddEquipment!}
             onRemoveEquipment={onRemoveEquipment}
             onAddTechnician={onAddTechnician}
+            onUnlinkTechnician={() => handleUnlink('technician')}
             tasks={tasks}
             newTask={newTask}
             setNewTask={setNewTask}

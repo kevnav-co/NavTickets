@@ -3,8 +3,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ServiceOrder, User, Client, Equipment, OrderStatus } from '../../types';
 import { 
-  ChevronLeft, Timer, Camera, ImageIcon, X, CheckCircle2, Plus, Trash2, 
-  UserCheck, CreditCard, Maximize2, ListChecks, MapPin, Building2, 
+  ChevronLeft, Timer, Camera, ImageIcon, X, CheckCircle2, Plus, Trash2,
+  UserCheck, UserIcon, CreditCard, Maximize2, ListChecks, MapPin, Building2,
   Mic, Pencil, RefreshCw, Wrench, ChevronRight, ShieldCheck, Loader2, Cog,
   FileText
 } from 'lucide-react';
@@ -23,6 +23,7 @@ interface OrderInProgressViewProps {
   onUnlinkClient: () => void;
   onAddEquipment: () => void;
   onAddTechnician: () => void;
+  onUnlinkTechnician: () => void;
   onRemoveEquipment: (equipmentId: string) => void;
   tasks: string[];
   newTask: string;
@@ -79,6 +80,7 @@ const OrderInProgressView: React.FC<OrderInProgressViewProps> = (
     canUploadInitialEvidence,
     canUploadFinalEvidence,
     onAddTechnician,
+    onUnlinkTechnician,
   }
 ) => {
   const navigate = useNavigate();
@@ -184,6 +186,13 @@ const OrderInProgressView: React.FC<OrderInProgressViewProps> = (
               </div>
           </div>
           {canUpdate && client && !isDeleting ? (<button onClick={(e) => { e.stopPropagation(); onUnlinkClient(); }} className="p-2 text-gray-400 hover:text-red-500"><X size={18} /></button>) : canUpdate && !isDeleting ? <ChevronRight size={20} className="text-gray-300" /> : null}
+        </div>
+        <div onClick={canAssign && !isDeleting ? onAddTechnician : undefined} className={`bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between ${canAssign && !isDeleting ? 'cursor-pointer' : ''}`}>
+          <div className="flex items-center gap-4">
+              <div className="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center"><UserIcon className="text-red-500" size={22} /></div>
+              <div><p className="text-[11px] font-bold text-gray-400">RESPONSABLE TÉCNICO</p><p className="font-bold text-base text-gray-800">{technician?.name || 'No asignado'}</p>{technician ? <span className="flex items-center gap-1.5 text-xs text-green-600"><ShieldCheck size={12}/> ASIGNADO</span> : <span className="flex items-center gap-1.5 text-xs text-amber-600">Toca para asignar</span>}</div>
+          </div>
+          {canAssign && technician && !isDeleting ? (<button onClick={(e) => { e.stopPropagation(); onUnlinkTechnician(); }} className="p-2 text-gray-400 hover:text-red-500"><X size={18} /></button>) : canAssign && !isDeleting ? <ChevronRight size={20} className="text-gray-300" /> : null}
         </div>
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <div className="p-4 flex justify-between items-center">
