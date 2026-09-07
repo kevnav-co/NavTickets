@@ -148,6 +148,9 @@ export default async function handler(req: Request): Promise<Response> {
       company_id: companyId,
       title,
       body: message,
+      // `text` es NOT NULL; sin él el insert falla 500 y el push de prueba nunca
+      // crea la notificación interna.
+      text: message,
       path: '/',
       type: 'test',
       read: false,

@@ -103,11 +103,16 @@ export default async function handler(req: Request): Promise<Response> {
 
     // 1. Notificar al asignado (si es nuevo)
     if (assignedTo && (eventType === 'INSERT' || assignedTo !== previousAssignee)) {
+      const assignmentMsg = `Te han asignado la tarea: ${taskTitle}`;
       const { error: notifError } = await supabase.from('notifications').insert({
         company_id: companyId,
         user_id: assignedTo,
         title: eventType === 'INSERT' ? 'Nueva tarea asignada' : 'Tarea reasignada',
-        body: `Te han asignado la tarea: ${taskTitle}`,
+        body: assignmentMsg,
+        // `text` es NOT NULL en la tabla (los edges Supabase ya lo rellenan).
+        // Sin esto, la columna queda null y el insert falla con un 500 silencioso
+        // que impide que la notificación aparezca en la bandeja.
+        text: assignmentMsg,
         type: 'info',
         path: `/tasks/${taskId}`,
         read: false,
@@ -120,11 +125,13 @@ export default async function handler(req: Request): Promise<Response> {
 
     // 2. Notificar al creador si la tarea fue completada
     if (eventType === 'UPDATE' && record.completed && createdBy && createdBy !== assignedTo) {
+      const completedMsg = `La tarea "${taskTitle}" ha sido marcada como completada`;
       const { error: notifError } = await supabase.from('notifications').insert({
         company_id: companyId,
         user_id: createdBy,
         title: 'Tarea completada',
-        body: `La tarea "${taskTitle}" ha sido marcada como completada`,
+        body: completedMsg,
+        text: completedMsg,
         type: 'success',
         path: `/tasks/${taskId}`,
         read: false,

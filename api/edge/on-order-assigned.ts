@@ -118,11 +118,15 @@ export default async function handler(req: Request): Promise<Response> {
 
     if (isNewAssignment) {
       // Crear notificación en la base de datos
+      const orderMsg = `Te han asignado la orden: ${orderName}`;
       const { error: notifError } = await supabase.from('notifications').insert({
         company_id: companyId,
         user_id: technicianId,
         title: eventType === 'INSERT' ? 'Nueva orden asignada' : 'Orden reasignada',
-        body: `Te han asignado la orden: ${orderName}`,
+        body: orderMsg,
+        // `text` es NOT NULL en la tabla; sin rellenarlo el insert falla 500 y
+        // la notificación nunca aparece en la bandeja.
+        text: orderMsg,
         type: 'info',
         path: `/orders/${orderId}`,
         read: false,
