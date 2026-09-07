@@ -148,7 +148,10 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   }, [currentUser?.role, navigate]);
 
   return (
-    <header className="bg-white/80 backdrop-blur-md flex flex-col sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+    <header className="bg-white flex flex-col sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+      {/* SIN `backdrop-blur-md`: `backdrop-filter` crea un containing block que rompe
+          el `position:fixed` de SupportModal/NotificationsModal (quedan recortados a
+          la caja del header). Fondo blanco sólido. */}
       {impersonation && (
         <div className="w-full bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-center gap-3 text-xs font-bold shadow-[0_4px_12px_rgba(0,0,0,0.15)]">
           <Eye size={14} className="flex-shrink-0" />
