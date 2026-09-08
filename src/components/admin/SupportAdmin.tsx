@@ -3,7 +3,7 @@
 // control de estado. RLS de la migración 006 le da acceso a todas las empresas
 // (useCollection sin filtro). Gated a super_admin.
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Loader2, Send, LifeBuoy, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
@@ -43,6 +43,16 @@ const SupportAdmin: React.FC = () => {
   const [busy, setBusy] = useState(false);
   // En móvil, un solo panel a la vez: lista Ó chat. `viewingChat` alterna entre ellos.
   const [viewingChat, setViewingChat] = useState(false);
+
+  // El textarea de respuesta crece en vertical según el largo del texto (mejor DX
+  // con respuestas largas: el texto se envuelve, no hace scroll horizontal).
+  const replyRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = replyRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [reply]);
 
   const companyName = (id: string) => companies?.find(c => c.id === id)?.name || '—';
 
@@ -224,12 +234,14 @@ const SupportAdmin: React.FC = () => {
             {/* Responder */}
             {selected.status !== SupportTicketStatus.CLOSED && (
               <div className="flex items-end gap-2">
-                <input
-                  className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none"
+                <textarea
+                  ref={replyRef}
+                  rows={1}
+                  className="flex-1 resize-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none min-h-[42px] max-h-44 overflow-y-auto"
                   placeholder="Escribe tu respuesta como soporte..."
                   value={reply}
                   onChange={e => setReply(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleReply(); }}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
                   disabled={busy}
                 />
                 <button onClick={handleReply} disabled={busy || !reply.trim()} className="p-2.5 bg-primary text-white rounded-xl hover:bg-black disabled:opacity-50">
