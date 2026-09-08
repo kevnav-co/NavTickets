@@ -4,7 +4,7 @@
 // (useCollection sin filtro). Gated a super_admin.
 
 import React, { useState, useMemo } from 'react';
-import { Loader2, Send, LifeBuoy } from 'lucide-react';
+import { Loader2, Send, LifeBuoy, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useCollection } from '../../hooks/useCollection';
@@ -41,6 +41,8 @@ const SupportAdmin: React.FC = () => {
   const [search, setSearch] = useState('');
   const [reply, setReply] = useState('');
   const [busy, setBusy] = useState(false);
+  // En móvil, un solo panel a la vez: lista Ó chat. `viewingChat` alterna entre ellos.
+  const [viewingChat, setViewingChat] = useState(false);
 
   const companyName = (id: string) => companies?.find(c => c.id === id)?.name || '—';
 
@@ -97,7 +99,7 @@ const SupportAdmin: React.FC = () => {
   return (
     <div className="grid lg:grid-cols-[360px,1fr] gap-6">
       {/* ─── Lista de soportes ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-4 max-h-[80vh] overflow-y-auto">
+      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-4 max-h-[80vh] overflow-y-auto ${viewingChat ? 'hidden lg:block' : ''}`}>
         <div className="flex items-center gap-2 mb-3">
           <LifeBuoy size={18} className="text-primary" />
           <h2 className="text-base font-black text-gray-800">Soportes de las empresas</h2>
@@ -134,7 +136,7 @@ const SupportAdmin: React.FC = () => {
             return (
               <button
                 key={t.id}
-                onClick={() => setSelectedId(t.id)}
+                onClick={() => { setSelectedId(t.id); setViewingChat(true); }}
                 className={`w-full text-left p-3 rounded-2xl border transition-colors ${
                   active ? 'border-primary/40 bg-red-50/40' : 'border-gray-100 hover:bg-gray-50/60'
                 }`}
@@ -153,7 +155,7 @@ const SupportAdmin: React.FC = () => {
       </div>
 
       {/* ─── Detalle / chat ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col min-h-[60vh]">
+      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col min-h-[60vh] ${!viewingChat ? 'hidden lg:flex' : ''}`}>
         {!selected ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
             <LifeBuoy size={44} className="mb-3 opacity-50" />
@@ -163,9 +165,18 @@ const SupportAdmin: React.FC = () => {
         ) : (
           <>
             <div className="flex items-start justify-between gap-3 mb-4 border-b border-gray-100 pb-4">
-              <div className="min-w-0">
-                <h3 className="font-black text-gray-800 truncate">{selected.subject}</h3>
-                <p className="text-xs font-bold text-gray-400">{companyName(selected.companyId)} · {formatDate(selected.createdAt)}</p>
+              <div className="flex items-start gap-2 min-w-0">
+                <button
+                  onClick={() => setViewingChat(false)}
+                  aria-label="Volver a la lista de soportes"
+                  className="lg:hidden p-1 -ml-1 mt-0.5 text-gray-400 hover:text-gray-700 flex-shrink-0"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <div className="min-w-0">
+                  <h3 className="font-black text-gray-800 truncate">{selected.subject}</h3>
+                  <p className="text-xs font-bold text-gray-400">{companyName(selected.companyId)} · {formatDate(selected.createdAt)}</p>
+                </div>
               </div>
               <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).cls}`}>
                 {(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).label}
