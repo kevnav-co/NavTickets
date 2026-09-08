@@ -165,7 +165,7 @@ const SupportAdmin: React.FC = () => {
       </div>
 
       {/* ─── Detalle / chat ────────────────────────────────────────────────── */}
-      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col min-h-[60vh] ${!viewingChat ? 'hidden lg:flex' : ''}`}>
+      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col h-[calc(100dvh-10rem)] lg:h-[calc(100dvh-8rem)] ${!viewingChat ? 'hidden lg:flex' : ''}`}>
         {!selected ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
             <LifeBuoy size={44} className="mb-3 opacity-50" />
@@ -200,7 +200,7 @@ const SupportAdmin: React.FC = () => {
             </div>
 
             {/* Hilo */}
-            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+            <div className="flex-1 overflow-y-auto space-y-2 mb-4 min-h-0">
               {(messages || []).map(m => (
                 <div
                   key={m.id}
