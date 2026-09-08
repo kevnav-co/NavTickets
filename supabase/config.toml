@@ -400,6 +400,14 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# Support Chat Notify — push a los super_admins cuando la EMPRESA escribe en el
+# chat de soporte. Lo dispara el trigger support_message_notify_staff (migración
+# 028) vía pg_net, sin JWT de sesión -> verify_jwt = false. Mismo acceso por
+# x-webhook-secret (WEBHOOK_SECRET).
+[functions.support-chat-notify]
+enabled = true
+verify_jwt = false
+
 # Request Password Reset — público (usuario olvidó la clave, no hay sesión).
 # verify_jwt=false; no revela si el username existe. Genera el token y manda el
 # link al correo de recuperación (users.email).
