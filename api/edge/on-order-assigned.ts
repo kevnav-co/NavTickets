@@ -137,8 +137,40 @@ export default async function handler(req: Request): Promise<Response> {
         throw notifError;
       }
 
-      // TODO: Integrar con OneSignal para push notification en tiempo real
-      // await fetch('https://onesignal.com/api/v1/notifications', { ... });
+      // Push OneSignal en tiempo real al técnico asignado (mismo patrón que
+      // support-notify). Omitente si el técnico no tiene player id o no hay
+      // secrets configurados; la notificación interna ya se creó arriba.
+      const oneSignalAppId = process.env.ONESIGNAL_APP_ID;
+      const oneSignalApiKey = process.env.ONESIGNAL_API_KEY;
+      if (oneSignalAppId && oneSignalApiKey) {
+        const { data: techUsers } = await supabase
+          .from('users')
+          .select('onesignal_player_id, fcm_token')
+          .eq('id', technicianId);
+        const playerId = (techUsers || [])[0]?.onesignal_player_id
+          || (techUsers || [])[0]?.fcm_token;
+        if (playerId) {
+          const baseUrl = process.env.APP_URL || 'https://navtickets.vercel.app';
+          const pushResp = await fetch('https://onesignal.com/api/v1/notifications', {
+            method: 'POST',
+            headers: {
+              Authorization: `Basic ${oneSignalApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              app_id: oneSignalAppId,
+              include_player_ids: [playerId],
+              headings: { en: title },
+              contents: { en: orderMsg },
+              url: `${baseUrl}/#/orders/${orderId}`,
+              data: { path: `/orders/${orderId}` },
+            }),
+          });
+          if (!pushResp.ok) {
+            console.error('[OnOrderAssigned] OneSignal error:', await pushResp.text());
+          }
+        }
+      }
     }
 
     return new Response(JSON.stringify({

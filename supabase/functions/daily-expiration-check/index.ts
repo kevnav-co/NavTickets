@@ -22,6 +22,62 @@ if (!serviceRole) {
 }
 const supabase = createClient(SUPABASE_URL, serviceRole);
 
+// Push OneSignal: opcional (mismo patrón que support-notify). Sin secrets, el
+// cron degrada a solo-notificación-interna (sendPushNotification) sin romperse.
+const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
+const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
+const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
+
+// Envía un push OneSignal a un conjunto de user ids de la app (mantenimiento y
+// garantías por vencer para los admins del tenant). Resuelve el player id desde
+// users.onesignal_player_id (fallback fcm_token legado).
+async function sendPushToUserIds(
+  userIds: (string | null)[],
+  title: string,
+  body: string,
+  path: string,
+): Promise<number> {
+  if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) {
+    console.warn("[Expiration Check] OneSignal no configurado (solo notificación interna)");
+    return 0;
+  }
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return 0;
+
+  const { data: users, error } = await supabase
+    .from("users")
+    .select("onesignal_player_id, fcm_token")
+    .in("id", unique);
+  if (error) throw error;
+
+  const playerIds = (users || [])
+    .map((u) => u.onesignal_player_id || u.fcm_token)
+    .filter(Boolean);
+  if (playerIds.length === 0) return 0;
+
+  const pushBody = {
+    app_id: ONESIGNAL_APP_ID,
+    include_player_ids: playerIds,
+    headings: { en: title },
+    contents: { en: body },
+    url: `${base}/#${path}`,
+    data: { path },
+  };
+  const resp = await fetch("https://onesignal.com/api/v1/notifications", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${ONESIGNAL_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(pushBody),
+  });
+  if (!resp.ok) {
+    console.error("[Expiration Check] OneSignal error:", await resp.text());
+    return 0;
+  }
+  return playerIds.length;
+}
+
 interface CompanyBranding {
   name: string;
   primaryColor: string;
@@ -184,6 +240,12 @@ Deno.serve(async () => {
         for (const admin of admins || []) {
           await sendPushNotification(admin.id, companyId, title, body, path);
         }
+        await sendPushToUserIds(
+          (admins || []).map((a) => a.id),
+          title,
+          body,
+          path,
+        );
 
         if (eq.client_id) {
           const { data: client } = await supabase
@@ -244,6 +306,12 @@ Deno.serve(async () => {
         for (const admin of admins || []) {
           await sendPushNotification(admin.id, companyId, title, body, path);
         }
+        await sendPushToUserIds(
+          (admins || []).map((a) => a.id),
+          title,
+          body,
+          path,
+        );
 
         if (order.client_id) {
           const { data: client } = await supabase
