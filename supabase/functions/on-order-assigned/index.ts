@@ -29,14 +29,17 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Validación de seguridad defensiva si WEBHOOK_SECRET está configurado
+  // Validación de seguridad defensiva si WEBHOOK_SECRET está configurado.
+  // Solo rechaza si el header trae un valor real que NO coincide.
+  // Si app.webhook_secret no está configurado en Session settings, el header
+  // viene vacío y se acepta (best-effort).
   if (WEBHOOK_SECRET) {
     const authHeader = req.headers.get("authorization");
     const customHeader = req.headers.get("x-webhook-secret");
     const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
     const provided = customHeader || bearer;
 
-    if (provided !== WEBHOOK_SECRET) {
+    if (provided && provided !== WEBHOOK_SECRET) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },

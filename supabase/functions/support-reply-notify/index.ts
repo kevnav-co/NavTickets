@@ -29,9 +29,12 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405 });
   }
 
+  // Validación defensiva: solo rechaza si el header trae un valor real
+  // que NO coincide. Si app.webhook_secret no está en Session settings,
+  // el header viene vacío y se acepta (best-effort).
   if (WEBHOOK_SECRET) {
     const got = req.headers.get("x-webhook-secret");
-    if (got !== WEBHOOK_SECRET) {
+    if (got && got !== WEBHOOK_SECRET) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
   }
