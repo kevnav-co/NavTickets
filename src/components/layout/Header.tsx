@@ -44,10 +44,15 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   }, [currentUser, loadNotifications]);
 
   // OneSignal push notifications
-  const { permission, isSupported, isLoading, enableNotifications } = useOneSignal(
+  const { permission, isSupported, isLoading, initError, actionError, enableNotifications } = useOneSignal(
     currentUser,
     async (userId, token) => updateItem('users', userId, { onesignalPlayerId: token })
   );
+
+  // Aviso de diagnóstico visible cuando OneSignal no inicia o el permiso falla
+  // (antes toda falla se perdía en console y el botón parecía no hacer nada).
+  const [dismissNotifError, setDismissNotifError] = useState(false);
+  const notifError = dismissNotifError ? null : (actionError || initError);
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -242,6 +247,20 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
          )}
       </div>
       </div>
+      {notifError && (
+        <div className="flex items-start gap-3 px-4 py-2 bg-orange-50 border-t border-orange-200 text-orange-800 text-xs">
+          <div className="flex-1">
+            <p className="font-bold uppercase tracking-wide text-[10px] mb-0.5">Notificaciones push</p>
+            <p>{notifError}</p>
+          </div>
+          <button
+            onClick={() => setDismissNotifError(true)}
+            className="shrink-0 text-orange-500 hover:text-orange-700 font-bold"
+          >
+            Cerrar
+          </button>
+        </div>
+      )}
       <NotificationsModal
         isOpen={isNotificationsOpen}
         onClose={() => setIsNotificationsOpen(false)}

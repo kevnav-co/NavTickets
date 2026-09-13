@@ -21,6 +21,7 @@ export const UserSchema = z.object({
   longitude: z.number().min(-180).max(180).optional(),
   locationUpdatedAt: z.string().optional(),
   fcmToken: z.string().optional(),
+  onesignalPlayerId: z.string().optional(),
   signature: z.string().optional(),
 });
 

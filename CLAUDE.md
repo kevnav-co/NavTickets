@@ -37,7 +37,7 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 | `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`) |
 | `dailyExpirationCheck` | Supabase Edge | Diaria `0 8 * * *` | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
 | `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Push OneSignal a super_admin de consulta nueva (`supabase/functions/support-notify/`) |
-| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Vercel edge | En INSERT/UPDATE de orders/tasks (migración 003) | Notificación interna de asignación (`api/edge/on-*.ts`) |
+| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Supabase Edge | En INSERT/UPDATE de orders/tasks (migración 029) | Notificación interna + OneSignal push (`supabase/functions/on-order-assigned/`, `supabase/functions/on-task-assigned/`) |
 | `cuentiProxy` | Vercel edge | GET | Proxy de clientes Cuenti ERP (`api/edge/cuenti-proxy.ts`) |
 | `sendTestNotification` | Vercel edge | POST (admin/dev) | Push OneSignal de prueba (`api/edge/send-test-notification.ts`) |
 | `updateUserPassword` | Vercel edge | POST | Reset/self-service de clave vía Supabase Auth (`api/edge/update-user-password.ts`) |
@@ -122,17 +122,24 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 ```env
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_EMAIL_DOMAIN=navas.com        # Dominio de login (username@dominio). Fallback "navas.com"
-VITE_ONESIGNAL_APP_ID=            # App ID de push (frontend). Sin esta, oneSignal.ts no suscribe
-VITE_GOOGLE_MAPS_API_KEY=        # For Maps JavaScript API (currently unused — using Leaflet)
+SUPABASE_URL=                          # Backend (edges/functions)
+EMAIL_DOMAIN=navas.com                 # Dominio de login (username@dominio). Fallback "navas.com"
+VITE_EMAIL_DOMAIN=navas.com            # Mismo dominio, expose al cliente
+APP_URL=https://navtickets.vercel.app  # URL pública para deep-links de push
+WEBHOOK_SECRET=                        # Mismo valor en .env y Supabase settings → app.webhook_secret
+VITE_ONESIGNAL_APP_ID=                 # App ID de push (frontend). Sin esta, oneSignal.ts no suscribe
+VITE_GOOGLE_MAPS_API_KEY=              # For Maps JavaScript API (currently unused — using Leaflet)
 ```
 
 Push **OneSignal**: `VITE_ONESIGNAL_APP_ID` (cliente) se hornea al buildar (Vercel).
 Los secrets `ONESIGNAL_APP_ID` / `ONESIGNAL_API_KEY` (REST API key `os_v2_app_…`,
 server-side, para los edges) están seteados a nivel de **proyecto Supabase**
-(`npx supabase secrets set …`) — los lee `support-notify`. Para el botón de push de
-prueba del panel admin, `send-test-notification` (edge Vercel) también los usa, pero
-desde las env vars de **Vercel**, no de Supabase.
+(`npx supabase secrets set …`) — los leen `support-notify`, `on-order-assigned`,
+`on-task-assigned`, `support-reply-notify`, `support-chat-notify`. `WEBHOOK_SECRET`
+también es secreto de Supabase (Session settings) y se usa como `app.webhook_secret`
+en las migrations 024/027/028/029 para autenticar los webhooks de pg_net.
+`SUPABASE_SERVICE_ROLE_KEY` se configura como secreto de Supabase
+(`npx supabase secrets set`) — NO en .env.
 
 Edge Functions (Supabase) leen `EMAIL_DOMAIN` (fallback "navas.com"). `users.password`
 (texto plano) fue eliminada en la migración 010 — la autenticación vive 100% en Supabase

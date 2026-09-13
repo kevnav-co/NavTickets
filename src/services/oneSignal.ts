@@ -4,17 +4,21 @@ const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
 
 /**
  * Initialize OneSignal SDK
- * Call this once at app startup
+ * Call this once at app startup.
+ * Resuelve { ok, error } para que la UI pueda mostrar el motivo si falla
+ * (antes el error solo se logueaba y el botón de activar quedaba sin feedback.
+ * La causa típica: el script del SDK (cdn.onesignal.com) no carga —red,
+ * adblock o CSP— y las llamadas encoladas en window.OneSignalDeferred nunca
+ * corren, así que requestPermission queda colgado sin aviso).
  */
-export const initOneSignal = async (): Promise<void> => {
+export const initOneSignal = async (): Promise<{ ok: boolean; error?: string }> => {
   if (!ONESIGNAL_APP_ID) {
     console.warn('[OneSignal] VITE_ONESIGNAL_APP_ID not configured');
-    return;
+    return { ok: false, error: 'VITE_ONESIGNAL_APP_ID no configurado' };
   }
 
   try {
-    // Initialize OneSignal
-    await OneSignal.init({
+    const init = OneSignal.init({
       appId: ONESIGNAL_APP_ID,
       autoRegister: true,
       notificationClickHandlerAction: 'focus',
@@ -24,6 +28,22 @@ export const initOneSignal = async (): Promise<void> => {
       // Add service worker path for PWA
       serviceWorkerPath: '/sw.js',
     });
+
+    // Si el script del SDK no llega a cargarse, OneSignal.init (encolado en
+    // window.OneSignalDeferred) nunca resuelve y el botón se queda mudo. En vez
+    // de esperar para siempre, fallamos tras un límite con un mensaje claro.
+    await Promise.race([
+      init,
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error('El SDK de OneSignal no cargó (¿CDN bloqueado por red/adblock/CSP?)'),
+            ),
+          8000,
+        ),
+      ),
+    ]);
 
     // Enable logging in development
     if (import.meta.env.DEV) {
@@ -44,8 +64,10 @@ export const initOneSignal = async (): Promise<void> => {
     });
 
     console.log('[OneSignal] Initialized successfully');
-  } catch (error) {
+    return { ok: true };
+  } catch (error: any) {
     console.error('[OneSignal] Initialization error:', error);
+    return { ok: false, error: error?.message || String(error) };
   }
 };
 

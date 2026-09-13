@@ -1,0 +1,63 @@
+[project]
+name = "NavTicket"
+root = "."
+
+[dependencies]
+
+[build]
+
+# ─── Supabase Edge Functions (NOT Vercel) ────────────────────────
+# Notificaciones y webhooks que viven aquí:
+#  - support-notify       (trigger 011, verify_jwt=false)
+#  - support-reply-notify (trigger 027, verify_jwt=false)
+#  - support-chat-notify  (trigger 028, verify_jwt=false)
+#  - on-order-assigned    (trigger 029, verify_jwt=false)
+#  - on-task-assigned     (trigger 029, verify_jwt=false)
+[[edge_functions]]
+  id = "on-order-assigned"
+  path = "supabase/functions/on-order-assigned"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+[[edge_functions]]
+  id = "on-task-assigned"
+  path = "supabase/functions/on-task-assigned"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+[[edge_functions]]
+  id = "support-notify"
+  path = "supabase/functions/support-notify"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+[[edge_functions]]
+  id = "support-reply-notify"
+  path = "supabase/functions/support-reply-notify"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+[[edge_functions]]
+  id = "support-chat-notify"
+  path = "supabase/functions/support-chat-notify"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+# ─── Funciones que permanecen en Vercel (webhooks de trigger, proxies) ───
+# Estos endpoint Vercel son llamados por triggers de pg_net hacia
+# Vercel, NO despliegue local de Supabase:
+#  - cuenti-proxy                (proxy ERP)
+#  - updateUserPassword          (self-service clave)
+#  - sendTestNotification        (admin panel, prueba push)
+#  - onOrderAssigned             (stub muerto, redirigido a Supabase)
+#  - onTaskAssigned              (stub muerto, redirigido a Supabase)
+
+# ─── Funciones programadas de Supabase (cron, gestionadas en DB) ───
+[edge_runtime]
+  enabled = true
+  policy = "per_worker"
