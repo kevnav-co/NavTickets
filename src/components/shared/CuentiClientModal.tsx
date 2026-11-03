@@ -2,12 +2,12 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Search, UserPlus, Loader2, ServerCrash, Crown, RefreshCw, ListFilter, UploadCloud } from 'lucide-react';
 import { CuentiClient, Client } from '../../types';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import { authAccessToken } from '../../services/supabase';
 
 interface CuentiClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportClient: (client: CuentiClient) => void;
   existingClients: Client[];
 }
 
@@ -22,8 +22,9 @@ interface ApiClientData {
   ciudad: string;
 }
 
-export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, onClose, onImportClient, existingClients }) => {
+export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, onClose, existingClients }) => {
   const { addItem, updateItem } = useData();
+  const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [fetchedClients, setFetchedClients] = useState<(CuentiClient & { isVIP: boolean; existsInDB: boolean; needsUpdate: boolean })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -151,112 +152,71 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
     };
   }, [fetchedClients]);
 
+  // Crea o actualiza en la BD un cliente de Cuenti. Devuelve 'created' | 'updated' | 'unchanged'.
+  const syncClient = useCallback(async (client: CuentiClient): Promise<'created' | 'updated' | 'unchanged'> => {
+    const dbMatch = existingClients.find(c => c.identification === client.identification);
+    if (dbMatch) {
+      const updates: Partial<Client> = {};
+      if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
+      if (client.email && client.email !== dbMatch.email) updates.email = client.email;
+      if (client.address && !dbMatch.address?.includes(client.address)) {
+        updates.address = [client.address, client.city].filter(Boolean).join(', ');
+      }
+      if (Object.keys(updates).length === 0) return 'unchanged';
+      await updateItem('clients', dbMatch.id, updates);
+      return 'updated';
+    }
+    if (!currentUser?.companyId) throw new Error('Sesión sin empresa asociada');
+    await addItem('clients', {
+      companyId: currentUser.companyId,
+      name: client.name,
+      identification: client.identification,
+      contact: client.phone || '',
+      email: client.email || '',
+      address: [client.address, client.city].filter(Boolean).join(', '),
+      city: client.city || '',
+    });
+    return 'created';
+  }, [existingClients, addItem, updateItem, currentUser?.companyId]);
+
   const handleBulkSync = async () => {
     if (filteredClients.length === 0 || isSyncingBulk) return;
-
-    const confirmMsg = `¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos del sistema?`;
-    if (!window.confirm(confirmMsg)) return;
+    if (!window.confirm(`¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos del sistema?`)) return;
 
     setIsSyncingBulk(true);
-    let newCount = 0;
-    let updateCount = 0;
-
-    try {
-      filteredClients.forEach(client => {
-        const dbMatch = existingClients.find(c => c.identification === client.identification);
-
-        if (dbMatch) {
-          // Es una actualización
-          if (client.needsUpdate) {
-            const updates: any = {};
-            if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
-            if (client.email && client.email !== dbMatch.email) updates.email = client.email;
-            // Si hay dirección, comparamos. Si no, mantenemos la vieja.
-            if (client.address) {
-                // Si la dirección de cuenti no está contenida en la vieja, actualizamos
-                if (!dbMatch.address?.includes(client.address)) {
-                    updates.address = [client.address, client.city].filter(Boolean).join(', ');
-                }
-            }
-
-            if (Object.keys(updates).length > 0) {
-              updateItem('clients', dbMatch.id, updates);
-              updateCount++;
-            }
-          }
-        } else {
-          // Es un cliente nuevo
-          addItem('clients', {
-            id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-            name: client.name,
-            identification: client.identification,
-            contact: client.phone || '',
-            email: client.email || '',
-            address: [client.address, client.city].filter(Boolean).join(', ') || '',
-            createdAt: new Date().toISOString()
-          });
-          newCount++;
-        }
-      });
-
-      if (newCount > 0 || updateCount > 0) {
-        // Note: Supabase writes are async, we don't await each one
-        // In a real batch scenario, you'd want to ensure all complete
-        alert(`Sincronización finalizada:\n- ${newCount} nuevos agregados\n- ${updateCount} actualizados`);
-        onClose(); // Cerramos el modal tras sincronizar
-      } else {
-        alert("No se detectaron cambios pendientes para sincronizar.");
+    const counts = { created: 0, updated: 0, unchanged: 0, failed: 0 };
+    const failures: string[] = [];
+    for (const client of filteredClients) {
+      try {
+        counts[await syncClient(client)]++;
+      } catch (err: any) {
+        counts.failed++;
+        failures.push(`${client.name}: ${err.message}`);
       }
-    } catch (err: any) {
-      console.error("Error en sincronización masiva:", err);
-      alert("Error al sincronizar los datos: " + err.message);
-    } finally {
-      setIsSyncingBulk(false);
     }
+    setIsSyncingBulk(false);
+
+    if (counts.failed > 0) console.error('[Cuenti] Fallos de sincronización:', failures);
+    if (counts.created + counts.updated + counts.failed === 0) {
+      alert('No se detectaron cambios pendientes para sincronizar.');
+      return;
+    }
+    alert(`Sincronización finalizada:\n- ${counts.created} nuevos agregados\n- ${counts.updated} actualizados` +
+      (counts.failed ? `\n- ${counts.failed} con error (ej.: ${failures[0]})` : ''));
+    if (counts.failed === 0) onClose();
   };
 
-  const handleSingleSync = useCallback(async (client: any) => {
+  const handleSingleSync = useCallback(async (client: CuentiClient & { needsUpdate: boolean; existsInDB: boolean }) => {
     if (isSyncingBulk) return;
-
-    const isUpdate = client.needsUpdate && client.existsInDB;
-    const actionText = isUpdate ? 'actualizar' : 'importar';
-
+    const actionText = client.needsUpdate && client.existsInDB ? 'actualizar' : 'importar';
     try {
-      const dbMatch = existingClients.find(c => c.identification === client.identification);
-
-      if (isUpdate && dbMatch) {
-          const updates: any = {};
-          if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
-          if (client.email && client.email !== dbMatch.email) updates.email = client.email;
-          if (client.address) {
-              if (!dbMatch.address?.includes(client.address)) {
-                  updates.address = [client.address, client.city].filter(Boolean).join(', ');
-              }
-          }
-
-          if (Object.keys(updates).length > 0) {
-            await updateItem('clients', dbMatch.id, updates);
-          }
-      } else {
-          await addItem('clients', {
-            id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-            name: client.name,
-            identification: client.identification,
-            contact: client.phone || '',
-            email: client.email || '',
-            address: [client.address, client.city].filter(Boolean).join(', ') || '',
-            createdAt: new Date().toISOString()
-          });
-      }
-
-      // Actualizamos el estado local para que desaparezca de la lista si hay filtros.
+      await syncClient(client);
       setFetchedClients(prev => prev.map(c => c.id === client.id ? { ...c, existsInDB: true, needsUpdate: false } : c));
-
     } catch (err: any) {
       console.error(`Error al ${actionText} cliente:`, err);
       alert(`Error al ${actionText}: ` + err.message);
     }
-  }, [existingClients, addItem, updateItem, isSyncingBulk]);
+  }, [syncClient, isSyncingBulk]);
 
   if (!isOpen) return null;
 

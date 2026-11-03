@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { OrderStatus, CuentiClient } from '../../types';
+import React, { useState, useMemo, useRef } from 'react';
+import { OrderStatus } from '../../types';
 import { Search, Building2, UserPlus, Phone, MapPin, LayoutGrid, LayoutList, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
@@ -101,11 +101,6 @@ const ClientManager: React.FC = () => {
     return enrichedClients;
   }, [clients, orders, equipment, searchTerm, filterType]);
 
-  const handleSelectClientToImport = (clientToImport: CuentiClient) => {
-    setIsCuentiModalOpen(false);
-    navigate('/clients/new', { state: { clientToImport } });
-  };
-
   // Virtualized list setup
   const parentRef = useRef<HTMLDivElement>(null);
   const ITEM_HEIGHT = viewMode === 'list' ? 120 : 50; // Smaller estimate for grid items
@@ -122,7 +117,6 @@ const ClientManager: React.FC = () => {
       <CuentiClientModal 
         isOpen={isCuentiModalOpen}
         onClose={() => setIsCuentiModalOpen(false)}
-        onImportClient={handleSelectClientToImport}
         existingClients={clients}
       />
       

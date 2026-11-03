@@ -4,7 +4,7 @@ import { ServiceOrder, OrderStatus, User } from '../types';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useValidatedActions } from './useValidatedActions';
-import { ServiceOrderSchema } from '../schemas/order.schema';
+import { NewServiceOrderSchema, ServiceOrderSchema } from '../schemas/order.schema';
 import { compressImage } from '../utils/index';
 import PERMISSIONS, { ROLES, hasPermission } from '../permissions';
 import { useSupabaseStorage } from './useSupabaseStorage';
@@ -274,7 +274,7 @@ export const useOrderForm = () => {
       const currentOrder = id ? orders.find(o => o.id === id) : null;
       const orderData: Omit<ServiceOrder, 'id' | 'createdAt' | 'updatedAt'> = {
         name: formData.serviceName?.toUpperCase() || '',
-        companyId: currentUser?.companyId || 'default',
+        companyId: currentUser?.companyId ?? '',
         orderNumber: nextOrderNumber,
         equipmentIds: formData.selectedEquipmentIds,
         technicianId: formData.technicianId,
@@ -303,7 +303,7 @@ export const useOrderForm = () => {
         navigate(`/orders/${id}`);
       } else {
         if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.CREATE_ORDER)) throw new Error('Permiso denegado.');
-        const newOrderId = await addValidated('orders', orderData, ServiceOrderSchema.omit({ id: true, companyId: true }));
+        const newOrderId = await addValidated('orders', orderData, NewServiceOrderSchema);
         alert(`Orden ${nextOrderNumber} creada`);
         navigate(`/orders/${newOrderId}`);
       }

@@ -11,6 +11,7 @@ import {
 } from '../../types/intelligence';
 import { mapExcelToProduct } from '../../utils/productUtils';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface IntelligenceEngineProps {
   clients: Client[] | null;
@@ -18,6 +19,7 @@ interface IntelligenceEngineProps {
 
 const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
   const { addItem, updateItem } = useData();
+  const { currentUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // ...
   const [analysisData, setAnalysisData] = useState<{ type: AnalysisType, items: any[] } | null>(null);
@@ -211,6 +213,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                     }
                 } else if (!client.existsInDB) {
                     await addItem('clients', {
+                        companyId: currentUser?.companyId,
                         name: client.nombre,
                         identification: client.identificacion,
                         contact: client.telefono,
@@ -224,10 +227,10 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
         } else {
             for (const prod of itemsToUpload) {
                 await addItem('equipment', {
+                    companyId: currentUser?.companyId,
                     name: prod.descripcion,
                     serialNumber: prod.codigo,
                     description: `Categoría: ${prod.categoria}`,
-                    clientId: '',
                     status: 'Activa',
                     voltage: '110V',
                     location: 'Bodega',
