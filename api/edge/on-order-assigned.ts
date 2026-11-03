@@ -19,20 +19,18 @@ export const config = {
  * }
  */
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
-  }
-
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Método no permitido' }), {
       status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // El trigger (migración 003) envía `Bearer <app.webhook_secret>`; sin secreto configurado se rechaza todo.
+  const webhookSecret = process.env.WEBHOOK_SECRET;
+  if (!webhookSecret || req.headers.get('authorization') !== `Bearer ${webhookSecret}`) {
+    return new Response(JSON.stringify({ error: 'No autorizado' }), {
+      status: 401,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -85,6 +83,7 @@ export default async function handler(req: Request): Promise<Response> {
         user_id: technicianId,
         title: eventType === 'INSERT' ? 'Nueva orden asignada' : 'Orden reasignada',
         body: `Te han asignado la orden: ${orderName}`,
+        text: `Te han asignado la orden: ${orderName}`,
         type: 'info',
         path: `/orders/${orderId}`,
         read: false,

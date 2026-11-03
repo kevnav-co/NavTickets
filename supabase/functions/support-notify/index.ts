@@ -19,7 +19,7 @@ const supabase = serviceRole
 
 const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
 const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET"); // opcional
+const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET");
 const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
 
 Deno.serve(async (req: Request) => {
@@ -27,12 +27,9 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405 });
   }
 
-  // Webhook check defensivo: si WEBHOOK_SECRET está seteado, exigirlo.
-  if (WEBHOOK_SECRET) {
-    const got = req.headers.get("x-webhook-secret");
-    if (got !== WEBHOOK_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
+  // verify_jwt = false: el secreto compartido con el trigger (migración 011) es el único control de acceso.
+  if (!WEBHOOK_SECRET || req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
   try {

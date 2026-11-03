@@ -37,10 +37,10 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 | `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`) |
 | `dailyExpirationCheck` | Supabase Edge | Diaria `0 8 * * *` | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
 | `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Push OneSignal a super_admin de consulta nueva (`supabase/functions/support-notify/`) |
-| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Vercel edge | En INSERT/UPDATE de orders/tasks (migración 003) | Notificación interna de asignación (`api/edge/on-*.ts`) |
-| `cuentiProxy` | Vercel edge | GET | Proxy de clientes Cuenti ERP (`api/edge/cuenti-proxy.ts`) |
-| `sendTestNotification` | Vercel edge | POST (admin/dev) | Push OneSignal de prueba (`api/edge/send-test-notification.ts`) |
-| `updateUserPassword` | Vercel edge | POST | Reset/self-service de clave vía Supabase Auth (`api/edge/update-user-password.ts`) |
+| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Vercel edge | En INSERT/UPDATE de orders/tasks (migración 003) | Notificación interna de asignación (`api/edge/on-*.ts`). Exige `Authorization: Bearer <WEBHOOK_SECRET>` (= `app.webhook_secret`) |
+| `cuentiProxy` | Vercel edge | GET (sesión: admin/supervisor/aux_admin/developer/super_admin) | Proxy de clientes Cuenti ERP (`api/edge/cuenti-proxy.ts`); `CUENTI_COMPANY_ID` restringe a la empresa dueña |
+| `sendTestNotification` | Vercel edge | POST (sesión admin/dev/super_admin, misma empresa) | Push OneSignal de prueba (`api/edge/send-test-notification.ts`) |
+| `updateUserPassword` | Supabase Edge | POST | Reset/self-service de clave vía Supabase Auth (`supabase/functions/update-user-password/`) |
 
 ### Communication Channels (`communicationChannels.js`)
 

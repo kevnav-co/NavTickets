@@ -6,27 +6,39 @@ export const config = {
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
+const IMPORT_ROLES = ['admin', 'developer', 'super_admin', 'supervisor', 'aux_admin'];
+const CUENTI_URL = 'https://app.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/ConsultarClientePaginado/1/0';
+
+const text = (body: string, status: number) => new Response(body, { status });
+
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'GET') {
-    return new Response('Method Not Allowed', { status: 405 });
+  if (req.method !== 'GET') return text('Method Not Allowed', 405);
+
+  const authHeader = req.headers.get('authorization') ?? '';
+  if (!authHeader.startsWith('Bearer ')) return text('Unauthorized', 401);
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.substring(7));
+  if (authError || !user) return text('Invalid token', 401);
+
+  const { data: caller } = await supabase
+    .from('users')
+    .select('role, company_id')
+    .eq('supabase_auth_id', user.id)
+    .single();
+  if (!caller || !IMPORT_ROLES.includes(caller.role)) return text('Forbidden', 403);
+
+  // Las credenciales Cuenti pertenecen a una sola empresa: si CUENTI_COMPANY_ID está definido, solo ella accede.
+  const allowedCompany = process.env.CUENTI_COMPANY_ID;
+  if (allowedCompany && caller.company_id !== allowedCompany && caller.role !== 'super_admin') {
+    return text('Forbidden', 403);
   }
-
-  const url = new URL(req.url);
-  const path = url.pathname;
-
-  // Only handle /api/cuenti/clients or /cuenti/clients paths
-  if (!path.includes('cuenti/clients')) {
-    return new Response('Not Found', { status: 404 });
-  }
-
-  const cuentiURL = 'https://app.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/ConsultarClientePaginado/1/0';
-  console.log(`[Cuenti Proxy] Fetching from: ${cuentiURL}`);
 
   try {
-    const cuentiResponse = await fetch(cuentiURL, {
+    const cuentiResponse = await fetch(CUENTI_URL, {
       method: 'GET',
       headers: {
         'Accept': 'application/json, text/plain, */*',
@@ -38,44 +50,26 @@ export default async function handler(req: Request): Promise<Response> {
     });
 
     const responseBodyText = await cuentiResponse.text();
-    console.log(`[Cuenti Proxy] Status: ${cuentiResponse.status}`);
-
     if (!cuentiResponse.ok) {
-      console.error('[Cuenti Proxy] Error from Cuenti API:', responseBodyText);
-      return new Response(`Error from Cuenti API: ${responseBodyText}`, { status: cuentiResponse.status });
+      console.error('[Cuenti Proxy] Error from Cuenti API:', cuentiResponse.status, responseBodyText);
+      return text('Error al consultar la API de Cuenti.', 502);
     }
 
-    let dataFromCuenti;
     try {
-      dataFromCuenti = JSON.parse(responseBodyText);
-    } catch (parseError) {
-      console.error('[Cuenti Proxy] Invalid JSON from Cuenti:', parseError);
-      return new Response('La respuesta de Cuenti no pudo ser procesada como JSON.', { status: 500 });
+      JSON.parse(responseBodyText);
+    } catch {
+      return text('La respuesta de Cuenti no pudo ser procesada como JSON.', 502);
     }
 
-    // Log successful request to Supabase for audit
-    try {
-      await supabase.from('api_logs').insert({
-        endpoint: 'cuenti/clients',
-        status_code: 200,
-        response_size: responseBodyText.length,
-        created_at: new Date().toISOString(),
-      });
-    } catch (logError) {
-      console.warn('[Cuenti Proxy] Failed to log to Supabase:', logError);
-    }
-
-    console.log('[Cuenti Proxy] Success - returning data');
-    return new Response(JSON.stringify(dataFromCuenti), {
+    return new Response(responseBodyText, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Cache-Control': 'no-store',
       },
     });
-
   } catch (error) {
     console.error('[Cuenti Proxy] Fatal error:', error);
-    return new Response('Error interno del servidor al procesar la solicitud para Cuenti.', { status: 500 });
+    return text('Error interno del servidor al procesar la solicitud para Cuenti.', 500);
   }
 }

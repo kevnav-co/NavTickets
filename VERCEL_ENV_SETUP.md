@@ -20,24 +20,27 @@
 | Variable | Description | Generation |
 |----------|-------------|------------|
 | `CRON_SECRET` | Secret for cron job authorization | `openssl rand -hex 32` |
-| `WEBHOOK_SECRET` | Shared secret for Supabase pg_net webhooks | **Same as CRON_SECRET** |
+| `WEBHOOK_SECRET` | Shared secret for Supabase pg_net webhooks (**obligatorio**: sin él `on-order-assigned`/`on-task-assigned` responden 401) | **Same as CRON_SECRET** |
 
 ### Application URLs
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VERCEL_API_BASE` | Production Vercel URL | `https://navticket.vercel.app` |
+| `APP_URL` | URL pública de la app (link del push de prueba) | `https://navtickets.vercel.app` |
 
 ### OneSignal Configuration
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `ONESIGNAL_API_KEY` | OneSignal REST API Key (Settings → Keys & IDs) | `YWNiYz...` |
+| `ONESIGNAL_APP_ID` | OneSignal App ID (server-side, push de prueba) | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `ONESIGNAL_API_KEY` | OneSignal REST API Key (Settings → Keys & IDs) | `os_v2_app_...` |
 
 ### Cuenti ERP Proxy (Optional - for client import feature)
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `CUENTI_API_TOKEN` | Cuenti API Token | `dEmafMDjPaYNJEY0eLlMi2OAz...` |
-| `CUENTI_EMPRESA_ID` | Cuenti Empresa ID | `14507` |
-| `CUENTI_USER_ID` | Cuenti User ID | `22736` |
+| `CUENTI_API_TOKEN` | Cuenti API Token | `<token de Cuenti>` |
+| `CUENTI_EMPRESA_ID` | Cuenti Empresa ID | `<id empresa>` |
+| `CUENTI_USER_ID` | Cuenti User ID | `<id usuario>` |
+| `CUENTI_COMPANY_ID` | UUID de la empresa NavTickets dueña de las credenciales Cuenti (solo ella y super_admin pueden importar) | `<uuid de companies.id>` |
 
 > Las variables `VITE_FIREBASE_*` / `VITE_VAPID_KEY` quedaron **retiradas**: el push ya no usa Firebase Messaging (ver `directivas/directiva_notificaciones_fcm.md`). El push se sirve con **OneSignal** (`VITE_ONESIGNAL_APP_ID` en frontend + `ONESIGNAL_API_KEY`/`ONESIGNAL_APP_ID` como secrets del proyecto Supabase).
 
@@ -63,10 +66,13 @@ vercel env add VITE_ONESIGNAL_APP_ID production
 vercel env add CRON_SECRET production
 vercel env add WEBHOOK_SECRET production
 vercel env add VERCEL_API_BASE production
+vercel env add ONESIGNAL_APP_ID production
 vercel env add ONESIGNAL_API_KEY production
+vercel env add APP_URL production
 vercel env add CUENTI_API_TOKEN production
 vercel env add CUENTI_EMPRESA_ID production
 vercel env add CUENTI_USER_ID production
+vercel env add CUENTI_COMPANY_ID production
 
 # NOTA: NO agregues variables VITE_FIREBASE_* ni VITE_VAPID_KEY.
 # Firebase Messaging quedó retirado; el push es OneSignal (solo VITE_ONESIGNAL_APP_ID + ONESIGNAL_API_KEY).
@@ -123,13 +129,12 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 After setting variables and deploying:
 
 ```bash
-# Test Supabase connection
-curl https://your-app.vercel.app/api/edge/cuenti-proxy
+# Los endpoints exigen autenticación: sin token deben responder 401
+curl -i https://your-app.vercel.app/api/edge/cuenti-proxy
+curl -i -X POST https://your-app.vercel.app/api/edge/on-order-assigned
 
-# Test cron jobs (in Vercel Dashboard → Cron Jobs)
-# Click "Run Now" for:
-# - /api/edge/task-scheduler
-# - /api/edge/daily-expiration-check
+# Los schedules (task-scheduler, daily-expiration-check) viven en Supabase,
+# no en Vercel: verificar en Supabase Dashboard → Integrations → Cron
 
 # Test OneSignal
 # Login to app → Enable notifications in header → Check device for push
