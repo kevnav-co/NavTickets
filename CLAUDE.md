@@ -55,7 +55,7 @@ Multi-tenant: every business table is scoped by `company_id`; RLS (helpers `publ
 - `users` — Technicians, supervisors, admins, developers, super_admin. Login via Supabase Auth (linked by `supabase_auth_id`); `role`, `company_id`, `onesignal_player_id`.
 - `clients` — Industrial clients with GPS coordinates for mapping
 - `equipment` — Machines per client, with maintenance frequency and status tracking
-- `orders` — Service orders with workflow: Pendiente → En Progreso → Cerrado (with warranty tracking)
+- `orders` — Service orders with workflow: Pendiente → En Progreso → Cerrado (with warranty tracking). Equipos en `equipment_ids` JSONB (migración 018; la tabla `equipment_orders` es legado sin uso)
 - `tasks` — Personal tasks with reminders, assignment, file attachments
 - `inventory_items` — Spare-parts catalog per company (stock + low-stock threshold). Technician is read-only; admin/developer/super_admin edit stock (migration 014)
 - `order_inventory_lines` — M:N order↔part with `quantity_out` and `unit_cost_snapshot` (migration 014; tenant via parent FK)
@@ -167,4 +167,8 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 - **Todos los schedules viven en Supabase Edge Functions** (task-scheduler cada 5 min, daily-expiration-check a las 08:00). Vercel `api/*` no tiene crons ni stubs; solo endpoints vivos (webhooks de triggers y proxies).
 - **Fase 6 — Inventario y Reportes:** módulo de inventario (`src/components/inventory/*`: Manager/Form/Detail + `InventorySelectorModal`) y sección "Repuestos" en `OrderWorkflow` (replace-set sobre `order_inventory_lines`); rutas `/inventory*` gated por `VIEW_INVENTORY` (técnico lee, no edita stock). Reportes (`src/components/reports/Reports.tsx`) con export CSV (`csv.ts`) y PDF (`reportPdf.ts`); ruta `/reports` gated por `VIEW_REPORTS`. Tabs `inventory`/`reports` en `DEFAULT_BUILT_IN_TABS` (`src/types/company.ts`).
 - **Contabilidad (migración 017):** `src/components/Account/*` + lógica pura en `src/utils/accounting.ts` (saldos vía `signedAmount`, espejo de las reglas SQL) y RPC en `src/services/accounting.ts`. Visible solo con `companies.features.accounting = true`; ruta `/accounting` gated por `isTabVisible`. Las RPC requieren conexión (no entran a la cola offline).
+- **Arrays/objetos → JSONB tal cual:** `toSnakeCase` ya no hace `JSON.stringify` (antes las columnas JSONB guardaban strings; la migración 018 los normalizó). `snakeToCamel` sigue parseando strings JSON por compatibilidad.
+- **Altas con Zod:** usar schemas que conserven `companyId` (p. ej. `NewServiceOrderSchema`); `.omit({ companyId: true })` lo descarta y RLS rechaza el insert.
+- **Cola offline única:** la de la app (`useSyncManager`). El service worker no encola mutaciones.
+- **CI (`.github/workflows/ci.yml`):** `tsc --noEmit` (debe quedar en 0), `npm test`, build y migraciones + `supabase/tests/accounting_rls.sql` en Postgres 16.
 - **Ramificación (2026-08):** el roadmap (Fases 1–6) está **integrado y mergeado en `main`**; las ramas `feat/fase*` locales fueron borradas. `main` en sintonía con `origin/main`. El deploy de producción va por `npm run deploy`.
