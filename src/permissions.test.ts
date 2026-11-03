@@ -17,10 +17,11 @@ describe('isTabVisible (Fase 5 — pestañas por rol y feature)', () => {
     expect(isTabVisible('map', 'admin', { maps: true }).visible).toBe(true);
   });
 
-  it('accounting exige feature Y permiso view_reports (que technician no tiene)', () => {
-    expect(isTabVisible('accounting', 'admin', { accounting: true }).visible).toBe(true);
-    expect(isTabVisible('accounting', 'admin', { accounting: false }).visible).toBe(false);
-    expect(isTabVisible('accounting', 'technician', { accounting: true }).visible).toBe(false);
+  it('accounting (caja menor) es para todos los roles operativos, pero solo con la feature activa', () => {
+    for (const role of ['technician', 'supervisor', 'aux_admin', 'admin', 'developer'] as const) {
+      expect(isTabVisible('accounting', role, { accounting: true }).visible).toBe(true);
+      expect(isTabVisible('accounting', role, { accounting: false }).visible).toBe(false);
+    }
   });
 
   it('oculta /users por permiso (solo admin/developer lo ven)', () => {

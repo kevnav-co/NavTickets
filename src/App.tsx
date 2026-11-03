@@ -23,7 +23,7 @@ import { useModal } from './context/ModalContext';
 import { CompanyProvider, useCompany } from './context/CompanyContext';
 import { applyCompanyTheme } from './utils/theme';
 import CustomPageRenderer from './components/custom/CustomPageRenderer';
-import PERMISSIONS, { hasPermission } from './permissions';
+import PERMISSIONS, { hasPermission, isTabVisible } from './permissions';
 
 // --- LAZY LOADED COMPONENTS ---
 const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
@@ -238,7 +238,7 @@ function AppContent({
                       : <RouteWithLayout title="Inicio"><Dashboard /></RouteWithLayout>
                   } />
                   <Route path="/tasks" element={<RouteWithLayout title="Tareas"><Tasks /></RouteWithLayout>} />
-                  {currentUser && currentUser.role === 'developer' && (
+                  {currentUser && isTabVisible('accounting', currentUser.role, company?.features).visible && (
                       <Route path="/accounting" element={<RouteWithLayout title="Contable"><Accounting /></RouteWithLayout>} />
                   )}
                   {/* /admin: super_admin → panel multi-tenant; admin/developer →
