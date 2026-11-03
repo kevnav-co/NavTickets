@@ -11,11 +11,14 @@
 // the client off the incoming `Authorization` header to retain full schema privileges.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 Deno.serve(async (req: Request) => {
+  if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
+
   // Usa la service role key (env secret) para privilegios completos.
   // Fallback: si no está seteada como secret, usa el JWT que el scheduler
   // pasa en el header Authorization (patrón heredado).
