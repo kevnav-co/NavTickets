@@ -12,6 +12,7 @@ import * as adminService from '../../services/adminService';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../ui/Toast';
 import InfoTip from '../ui/InfoTip';
+import { safeUrl } from '../../utils/html';
 
 interface CompanyFormProps {
   companyId: string | null;
@@ -105,7 +106,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null); // Errors de carga (banner superior)
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string; admin?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string; admin?: string; tabs?: string }>({});
   const [saveErrorToast, setSaveErrorToast] = useState<string | null>(null); // Feedback elegante al guardar
   const [uploading, setUploading] = useState<'logo' | 'icon' | 'logoWhite' | 'favicon' | null>(null);
 
@@ -225,6 +226,10 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     if (!isEditMode && (!adminUsername.trim() || adminPassword.length < 6)) {
       newErrors.admin = 'Crea el administrador inicial: usuario y contraseña (mínimo 6 caracteres).';
     }
+
+    // Misma regla que el trigger validate_company_tab_urls (migración 019).
+    const badTab = tabs.find(t => (t.type === 'iframe' || t.type === 'external') && !safeUrl(t.content || '', ['https:']));
+    if (badTab) newErrors.tabs = `La pestaña "${badTab.label || badTab.id}" debe usar una URL https:// válida.`;
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
