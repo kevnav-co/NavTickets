@@ -36,6 +36,7 @@ firebase-debug.log
 .env.*
 .vercel
 
-# Tooling local (Claude Code / spec-kit)
-.claude/
+# Tooling local (Claude Code / spec-kit). Se versionan solo los skills del proyecto.
+.claude/*
+!.claude/skills/
 .specify/extensions/*/local-config.yml

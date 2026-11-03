@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Estilo de respuesta
+
+Este proyecto usa el skill `caveman` (`.claude/skills/caveman/`, upstream JuliusBrussee/caveman `v4.0.1`, Apache-2.0) **activo por defecto en cada sesión**: responder siempre siguiendo `.claude/skills/caveman/SKILL.md`. Se apaga con "stop caveman" o "normal mode"; `/caveman ultra` y `/caveman wenyan` usan `ultracave` y `megacave`. Código, comentarios, commits, PRs, documentación y manuales se escriben siempre en prosa completa.
+
 ## Commands
 
 - `npm run dev` — Start Vite dev server on port 8080 (host: true)
