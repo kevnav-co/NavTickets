@@ -17,6 +17,8 @@ interface IntelligenceEngineProps {
   clients: Client[] | null;
 }
 
+const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
+
 const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
   const { addItem, updateItem } = useData();
   const { currentUser } = useAuth();
@@ -38,6 +40,12 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
     }
     const file = e.target.files?.[0];
     if (!file) return;
+    // xlsx 0.18 tiene CVEs al parsear archivos manipulados (ReDoS/prototype pollution): limitar tamaño.
+    if (file.size > MAX_IMPORT_BYTES) {
+      alert('El archivo supera el límite de 5 MB para importación.');
+      if (e.target) e.target.value = '';
+      return;
+    }
     setProcessingStatus('reading');
     const reader = new FileReader();
     reader.onload = async (evt) => {

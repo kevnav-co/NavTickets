@@ -34,8 +34,8 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 
 | Función | Plataforma | Cadencia / Trigger | Propósito |
 |---------|-----------|--------------------|-----------|
-| `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`) |
-| `dailyExpirationCheck` | Supabase Edge | Diaria `0 8 * * *` | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
+| `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`). Solo acepta `Bearer <service_role>` o `x-cron-secret: <CRON_SECRET>` (`_shared/cron-auth.ts`) |
+| `dailyExpirationCheck` | Supabase Edge | Diaria `0 8 * * *` (mismo guard de cron) | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
 | `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Push OneSignal a super_admin de consulta nueva (`supabase/functions/support-notify/`) |
 | `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Vercel edge | En INSERT/UPDATE de orders/tasks (migración 003) | Notificación interna de asignación (`api/edge/on-*.ts`). Exige `Authorization: Bearer <WEBHOOK_SECRET>` (= `app.webhook_secret`) |
 | `cuentiProxy` | Vercel edge | GET (sesión: admin/supervisor/aux_admin/developer/super_admin) | Proxy de clientes Cuenti ERP (`api/edge/cuenti-proxy.ts`); `CUENTI_COMPANY_ID` restringe a la empresa dueña |
@@ -171,4 +171,8 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 - **Altas con Zod:** usar schemas que conserven `companyId` (p. ej. `NewServiceOrderSchema`); `.omit({ companyId: true })` lo descarta y RLS rechaza el insert.
 - **Cola offline única:** la de la app (`useSyncManager`). El service worker no encola mutaciones.
 - **CI (`.github/workflows/ci.yml`):** `tsc --noEmit` (debe quedar en 0), `npm test`, build y migraciones + `supabase/tests/accounting_rls.sql` en Postgres 16.
+- **Seguridad (migración 019):** trigger `guard_user_privileged_columns` — nadie cambia su propio `role`; `company_id`/`supabase_auth_id` solo super_admin; `must_reset_password` solo backend; asignar developer/super_admin solo super_admin. Pestañas iframe/external solo `https://` (trigger `validate_company_tab_urls` + `safeUrl` en el cliente). Test: `supabase/tests/users_rls.sql`.
+- **HTML no confiable:** nunca interpolar datos en `innerHTML`; usar `el()`/`escapeHtml()`/`safeUrl()` de `src/utils/html.ts` y `renderSimpleMarkdown` (`src/utils/markdown.ts`).
+- **Cabeceras (vercel.json):** HSTS, Referrer-Policy, Permissions-Policy y CSP en **Report-Only** (pasar a `Content-Security-Policy` tras validar en staging).
+- **Dependencias:** `xlsx@0.18.5` tiene CVEs sin arreglo en npm (SheetJS publica en cdn.sheetjs.com); import Excel limitado a 5 MB. CI audita con `--audit-level=critical` hasta reemplazarlo.
 - **Ramificación (2026-08):** el roadmap (Fases 1–6) está **integrado y mergeado en `main`**; las ramas `feat/fase*` locales fueron borradas. `main` en sintonía con `origin/main`. El deploy de producción va por `npm run deploy`.

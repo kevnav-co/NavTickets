@@ -23,6 +23,10 @@ jobs:
 
       - run: npm ci
 
+      # Subir a --audit-level=high cuando se reemplace xlsx@0.18 (SheetJS solo publica en cdn.sheetjs.com).
+      - name: Auditoría de dependencias de producción
+        run: npm audit --omit=dev --audit-level=critical
+
       - name: Type-check
         run: npx tsc --noEmit -p .
 
@@ -65,5 +69,9 @@ jobs:
             psql -v ON_ERROR_STOP=1 -q -f "$f"
           done
 
-      - name: Test de RLS y RPC de Contabilidad
-        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/accounting_rls.sql
+      - name: Tests SQL de RLS y seguridad
+        run: |
+          for f in supabase/tests/*_rls.sql; do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -f "$f"
+          done
