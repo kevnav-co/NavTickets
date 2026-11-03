@@ -65,15 +65,21 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const handleCreate = async () => {
     if (!subject.trim() || !message.trim()) return;
     setBusy(true);
-    const { data, error } = await addItem('support_tickets', {
-      companyId: currentUser.companyId,
-      userId: currentUser.id,
-      subject: subject.trim(),
-      message: message.trim(),
-    });
-    setBusy(false);
-    if (error) { alert('No se pudo enviar la consulta: ' + error); return; }
-    setSelectedId(data?.id ?? null);
+    let ticketId: string;
+    try {
+      ticketId = await addItem('support_tickets', {
+        companyId: currentUser.companyId,
+        userId: currentUser.id,
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+    } catch (error: any) {
+      alert('No se pudo enviar la consulta: ' + error.message);
+      return;
+    } finally {
+      setBusy(false);
+    }
+    setSelectedId(ticketId);
     setSubject(''); setMessage('');
     setView('detail');
     // El aviso al super_admin (push + contador) lo dispara un trigger de la BD
@@ -83,14 +89,19 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const handleReply = async () => {
     if (!selectedId || !reply.trim()) return;
     setBusy(true);
-    const { error } = await addItem('support_messages', {
-      ticketId: selectedId,
-      userId: currentUser.id,
-      role: 'empresa',
-      message: reply.trim(),
-    });
-    setBusy(false);
-    if (error) { alert('No se pudo enviar el mensaje: ' + error); return; }
+    try {
+      await addItem('support_messages', {
+        ticketId: selectedId,
+        userId: currentUser.id,
+        role: 'empresa',
+        message: reply.trim(),
+      });
+    } catch (error: any) {
+      alert('No se pudo enviar el mensaje: ' + error.message);
+      return;
+    } finally {
+      setBusy(false);
+    }
     setReply('');
   };
 
@@ -124,7 +135,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
               {ticketsLoading && (
                 <div className="flex items-center justify-center gap-2 text-gray-400 py-8"><Loader2 className="animate-spin" size={22} /><span>Cargando soportes...</span></div>
               )}
-              {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError.message}</p>}
+              {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError}</p>}
               {!ticketsLoading && !ticketsError && (tickets || []).length === 0 && (
                 <p className="text-center text-sm text-gray-400 py-10">No tienes consultas de soporte aún. Crea una "Nueva consulta".</p>
               )}

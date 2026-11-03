@@ -67,14 +67,19 @@ const SupportAdmin: React.FC = () => {
   const handleReply = async () => {
     if (!selectedId || !reply.trim() || !currentUser) return;
     setBusy(true);
-    const { error: err } = await addItem('support_messages', {
-      ticketId: selectedId,
-      userId: currentUser.id,
-      role: 'admin',
-      message: reply.trim(),
-    });
-    setBusy(false);
-    if (err) { alert('No se pudo enviar la respuesta: ' + err); return; }
+    try {
+      await addItem('support_messages', {
+        ticketId: selectedId,
+        userId: currentUser.id,
+        role: 'admin',
+        message: reply.trim(),
+      });
+    } catch (err: any) {
+      alert('No se pudo enviar la respuesta: ' + err.message);
+      return;
+    } finally {
+      setBusy(false);
+    }
     setReply('');
   };
 
@@ -87,7 +92,7 @@ const SupportAdmin: React.FC = () => {
     return <div className="w-full h-96 flex items-center justify-center gap-3 text-gray-400"><Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando soportes...</span></div>;
   }
   if (error) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error}</div>;
   }
 
   return (

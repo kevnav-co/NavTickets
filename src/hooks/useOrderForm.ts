@@ -187,7 +187,7 @@ export const useOrderForm = () => {
     setLoadingMessage(`Comprimiendo ${files.length} imagen(es)...`);
     const compressedBlobs: Blob[] = [];
     try {
-      const blobs = await Promise.all(files.map(compressImage));
+      const blobs = await Promise.all(files.map(file => compressImage(file)));
       compressedBlobs.push(...blobs);
       setInitialEvidence(prev => [...prev, ...blobs]);
     } catch (err) {

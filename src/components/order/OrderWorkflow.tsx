@@ -40,7 +40,7 @@ const OrderWorkflow: React.FC = () => {
   const [showUserSearch, setShowUserSearch] = useState(false);
 
   // Repuestos usados en esta orden (tabla M:N order_inventory_lines).
-  const { data: orderLines } = useCollection<OrderInventoryLine>('order_inventory_lines', {
+  const { data: orderLines } = useCollection<OrderInventoryLine & { id: string }>('order_inventory_lines', {
     filters: id ? [{ column: 'order_id', operator: 'eq', value: id }] : [],
   });
 
@@ -187,7 +187,7 @@ const OrderWorkflow: React.FC = () => {
   }, [order, navigate, location.pathname]);
 
   // Guarda las líneas de repuestos de la orden (reemplazo del set completo).
-  const handleInventoryLinesSave = useCallback(async (lines: OrderInventoryLine[]) => {
+  const handleInventoryLinesSave = useCallback(async (lines: Omit<OrderInventoryLine, 'orderId'>[]) => {
     if (!order) return;
     try {
       const current = orderLines || [];
@@ -260,7 +260,7 @@ const OrderWorkflow: React.FC = () => {
 
   const anyError = orderError || dataError;
   if (anyError) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError instanceof Error ? anyError.message : anyError}</div>;
   }
 
   if (!order) {
