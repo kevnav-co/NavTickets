@@ -76,11 +76,8 @@ async function evictIfNeeded(collection: string): Promise<void> {
   if (count > CACHE_CONFIG.maxEntries / 5) { // Max ~2000 per collection
     // Remove oldest 20%
     const toRemove = Math.floor(count * 0.2);
-    const oldest = await collectionCache
-      .orderBy('updatedAt')
-      .limit(toRemove)
-      .primaryKeys();
-    await db.cache.bulkDelete(oldest);
+    const byAge = await collectionCache.sortBy('updatedAt');
+    await db.cache.bulkDelete(byAge.slice(0, toRemove).map(d => d.id));
     console.log(`[OfflineCache] Evicted ${toRemove} old entries from ${collection}`);
     return;
   }
@@ -347,29 +344,6 @@ export const offlineCache = {
   },
 
   /**
-   * Encola múltiples operaciones en batch.
-   */
-  async enqueueWrites(
-    writes: Array<{
-      collection: string;
-      action: 'create' | 'update' | 'delete';
-      docId: string;
-      data: any;
-      priority?: number;
-    }>
-  ): Promise<number[]> {
-    if (writes.length === 0) return [];
-    const db = getDb();
-    const entries = writes.map(w => ({
-      ...w,
-      createdAt: Date.now(),
-      retries: 0,
-      priority: w.priority ?? 0,
-    }));
-    return await db.pendingWrites.bulkAdd(entries);
-  },
-
-  /**
    * Obtiene todas las operaciones pendientes de sincronización, ordenadas por prioridad y fecha.
    */
   async getPendingWrites(): Promise<PendingWrite[]> {
@@ -378,23 +352,6 @@ export const offlineCache = {
       return await db.pendingWrites
         .orderBy('priority')
         .reverse() // Mayor prioridad primero
-        .toArray();
-    } catch {
-      return [];
-    }
-  },
-
-  /**
-   * Obtiene operaciones pendientes por colección.
-   */
-  async getPendingWritesByCollection(collection: string): Promise<PendingWrite[]> {
-    try {
-      const db = getDb();
-      return await db.pendingWrites
-        .where('collection')
-        .equals(collection)
-        .orderBy('priority')
-        .reverse()
         .toArray();
     } catch {
       return [];

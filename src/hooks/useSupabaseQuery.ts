@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
@@ -7,7 +7,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export type QueryFilter = {
   column: string;
-  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'is';
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'is' | 'contains';
   value: any;
 };
 
@@ -17,8 +17,8 @@ export type OrderBy = {
 };
 
 interface UseSupabaseQueryOptions {
-  /** Nombre de la tabla en Supabase */
-  table: string;
+  /** Nombre de la tabla en Supabase (por defecto, el nombre de la colección) */
+  table?: string;
   /** Filtros a aplicar */
   filters?: QueryFilter[];
   /** Ordenamiento */
@@ -57,14 +57,21 @@ export function useSupabaseQuery<T extends { id: string }>(
 ): UseSupabaseQueryResult<T> {
   const {
     table = collection,
-    filters = [],
-    orderBy,
+    filters: rawFilters,
+    orderBy: rawOrderBy,
     limit: queryLimit,
     realtime = true,
     forceOffline = false,
     transform,
     enabled = true,
   } = options;
+
+  // Los llamadores suelen pasar arrays/objetos literales nuevos en cada render; se estabilizan por
+  // contenido para no re-disparar fetchData en cada render (bucle infinito de consultas).
+  const filtersKey = JSON.stringify(rawFilters ?? []);
+  const orderByKey = JSON.stringify(rawOrderBy ?? null);
+  const filters = useMemo<QueryFilter[]>(() => JSON.parse(filtersKey), [filtersKey]);
+  const orderBy = useMemo<OrderBy | undefined>(() => JSON.parse(orderByKey) ?? undefined, [orderByKey]);
 
   const { isOnline } = useConnectivityStatus();
   const [data, setData] = useState<T[]>([]);

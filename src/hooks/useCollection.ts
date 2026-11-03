@@ -8,6 +8,7 @@ export interface UseCollectionOptions {
   orderBy?: { column: string; ascending?: boolean };
   limit?: number;
   realtime?: boolean;
+  enabled?: boolean;
 }
 
 /**
@@ -31,8 +32,9 @@ export const useCollection = <T extends { id: string }>(collectionName: string, 
     orderBy: options.orderBy,
     limit: options.limit,
     realtime: options.realtime ?? true,
+    enabled: options.enabled ?? true,
     transform: snakeToCamel,
-  }), [collectionName, options.filters, options.orderBy, options.limit, options.realtime]);
+  }), [collectionName, options.filters, options.orderBy, options.limit, options.realtime, options.enabled]);
 
   const {
     data,

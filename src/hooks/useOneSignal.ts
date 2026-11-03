@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import OneSignal from 'react-onesignal';
 import {
   initOneSignal,
   requestNotificationPermission,
