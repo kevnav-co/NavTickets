@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { X, ArrowLeft, Pencil, Trash2, Package, Hash, Coins, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, Pencil, Trash2, Package, Hash, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
-import { useValidatedActions } from '../../hooks/useValidatedActions';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 
 const InventoryDetail: React.FC = () => {

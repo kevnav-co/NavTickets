@@ -33,13 +33,12 @@ const UserDetail: React.FC = () => {
 
   const user = users.find(u => u.id === id);
 
-  const { canUpdate, canDelete, isDeveloper, isAdmin } = useMemo(() => {
+  const { canUpdate, canDelete, isDeveloper } = useMemo(() => {
     const isOwn = currentUser?.id === user?.id;
     return {
       canUpdate: isOwn || hasPermission(currentUser?.role, PERMISSIONS.UPDATE_USER),
       canDelete: !isOwn && hasPermission(currentUser?.role, PERMISSIONS.DELETE_USER),
       isDeveloper: currentUser?.role === 'developer',
-      isAdmin: currentUser?.role === 'admin',
     };
   }, [currentUser, user]);
 

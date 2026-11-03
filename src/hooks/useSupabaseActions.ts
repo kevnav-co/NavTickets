@@ -1,5 +1,9 @@
 import { useCallback, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Tabla elegida en tiempo de ejecución: el tipado generado de Database no aplica.
+const fromTable = (table: string) => (supabase as unknown as SupabaseClient).from(table);
 import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { toSnakeCase, snakeToCamel } from '../utils/caseConverter';
@@ -57,8 +61,7 @@ export function useSupabaseActions(
       // ─── Modo online: insertar directamente ──────────────────────────────
       try {
         const camelToSnakeData = toSnakeCase(data);
-        const { data: result, error } = await supabase
-          .from(targetTable)
+        const { data: result, error } = await fromTable(targetTable)
           .insert(camelToSnakeData)
           .select()
           .single();
@@ -104,8 +107,7 @@ export function useSupabaseActions(
       // ─── Modo online: actualizar directamente ────────────────────────────
       try {
         const camelToSnakeData = toSnakeCase(data);
-        const { error } = await supabase
-          .from(targetTable)
+        const { error } = await fromTable(targetTable)
           .update(camelToSnakeData)
           .eq('id', id);
 
@@ -146,8 +148,7 @@ export function useSupabaseActions(
 
       // ─── Modo online: eliminar directamente ──────────────────────────────
       try {
-        const { error } = await supabase
-          .from(targetTable)
+        const { error } = await fromTable(targetTable)
           .delete()
           .eq('id', id);
 
@@ -187,23 +188,20 @@ export function useSupabaseActions(
             case 'create': {
               // Upsert idempotente: write.data ya trae el id del cliente (UUID),
               // así que un retry no duplica y los vínculos por id se mantienen.
-              const { error: e } = await supabase
-                .from(targetTable)
+              const { error: e } = await fromTable(targetTable)
                 .upsert(toSnakeCase(write.data), { onConflict: 'id' });
               error = e;
               break;
             }
             case 'update': {
-              const { error: e } = await supabase
-                .from(targetTable)
+              const { error: e } = await fromTable(targetTable)
                 .update(toSnakeCase(write.data))
                 .eq('id', write.docId);
               error = e;
               break;
             }
             case 'delete': {
-              const { error: e } = await supabase
-                .from(targetTable)
+              const { error: e } = await fromTable(targetTable)
                 .delete()
                 .eq('id', write.docId);
               error = e;

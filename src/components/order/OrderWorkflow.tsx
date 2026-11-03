@@ -16,7 +16,6 @@ import { Loader2, Package, Plus, X } from 'lucide-react';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
 import { useCollection } from '../../hooks/useCollection';
-import { QueryFilter } from '../../hooks/useSupabaseQuery';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import { supabase } from '../../services/supabase';
 

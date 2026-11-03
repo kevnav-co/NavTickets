@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { User } from '../../types';
-import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { authAccessToken } from '../../services/supabase';
 import { useValidatedActions } from '../../hooks/useValidatedActions';

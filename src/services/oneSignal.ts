@@ -20,6 +20,7 @@ export const initOneSignal = async (): Promise<void> => {
       notificationClickHandlerAction: 'focus',
       welcomeNotification: {
         disable: true,
+        message: '',
       },
       // Add service worker path for PWA
       serviceWorkerPath: '/sw.js',
@@ -86,7 +87,7 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
  */
 export const getOneSignalToken = (): string | null => {
   try {
-    return OneSignal.User.PushSubscription.token;
+    return OneSignal.User.PushSubscription.token ?? null;
   } catch (error) {
     console.error('[OneSignal] Get token error:', error);
     return null;

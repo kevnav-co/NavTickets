@@ -3,7 +3,6 @@ import { compressImage } from '../utils/imageCompression';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { blobToBase64 } from '../utils/blobConverter';
 import { useSupabaseStorage } from './useSupabaseStorage';
-import { supabase } from '../services/supabase';
 
 type DocumentWithId = { id: string; [key: string]: any };
 

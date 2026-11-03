@@ -3,7 +3,6 @@ import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { snakeToCamel } from '../utils/caseConverter';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 export type QueryFilter = {
   column: string;
@@ -83,7 +82,7 @@ export function useSupabaseQuery<T extends { id: string }>(
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const applyFilters = useCallback(
-    (query: ReturnType<typeof supabase.from<T>['select']>) => {
+    (query: any) => {
       let q = query;
       for (const f of filters) {
         if (f.operator === 'in') {
