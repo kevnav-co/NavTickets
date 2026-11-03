@@ -81,11 +81,9 @@ export function toSnakeCase(obj: Record<string, any>): Record<string, any> {
   const result: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = CAMEL_TO_SNAKE[key] || key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
-    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      result[snakeKey] = JSON.stringify(value);
-    } else {
-      result[snakeKey] = value;
-    }
+    // Arrays/objetos van tal cual: las columnas destino son JSONB. Serializarlos aquí guardaba
+    // strings JSON en vez de arrays/objetos reales (ver migración 018).
+    result[snakeKey] = value;
   }
   return result;
 }
