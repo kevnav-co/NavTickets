@@ -15,7 +15,8 @@
 
 import { readFileSync } from "node:fs";
 
-const URL = "https://hvysnxvuyexacktlwsbm.supabase.co";
+const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+if (!URL) { console.error("Define SUPABASE_URL (https://<project-ref>.supabase.co) del proyecto a usar."); process.exit(1); }
 const DOMAIN = "navas.com";
 const PASSWORD = "Demo#2026";
 const ANON = readFileSync("C:/Users/Nvas/Free Claude/NavTicket/.env", "utf8")

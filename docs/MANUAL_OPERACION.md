@@ -9,7 +9,7 @@ No contiene valores de secretos: solo sus nombres y dónde se configuran.
 |---|---|---|
 | Frontend (PWA React) | Vercel | Interfaz, cola offline (IndexedDB) y sincronización |
 | Endpoints `api/edge/*` | Vercel | Webhooks de asignación, proxy Cuenti, push de prueba |
-| Base de datos Postgres | Supabase (`hvysnxvuyexacktlwsbm`) | Datos multiempresa protegidos con RLS |
+| Base de datos Postgres | Supabase (`vhcvcbpfeiivwepdtkvu`) | Datos multiempresa protegidos con RLS |
 | Edge Functions | Supabase | Tareas programadas, soporte, alta de usuarios y empresas, claves |
 | Storage | Supabase | Fotos de evidencia, firmas, logos |
 | Push | OneSignal | Notificaciones a dispositivos suscritos |
@@ -38,6 +38,10 @@ Reglas:
 
 Orden obligatorio (lo compatible con la versión anterior va primero):
 
+0. Desde la carpeta del repositorio, enlazar la CLI al proyecto de producción y comprobarlo:
+   `npx supabase link --project-ref vhcvcbpfeiivwepdtkvu` y `npx supabase projects list`
+   (el proyecto enlazado debe ser `vhcvcbpfeiivwepdtkvu`). La carpeta `supabase/.temp/` es local
+   y no se versiona: nunca se debe confiar en un enlace heredado.
 1. Respaldo de la base de datos (Supabase → Database → Backups, o `npx supabase db dump`).
 2. Variables y secretos nuevos en Vercel y Supabase (no afectan producción hasta el despliegue).
 3. Migraciones: revisar `npx supabase migration list`. Si la columna Remote está completa, usar
@@ -83,7 +87,7 @@ Endpoints protegidos (deben responder 401 sin credenciales):
 ```bash
 curl -i -X POST <APP_URL>/api/edge/on-order-assigned
 curl -i <APP_URL>/api/edge/cuenti-proxy
-curl -i -X POST https://hvysnxvuyexacktlwsbm.supabase.co/functions/v1/task-scheduler -H "Authorization: Bearer <ANON_KEY>"
+curl -i -X POST https://vhcvcbpfeiivwepdtkvu.supabase.co/functions/v1/task-scheduler -H "Authorization: Bearer <ANON_KEY>"
 ```
 
 Comprobaciones funcionales: iniciar sesión con cada rol, crear y cerrar una orden con equipos,
