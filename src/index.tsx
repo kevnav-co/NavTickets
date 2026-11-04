@@ -7,6 +7,7 @@ import './index.css';
 import { AuthProvider } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
 import { ModalProvider } from './context/ModalContext';
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,10 +24,10 @@ const queryClient = new QueryClient({
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error("Root element not found");
 
-console.log("🚀 Index.tsx Ejecutándose...");
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <DataProvider>
@@ -36,5 +37,6 @@ root.render(
         </DataProvider>
       </AuthProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );
