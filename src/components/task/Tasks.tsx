@@ -28,7 +28,8 @@ const Tasks: React.FC = () => {
 
   // Use useCollection for reactive tasks data
   const { data: tasks, loading } = useCollection<Task>('tasks', {
-    filters: currentUser ? [{ column: 'participants', operator: 'contains', value: currentUser.id }] : [],
+    // participants es JSONB: el operador cs exige un literal JSON (un id suelto da "invalid input syntax for type json").
+    filters: currentUser ? [{ column: 'participants', operator: 'contains', value: JSON.stringify([currentUser.id]) }] : [],
     realtime: true,
     enabled: !!currentUser,
   });
