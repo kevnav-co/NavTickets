@@ -349,10 +349,10 @@ export const offlineCache = {
   async getPendingWrites(): Promise<PendingWrite[]> {
     try {
       const db = getDb();
-      return await db.pendingWrites
-        .orderBy('priority')
-        .reverse() // Mayor prioridad primero
-        .toArray();
+      // Mayor prioridad primero y, a igual prioridad, orden de llegada (++id). orderBy().reverse()
+      // invertía también el orden de llegada: un create+update offline se enviaba como update→create.
+      const writes = await db.pendingWrites.toArray();
+      return writes.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0) || (a.id ?? 0) - (b.id ?? 0));
     } catch {
       return [];
     }
