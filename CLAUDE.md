@@ -167,7 +167,7 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 
 - The service worker (`src/sw.ts`) handles push notifications via the native `push` event — this works reliably on iOS PWA.
 - Push notifications use **OneSignal**; Firebase Cloud Messaging is no longer used. **Flujo completo cableado (Fase 3):** el cliente suscribe con `VITE_ONESIGNAL_APP_ID` y guarda `onesignal_player_id` en `users` (`useOneSignal`→`Header`); el edge `support-notify` (disparado por trigger BD, migración 011) manda el push con `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` seteados como secrets de proyecto Supabase. El push solo alcanza a super_admins **suscritos** por PWA instalada.
-- Supabase keeps data offline-friendly via the client cache (IndexedDB/Dexie) driving `useSupabaseQuery`; no pagination is applied on the main collection queries.
+- Supabase keeps data offline-friendly via the client cache (IndexedDB/Dexie) driving `useSupabaseQuery`. Sin `limit`, `useSupabaseQuery` pagina con `range()` en bloques de 1000 (el `max_rows` de PostgREST) hasta agotar.
 - Images are compressed client-side before upload to Supabase Storage.
 - **Sync offline idempotente (Fase 3):** los creates offline ya no usan PK `offline_<timestamp>` sino un **UUID estable generado por el cliente** (`crypto.randomUUID()`), que viaja dentro de `data` y se inserta con `upsert(onConflict:'id')`. Así los retries no duplican y los vínculos/evidencia que referencian ese id sobreviven al sync (`useSupabaseActions.ts` + `useSyncManager.ts`).
 - **Todos los schedules viven en Supabase Edge Functions** (task-scheduler cada 5 min, daily-expiration-check a las 08:00). Vercel `api/*` no tiene crons ni stubs; solo endpoints vivos (webhooks de triggers y proxies).
@@ -175,8 +175,15 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 - **Contabilidad (migración 017):** `src/components/Account/*` + lógica pura en `src/utils/accounting.ts` (saldos vía `signedAmount`, espejo de las reglas SQL) y RPC en `src/services/accounting.ts`. Visible solo con `companies.features.accounting = true`; ruta `/accounting` gated por `isTabVisible`. Las RPC requieren conexión (no entran a la cola offline).
 - **Arrays/objetos → JSONB tal cual:** `toSnakeCase` ya no hace `JSON.stringify` (antes las columnas JSONB guardaban strings; la migración 018 los normalizó). `snakeToCamel` sigue parseando strings JSON por compatibilidad.
 - **Altas con Zod:** usar schemas que conserven `companyId` (p. ej. `NewServiceOrderSchema`); `.omit({ companyId: true })` lo descarta y RLS rechaza el insert.
-- **Cola offline única:** la de la app (`useSyncManager`). El service worker no encola mutaciones.
-- **CI (`.github/workflows/ci.yml`):** `tsc --noEmit` (debe quedar en 0), `npm test`, build y migraciones + `supabase/tests/accounting_rls.sql` en Postgres 16.
+- **Cola offline única:** la de la app (`useSyncManager`). El service worker no encola mutaciones. `getPendingWrites` respeta prioridad y, a igual prioridad, el orden de llegada (create → update → delete).
+- **Conectividad:** usar `isOnline` de `useConnectivityStatus`, nunca `text === 'Online'` (la PWA instalada reporta `Híbrido`).
+- **Storage:** parsear URLs públicas con `storageObjectFromPublicUrl` y nombres con `safeFileName` (`src/utils/storagePath.ts`). Los archivos se borran después de que el registro deja de referenciarlos (`deleteOrderEvidenceFiles` en `src/services/data.ts`).
+- **Filtros JSONB:** `contains` sobre columnas JSONB (p. ej. `tasks.participants`) necesita un literal JSON: `JSON.stringify([id])`.
+- **CI (`.github/workflows/ci.yml`):** `tsc --noEmit` (debe quedar en 0), `npm audit`, `npm test`, build y migraciones + todos los `supabase/tests/*_rls.sql` en Postgres 16.
+- **Tareas (migración 020):** solo creador, asignado o participante (o admin/developer/super_admin) actualiza o borra una tarea; INSERT exige `created_by` propio. Test: `supabase/tests/tasks_rls.sql`.
+- **Triggers de webhook (migración 021):** SECURITY DEFINER (el rol `authenticated` no tiene acceso a `net`), se omiten si `app.vercel_api_base` no está definido y el de tareas escucha también `completed`.
+- **Errores:** `ErrorBoundary` global (`src/components/ui/ErrorBoundary.tsx`); el build conserva `console.warn`/`console.error`.
+- **Operación:** `docs/MANUAL_OPERACION.md` (despliegue, secretos, rotación, crons, verificación, incidentes).
 - **Seguridad (migración 019):** trigger `guard_user_privileged_columns` — nadie cambia su propio `role`; `company_id`/`supabase_auth_id` solo super_admin; `must_reset_password` solo backend; asignar developer/super_admin solo super_admin. Pestañas iframe/external solo `https://` (trigger `validate_company_tab_urls` + `safeUrl` en el cliente). Test: `supabase/tests/users_rls.sql`.
 - **HTML no confiable:** nunca interpolar datos en `innerHTML`; usar `el()`/`escapeHtml()`/`safeUrl()` de `src/utils/html.ts` y `renderSimpleMarkdown` (`src/utils/markdown.ts`).
 - **Cabeceras (vercel.json):** HSTS, Referrer-Policy, Permissions-Policy y CSP en **Report-Only** (pasar a `Content-Security-Policy` tras validar en staging).
