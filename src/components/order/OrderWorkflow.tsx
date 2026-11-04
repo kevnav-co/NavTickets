@@ -17,7 +17,7 @@ import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
 import { useCollection } from '../../hooks/useCollection';
 import PERMISSIONS, { hasPermission } from '../../permissions';
-import { supabase } from '../../services/supabase';
+import { deleteOrderEvidenceFiles } from '../../services/data';
 
 const OrderWorkflow: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -103,37 +103,8 @@ const OrderWorkflow: React.FC = () => {
     if (!order || !window.confirm('¿Estás seguro de que quieres eliminar esta orden? Esta acción es irreversible y borrará todos los datos y fotos asociadas.')) return;
     setIsDeleting(true);
     try {
-      // Delete order evidence images from Supabase Storage
-      const evidenceItems = [
-        ...(order.initialEvidence || []),
-        ...(order.closingData?.evidenceImages || []),
-      ];
-      const storageUrls = evidenceItems.filter(
-        (item): item is string => typeof item === 'string' && item.includes('supabase.co/storage/v1/object/public')
-      );
-
-      if (storageUrls.length > 0) {
-        const pathsToDelete = storageUrls.map(url => {
-          try {
-            const [, rest] = url.split('/public/');
-            const parts = rest[0].split('/');
-            parts.shift();
-            return parts.join('/');
-          } catch {
-            return null;
-          }
-        }).filter(Boolean) as string[];
-
-        if (pathsToDelete.length > 0) {
-          const { error: storageError } = await supabase.storage.from('order-photos').remove(pathsToDelete);
-          if (storageError) {
-            console.warn('Failed to delete some evidence files from Supabase Storage:', storageError.message);
-          }
-        }
-      }
-
-      // Delete the order record from Supabase
       await deleteItem('orders', order.id);
+      await deleteOrderEvidenceFiles(order);
       sessionStorage.removeItem('accountingOrdersCache');
       navigate('/orders');
     } catch (error) {

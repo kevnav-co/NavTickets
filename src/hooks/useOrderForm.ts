@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import { ServiceOrder, OrderStatus, User } from '../types';
 import { useData } from '../context/DataContext';
@@ -10,6 +10,7 @@ import PERMISSIONS, { ROLES, hasPermission } from '../permissions';
 import { useSupabaseStorage } from './useSupabaseStorage';
 import { blobToBase64 } from '../utils/blobConverter';
 import { useConnectivityStatus } from './useConnectivityStatus';
+import { storageObjectFromPublicUrl } from '../utils/storagePath';
 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
 const today = new Date().toISOString().split('T')[0];
@@ -39,7 +40,9 @@ export const useOrderForm = () => {
   const connectivityStatus = useConnectivityStatus();
 
   // Supabase storage hook for order photos
-  const { uploadBase64 } = useSupabaseStorage({ bucket: 'order-photos' });
+  const { uploadBase64, deleteFile } = useSupabaseStorage({ bucket: 'order-photos' });
+  // Fotos quitadas del formulario: se borran de Storage solo después de guardar la orden.
+  const removedEvidenceRef = useRef<string[]>([]);
 
   const [formData, setFormData] = useState(initialFormData);
   const [isServiceNameManuallySet, setIsServiceNameManuallySet] = useState(false);
@@ -232,18 +235,20 @@ export const useOrderForm = () => {
     if (loadingMessage) return;
     if (!window.confirm('¿Seguro que quieres eliminar esta imagen?')) return;
     setInitialEvidence(prev => prev.filter(item => item !== evidenceToRemove));
-    if (typeof evidenceToRemove === 'string' && evidenceToRemove.includes('supabase.co/storage/v1/object/public')) {
-      try {
-        const pathToDelete = evidenceToRemove.split('/public/')[1]?.split('/')?.slice(1).join('/');
-        if (pathToDelete) {
-          const { deleteFile } = useSupabaseStorage({ bucket: 'order-photos' });
-          await deleteFile(pathToDelete);
-        }
-      } catch (error: any) {
-        console.error('Error al eliminar de Storage:', error);
-      }
+    if (typeof evidenceToRemove === 'string' && storageObjectFromPublicUrl(evidenceToRemove)) {
+      removedEvidenceRef.current.push(evidenceToRemove);
     }
   }, [loadingMessage]);
+
+  const purgeRemovedEvidence = useCallback(async () => {
+    const urls = removedEvidenceRef.current.splice(0);
+    for (const url of urls) {
+      const obj = storageObjectFromPublicUrl(url);
+      if (obj?.bucket !== 'order-photos') continue;
+      const { error } = await deleteFile(obj.path);
+      if (error) console.error('Error al eliminar de Storage:', error);
+    }
+  }, [deleteFile]);
 
   const toggleEquipment = (equipmentId: string) => {
     setFormData(prev => {
@@ -298,12 +303,14 @@ export const useOrderForm = () => {
       if (id) {
         if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.UPDATE_ORDER)) throw new Error('Permiso denegado.');
         await updateValidated('orders', id, { ...orderData, updatedAt: new Date().toISOString() }, ServiceOrderSchema);
+        await purgeRemovedEvidence();
         localStorage.removeItem(`order-form-${id}`);
         alert('Orden actualizada');
         navigate(`/orders/${id}`);
       } else {
         if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.CREATE_ORDER)) throw new Error('Permiso denegado.');
         const newOrderId = await addValidated('orders', orderData, NewServiceOrderSchema);
+        await purgeRemovedEvidence();
         alert(`Orden ${nextOrderNumber} creada`);
         navigate(`/orders/${newOrderId}`);
       }

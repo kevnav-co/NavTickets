@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { compressImage } from '../utils/imageCompression';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { blobToBase64 } from '../utils/blobConverter';
 import { useSupabaseStorage } from './useSupabaseStorage';
+import { safeFileName, storageObjectFromPublicUrl } from '../utils/storagePath';
 
 type DocumentWithId = { id: string; [key: string]: any };
 
@@ -30,7 +31,7 @@ export const useFileHandler = <T extends DocumentWithId>({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const connectivityStatus = useConnectivityStatus();
+  const { isOnline } = useConnectivityStatus();
 
   // Determine bucket based on storagePath
   const bucketName = storagePath === 'equipment' ? 'equipment-photos' : 'order-photos';
@@ -39,10 +40,33 @@ export const useFileHandler = <T extends DocumentWithId>({
   const handleSelectImage = (url: string) => setSelectedImage(url);
   const handleCloseModal = () => setSelectedImage(null);
 
+  // Un object URL por Blob, reutilizado entre renders y revocado al desmontar.
+  const objectUrlsRef = useRef(new Map<Blob, string>());
+  useEffect(() => {
+    const urls = objectUrlsRef.current;
+    return () => {
+      urls.forEach(url => URL.revokeObjectURL(url));
+      urls.clear();
+    };
+  }, []);
+
   const getFileUrl = (file: string | Blob): string => {
     if (typeof file === 'string') return file;
-    return URL.createObjectURL(file);
+    let url = objectUrlsRef.current.get(file);
+    if (!url) {
+      url = URL.createObjectURL(file);
+      objectUrlsRef.current.set(file, url);
+    }
+    return url;
   };
+
+  const deleteStoredFile = useCallback(async (representation: unknown) => {
+    if (typeof representation !== 'string') return;
+    const obj = storageObjectFromPublicUrl(representation);
+    if (obj?.bucket !== bucketName) return;
+    const { error: deleteError } = await deleteFile(obj.path);
+    if (deleteError) console.warn('No se pudo eliminar el archivo anterior de Storage:', deleteError);
+  }, [bucketName, deleteFile]);
 
   const handleUpload = useCallback(async (files: File[], fieldName: keyof T, isArray: boolean = false) => {
     if (!doc || !doc.id) {
@@ -61,12 +85,12 @@ export const useFileHandler = <T extends DocumentWithId>({
       let finalFileRepresentations: string[];
 
       // ---- ONLINE PATH ----
-      if (connectivityStatus.text === 'Online') {
+      if (isOnline) {
         finalFileRepresentations = await Promise.all(
           compressedBlobs.map(async (blob, index) => {
             if (!blob) throw new Error(`La compresión falló para: ${files[index].name}`);
             const originalFile = files[index];
-            const filePath = `${storagePath}/${doc.id}/${String(fieldName)}/${Date.now()}_${originalFile.name}`;
+            const filePath = `${storagePath}/${doc.id}/${String(fieldName)}/${Date.now()}_${safeFileName(originalFile.name)}`;
 
             const { url, error: uploadError } = await uploadBase64(filePath, await blobToBase64(blob));
             if (uploadError) throw new Error(uploadError);
@@ -85,35 +109,27 @@ export const useFileHandler = <T extends DocumentWithId>({
       }
 
       let updatedValue: any;
+      let replaced: unknown;
       if (isArray) {
         const currentFiles = (doc[fieldName] as any[] | undefined) || [];
         const sanitizedCurrentFiles = Array.isArray(currentFiles) ? currentFiles.flat(Infinity) : [];
         const combinedFiles = [...sanitizedCurrentFiles, ...finalFileRepresentations];
         updatedValue = [...new Set(combinedFiles)];
       } else {
-        const oldRepresentation = doc[fieldName];
-        if (connectivityStatus.text === 'Online' && typeof oldRepresentation === 'string' && oldRepresentation.includes('supabase.co/storage/v1/object/public')) {
-          try {
-            // Extract path from Supabase URL and delete
-            const pathToDelete = oldRepresentation.split('/public/')[1]?.split('/')?.slice(1).join('/');
-            if (pathToDelete) {
-              await deleteFile(pathToDelete);
-            }
-          } catch {
-            // Ignore if file doesn't exist
-          }
-        }
+        replaced = doc[fieldName];
         updatedValue = finalFileRepresentations[finalFileRepresentations.length - 1];
       }
 
       await updateDoc({ [fieldName]: updatedValue } as Partial<T>);
+      // El archivo reemplazado se borra solo después de que el documento ya no lo referencia.
+      if (isOnline) await deleteStoredFile(replaced);
     } catch (e: any) {
       console.error(`Error al procesar archivos para ${String(fieldName)}:`, e);
       setError(`Error al procesar archivos: ${e.message}`);
     } finally {
       setIsUploading(false);
     }
-  }, [doc, updateDoc, storagePath, connectivityStatus, uploadBase64, deleteFile]);
+  }, [doc, updateDoc, storagePath, isOnline, uploadBase64, deleteStoredFile]);
 
   const handleRemove = useCallback(async (indexOrUrl: number | string, fieldName: keyof T, isArray: boolean = false) => {
     const currentFiles = doc[fieldName];
@@ -141,19 +157,13 @@ export const useFileHandler = <T extends DocumentWithId>({
     }
 
     try {
-      // If it's a Supabase Storage URL, delete from storage
-      if (typeof representationToRemove === 'string' && representationToRemove.includes('supabase.co/storage/v1/object/public')) {
-        const pathToDelete = representationToRemove.split('/public/')[1]?.split('/')?.slice(1).join('/');
-        if (pathToDelete) {
-          await deleteFile(pathToDelete);
-        }
-      }
       await updateDoc({ [fieldName]: updatedValue } as Partial<T>);
+      await deleteStoredFile(representationToRemove);
     } catch (e: any) {
       console.error('Error al eliminar el archivo:', e);
       setError(`Error al eliminar el archivo: ${e.message}`);
     }
-  }, [doc, updateDoc, deleteFile]);
+  }, [doc, updateDoc, deleteStoredFile]);
 
   return {
     isUploading,

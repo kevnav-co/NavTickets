@@ -1,30 +1,25 @@
 import { supabase } from './supabase';
 import { ServiceOrder } from '../types';
+import { storageObjectFromPublicUrl } from '../utils/storagePath';
+
+/** Todas las URLs de Supabase Storage referenciadas en cualquier campo del objeto (evidencias, firmas, garantías). */
+export const collectStorageUrls = (value: unknown): string[] => {
+  if (typeof value === 'string') return storageObjectFromPublicUrl(value) ? [value] : [];
+  if (!value || typeof value !== 'object') return [];
+  return Object.values(value as Record<string, unknown>).flatMap(collectStorageUrls);
+};
 
 /**
- * Deletes a service order and all associated evidence images from Supabase Storage.
- *
- * The function extracts storage paths from any string URLs that appear in the
- * order's evidence arrays, deletes those files from their Storage bucket,
- * and then deletes the order record from the 'orders' table.
+ * Borra de Supabase Storage los archivos de una orden, agrupados por bucket.
+ * Llamar después de eliminar el registro: si esto falla quedan archivos huérfanos,
+ * nunca una orden apuntando a archivos inexistentes.
  */
-export const deleteOrderWithEvidence = async (order: ServiceOrder): Promise<void> => {
-  // Gather any string URLs that look like Supabase public URLs.
-  const evidenceItems = [
-    ...(order.initialEvidence || []),
-    ...(order.closingData?.evidenceImages || []),
-  ];
-
-  const storageUrls = evidenceItems.filter(
-    (item): item is string => typeof item === 'string' && item.includes('supabase.co/storage/v1/object/public')
-  );
-
-  // URL pública: .../storage/v1/object/public/<bucket>/<ruta>. Se agrupa por bucket.
+export const deleteOrderEvidenceFiles = async (order: ServiceOrder): Promise<void> => {
   const pathsByBucket = new Map<string, string[]>();
-  for (const url of storageUrls) {
-    const [bucket, ...parts] = decodeURIComponent(url.split('/object/public/')[1]?.split('?')[0] ?? '').split('/');
-    if (!bucket || parts.length === 0) continue;
-    pathsByBucket.set(bucket, [...(pathsByBucket.get(bucket) ?? []), parts.join('/')]);
+  for (const url of new Set(collectStorageUrls(order))) {
+    const obj = storageObjectFromPublicUrl(url);
+    if (!obj) continue;
+    pathsByBucket.set(obj.bucket, [...(pathsByBucket.get(obj.bucket) ?? []), obj.path]);
   }
 
   for (const [bucket, paths] of pathsByBucket) {
@@ -33,11 +28,4 @@ export const deleteOrderWithEvidence = async (order: ServiceOrder): Promise<void
       console.warn(`Failed to delete some evidence files from bucket ${bucket}:`, error.message);
     }
   }
-
-  // Delete the order record from Supabase.
-  const { error: dbError } = await supabase.from('orders').delete().eq('id', order.id);
-  if (dbError) {
-    throw new Error(`Failed to delete order ${order.id}: ${dbError.message}`);
-  }
-  console.log(`Order ${order.id} and its evidence have been deleted.`);
 };
