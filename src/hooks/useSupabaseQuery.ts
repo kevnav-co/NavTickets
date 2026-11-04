@@ -4,6 +4,8 @@ import { offlineCache } from './useOfflineCache';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { snakeToCamel } from '../utils/caseConverter';
 
+const PAGE_SIZE = 1000;
+
 export type QueryFilter = {
   column: string;
   operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in' | 'is' | 'contains';
@@ -135,17 +137,24 @@ export function useSupabaseQuery<T extends { id: string }>(
     // ─── Modo online: consultar Supabase ───────────────────────────────────
     try {
       setLoading(true);
-      const query = applyFilters(
-        supabase.from(table).select('*')
-      );
-
-      const { data: result, error: queryError } = await query;
-
-      if (queryError) {
-        throw queryError;
+      const result: any[] = [];
+      if (queryLimit) {
+        const { data: rows, error: queryError } = await applyFilters(supabase.from(table).select('*'));
+        if (queryError) throw queryError;
+        result.push(...(rows || []));
+      } else {
+        // PostgREST corta en max_rows (1000, supabase/config.toml): paginar hasta agotar, con orden estable.
+        for (let from = 0; ; from += PAGE_SIZE) {
+          let query = applyFilters(supabase.from(table).select('*'));
+          if (!orderBy) query = query.order('id', { ascending: true });
+          const { data: rows, error: queryError } = await query.range(from, from + PAGE_SIZE - 1);
+          if (queryError) throw queryError;
+          result.push(...(rows || []));
+          if (!rows || rows.length < PAGE_SIZE) break;
+        }
       }
 
-      const transformed = (result || []).map((item: any) => {
+      const transformed = result.map((item: any) => {
         const camel = transform ? transform(item) : snakeToCamel(item);
         return camel as T;
       });
