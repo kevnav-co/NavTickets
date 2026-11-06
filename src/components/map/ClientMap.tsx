@@ -8,6 +8,7 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import { useOfflineStatus } from '../../hooks/useOfflineStatus';
 import PERMISSIONS, { hasPermission, ROLES } from '../../permissions';
+import { el, escapeHtml } from '../../utils/html';
 
 // NOTE: Leaflet and its CSS are now loaded dynamically in a useEffect hook.
 
@@ -183,20 +184,14 @@ const ClientMap: React.FC = () => {
 
         const marker = L.marker([client.latitude!, client.longitude!], { icon: clientIcon });
         
-        const popupContent = document.createElement('div');
-        popupContent.className = 'p-3 text-center';
-        popupContent.innerHTML = `
-          <div class="flex flex-col items-center">
-            <h3 class="font-bold text-gray-900 text-sm mb-1 line-clamp-1">${client.name}</h3>
-            <p class="text-[10px] text-gray-500 mb-3 line-clamp-2">${client.address}</p>
-            <button id="view-client-${client.id}" class="w-full bg-primary text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform">Ver Expediente</button>
-          </div>
-        `;
+        const popupContent = el('div', 'p-3 text-center');
+        const body = popupContent.appendChild(el('div', 'flex flex-col items-center'));
+        body.appendChild(el('h3', 'font-bold text-gray-900 text-sm mb-1 line-clamp-1', client.name));
+        body.appendChild(el('p', 'text-[10px] text-gray-500 mb-3 line-clamp-2', client.address ?? ''));
+        const viewClient = body.appendChild(el('button', 'w-full bg-primary text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform', 'Ver Expediente'));
+        viewClient.addEventListener('click', () => navigate(`/clients/${client.id}`));
 
         marker.bindPopup(popupContent);
-        marker.on('popupopen', () => {
-            document.getElementById(`view-client-${client.id}`)?.addEventListener('click', () => navigate(`/clients/${client.id}`));
-        });
 
         layer.addLayer(marker);
       });
@@ -205,7 +200,7 @@ const ClientMap: React.FC = () => {
     if (showUsers) {
       validUsers.forEach((user: User) => {
         const isMe = user.id === currentUser?.id;
-        const initials = user.name.substring(0, 2).toUpperCase();
+        const initials = escapeHtml(user.name.substring(0, 2).toUpperCase());
         
         const hasActiveOrder = orders.some(o => o.technicianId === user.id && o.status !== OrderStatus.CLOSED);
         const lastUpdate = user.locationUpdatedAt ? new Date(user.locationUpdatedAt).getTime() : 0;
@@ -245,19 +240,14 @@ const ClientMap: React.FC = () => {
         const statusText = hasActiveOrder ? '🟢 En servicio' : isRecent ? '🔵 Activo ahora' : `🔴 Visto: ${lastSeen}`;
         const statusColor = hasActiveOrder ? 'text-green-600 font-bold' : isRecent ? 'text-blue-600 font-bold' : 'text-gray-500';
 
-        const popupContent = document.createElement('div');
-        popupContent.className = 'p-3 text-center';
-        popupContent.innerHTML = `
-          <p class="text-[10px] font-black text-gray-400 uppercase mb-1">Técnico ${isMe ? '(Yo)' : ''}</p>
-          <h3 class="font-bold text-gray-900 text-sm mb-1">${user.name}</h3>
-          <p class="text-[10px] ${statusColor} mb-3">${statusText}</p>
-          <button id="view-user-${user.id}" class="w-full bg-gray-100 text-gray-800 py-2 rounded-lg text-[10px] font-bold uppercase active:scale-95 transition-transform border border-gray-200">Ver Perfil</button>
-        `;
+        const popupContent = el('div', 'p-3 text-center');
+        popupContent.appendChild(el('p', 'text-[10px] font-black text-gray-400 uppercase mb-1', `Técnico ${isMe ? '(Yo)' : ''}`));
+        popupContent.appendChild(el('h3', 'font-bold text-gray-900 text-sm mb-1', user.name));
+        popupContent.appendChild(el('p', `text-[10px] ${statusColor} mb-3`, statusText));
+        const viewUser = popupContent.appendChild(el('button', 'w-full bg-gray-100 text-gray-800 py-2 rounded-lg text-[10px] font-bold uppercase active:scale-95 transition-transform border border-gray-200', 'Ver Perfil'));
+        viewUser.addEventListener('click', () => navigate(`/users/${user.id}`));
 
         marker.bindPopup(popupContent);
-        marker.on('popupopen', () => {
-            document.getElementById(`view-user-${user.id}`)?.addEventListener('click', () => navigate(`/users/${user.id}`));
-        });
 
         layer.addLayer(marker);
       });

@@ -7,7 +7,7 @@ interface InventorySelectorModalProps {
   onClose: () => void;
   inventoryItems: InventoryItem[];
   initialLines: OrderInventoryLine[];
-  onSave: (lines: OrderInventoryLine[]) => void;
+  onSave: (lines: Omit<OrderInventoryLine, 'orderId'>[]) => void;
 }
 
 /** Modal para seleccionar repuestos de una orden, con cantidad por línea. */
@@ -45,7 +45,7 @@ const InventorySelectorModal: React.FC<InventorySelectorModalProps> = ({
   const isLow = (item: InventoryItem) => item.lowStockThreshold > 0 && (item.quantity ?? 0) <= (item.lowStockThreshold ?? 0);
 
   const handleSave = () => {
-    const result: OrderInventoryLine[] = Object.entries(lines)
+    const result: Omit<OrderInventoryLine, 'orderId'>[] = Object.entries(lines)
       .filter(([, qty]) => qty > 0)
       .map(([inventoryItemId, quantityOut]) => {
         const item = inventoryItems.find(i => i.id === inventoryItemId);

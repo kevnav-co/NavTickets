@@ -22,7 +22,7 @@ export const useValidatedActions = () => {
   const addValidated = useCallback(
     async <T extends Record<string, any>>(
       collectionName: string,
-      data: T,
+      data: unknown,
       schema: z.ZodSchema<T>
     ): Promise<string> => {
       const result = schema.safeParse(data);
@@ -74,7 +74,7 @@ export const useValidatedActions = () => {
   const addValidatedSafe = useCallback(
     async <T extends Record<string, any>>(
       collectionName: string,
-      data: T,
+      data: unknown,
       schema: z.ZodSchema<T>
     ): Promise<{ success: true; id: string } | { success: false; errors: z.ZodIssue[] }> => {
       const result = schema.safeParse(data);

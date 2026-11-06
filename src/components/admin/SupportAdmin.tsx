@@ -103,7 +103,7 @@ const SupportAdmin: React.FC = () => {
     return <div className="w-full h-96 flex items-center justify-center gap-3 text-gray-400"><Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando soportes...</span></div>;
   }
   if (error) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error}</div>;
   }
 
   return (

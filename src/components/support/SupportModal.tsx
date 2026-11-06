@@ -134,7 +134,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
               {ticketsLoading && (
                 <div className="flex items-center justify-center gap-2 text-gray-400 py-8"><Loader2 className="animate-spin" size={22} /><span>Cargando soportes...</span></div>
               )}
-              {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError.message}</p>}
+              {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError}</p>}
               {!ticketsLoading && !ticketsError && (tickets || []).length === 0 && (
                 <p className="text-center text-sm text-gray-400 py-10">No tienes consultas de soporte aún. Crea una "Nueva consulta".</p>
               )}

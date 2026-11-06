@@ -6,7 +6,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User as UserIcon, MailCheck, ChevronLeft, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
+import { User as UserIcon, MailCheck, ChevronLeft, AlertCircle, ArrowRight } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 
 const ForgotPassword: React.FC = () => {
