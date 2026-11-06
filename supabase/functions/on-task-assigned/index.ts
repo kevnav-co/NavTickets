@@ -3,7 +3,7 @@
 // Disparado por el trigger `trg_task_assigned_webhook` (PostgreSQL) vía pg_net.
 //
 // 1) Inserta una fila en la tabla `notifications` (bandeja interna de la app).
-// 2) Envía una notificación push en tiempo real vía OneSignal REST API.
+// 2) Envía una notificación push en tiempo real vía Web Push API.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
@@ -16,10 +16,6 @@ if (!serviceRole) {
 }
 
 const supabase = createClient(SUPABASE_URL, serviceRole);
-
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -55,18 +51,6 @@ Deno.serve(async (req: Request) => {
 
     const results: string[] = [];
 
-    // Obtener datos de empresa para branding (logo y nombre)
-    let companyName = "NavTicket";
-    let companyLogo: string | undefined;
-    if (companyId) {
-      const { data: company } = await supabase
-        .from("companies")
-        .select("name, theme")
-        .eq("id", companyId)
-        .single();
-      if (company?.name) companyName = company.name;
-      companyLogo = company?.theme?.logoUrl || undefined;
-    }
 
     // ─── 1. Notificar al asignado (si es asignación nueva o reasignación) ───
     if (assignedTo && (eventType === "INSERT" || assignedTo !== previousAssignee)) {
@@ -91,44 +75,23 @@ Deno.serve(async (req: Request) => {
         console.error("[OnTaskAssigned] Error al insertar notificación interna:", notifError);
       }
 
-      // Enviar Push OneSignal al asignado
-      if (ONESIGNAL_APP_ID && ONESIGNAL_API_KEY) {
-        const { data: assignedUsers } = await supabase
-          .from("users")
-          .select("onesignal_player_id, fcm_token")
-          .eq("id", assignedTo);
+      // Enviar Push vía send-push al asignado
+      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRole}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: assignedTo,
+          title: `📌 ${notifTitle}`,
+          body: assignmentMsg,
+          data: { path: targetPath },
+        }),
+      });
 
-        const playerId =
-          (assignedUsers || [])[0]?.onesignal_player_id || (assignedUsers || [])[0]?.fcm_token;
-
-        if (playerId) {
-          const pushPayload: Record<string, unknown> = {
-            app_id: ONESIGNAL_APP_ID,
-            include_player_ids: [playerId],
-            headings: { en: `📌 ${notifTitle}` },
-            contents: { en: `${companyName}: ${assignmentMsg}` },
-            url: `${base}/#${targetPath}`,
-            data: { path: targetPath, url: `${base}/#${targetPath}` },
-          };
-
-          if (companyLogo) {
-            pushPayload.chrome_web_icon = companyLogo;
-            pushPayload.chrome_web_badge = companyLogo;
-          }
-
-          const pushResp = await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${ONESIGNAL_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(pushPayload),
-          });
-
-          if (!pushResp.ok) {
-            console.error("[OnTaskAssigned] Error OneSignal asignado:", await pushResp.text());
-          }
-        }
+      if (!pushResp.ok) {
+        console.error("[OnTaskAssigned] Error send-push asignado:", await pushResp.text());
       }
 
       results.push(`Notificado asignado: ${assignedTo}`);
@@ -157,44 +120,23 @@ Deno.serve(async (req: Request) => {
         console.error("[OnTaskAssigned] Error al insertar notificación creador:", notifError);
       }
 
-      // Enviar Push OneSignal al creador
-      if (ONESIGNAL_APP_ID && ONESIGNAL_API_KEY) {
-        const { data: creatorUsers } = await supabase
-          .from("users")
-          .select("onesignal_player_id, fcm_token")
-          .eq("id", createdBy);
+      // Enviar Push vía send-push al creador
+      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRole}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: createdBy,
+          title: `✅ ${completedTitle}`,
+          body: completedMsg,
+          data: { path: targetPath },
+        }),
+      });
 
-        const playerId =
-          (creatorUsers || [])[0]?.onesignal_player_id || (creatorUsers || [])[0]?.fcm_token;
-
-        if (playerId) {
-          const pushPayload: Record<string, unknown> = {
-            app_id: ONESIGNAL_APP_ID,
-            include_player_ids: [playerId],
-            headings: { en: `✅ ${completedTitle}` },
-            contents: { en: `${companyName}: ${completedMsg}` },
-            url: `${base}/#${targetPath}`,
-            data: { path: targetPath, url: `${base}/#${targetPath}` },
-          };
-
-          if (companyLogo) {
-            pushPayload.chrome_web_icon = companyLogo;
-            pushPayload.chrome_web_badge = companyLogo;
-          }
-
-          const pushResp = await fetch("https://onesignal.com/api/v1/notifications", {
-            method: "POST",
-            headers: {
-              Authorization: `Basic ${ONESIGNAL_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(pushPayload),
-          });
-
-          if (!pushResp.ok) {
-            console.error("[OnTaskAssigned] Error OneSignal creador:", await pushResp.text());
-          }
-        }
+      if (!pushResp.ok) {
+        console.error("[OnTaskAssigned] Error send-push creador:", await pushResp.text());
       }
 
       results.push(`Notificado creador: ${createdBy}`);

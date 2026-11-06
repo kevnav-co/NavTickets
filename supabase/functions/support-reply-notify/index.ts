@@ -1,11 +1,11 @@
 // Supabase Edge Function — Support Reply Notify.
-// Push OneSignal al AUTOR de un caso de soporte cuando el super_admin responde.
+// Push Web Push API al AUTOR de un caso de soporte cuando el super_admin responde.
 // Lo dispara el trigger `support_message_notify_author` (migración 027) vía
 // pg_net cuando se inserta una fila en support_messages con role='admin'.
 //
 // El trigger 025 ya crea la notificación interna (bandeja de la app); esta función
-// hace la parte OPORTUNA: notificación push push en vivo al autor. Complementan, no
-// se duplican: 025 = fila en `notifications`, 027/pg_net = OneSignal al dispositivo.
+// hace la parte OPORTUNA: notificación push en vivo al autor. Complementan, no
+// se duplican: 025 = fila en `notifications`, 027/pg_net = Web Push al dispositivo.
 //
 // Sin JWT de sesión (verify_jwt=false, la llama pg_net). Acceso de control: cabecera
 // x-webhook-secret (obligatoria: ver _shared/webhook-auth.ts).
@@ -19,10 +19,6 @@ if (!serviceRole) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
 }
 const supabase = createClient(SUPABASE_URL, serviceRole);
-
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -54,66 +50,35 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Player id del autor + branding de su empresa (ícono del push).
-    const { data: author } = await supabase
-      .from("users")
-      .select("onesignal_player_id, fcm_token, name")
-      .eq("id", authorId)
-      .single();
-    const playerId = author?.onesignal_player_id || author?.fcm_token;
-    if (!playerId) {
-      return new Response(
-        JSON.stringify({ success: true, notified: 0, reason: "NO_PLAYER_ID" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    let companyName = "tu empresa";
-    let companyLogo: string | undefined;
-    if (companyId) {
-      const { data: company } = await supabase
-        .from("companies")
-        .select("name, theme")
-        .eq("id", companyId)
-        .single();
-      if (company?.name) companyName = company.name;
-      companyLogo = company?.theme?.logoUrl || undefined;
-    }
-
     const summary = (message || "").slice(0, 200);
-    const pushBody: Record<string, unknown> = {
-      app_id: ONESIGNAL_APP_ID,
-      include_player_ids: [playerId],
-      headings: { en: "🔔 Nueva respuesta en tu caso de soporte" },
-      contents: { en: `Soporte de ${companyName}: ${summary}` },
-      url: `${base}/#/admin`,
-      data: { path: "/admin" },
-    };
-    if (companyLogo) {
-      pushBody.chrome_web_icon = companyLogo;
-      pushBody.chrome_web_badge = companyLogo;
-    }
 
-    const resp = await fetch("https://onesignal.com/api/v1/notifications", {
+    // Enviar Push vía send-push al autor
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
       method: "POST",
       headers: {
-        Authorization: `Basic ${ONESIGNAL_API_KEY}`,
+        "Authorization": `Bearer ${serviceRole}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(pushBody),
+      body: JSON.stringify({
+        userId: authorId,
+        title: "🔔 Nueva respuesta en tu caso de soporte",
+        body: summary,
+        data: { path: "/admin/support" },
+      }),
     });
 
     if (!resp.ok) {
-      const errBody = await resp.json();
-      console.error("[Support Reply Notify] OneSignal error:", JSON.stringify(errBody));
+      const errBody = await resp.text();
+      console.error("[Support Reply Notify] send-push error:", errBody);
       return new Response(
-        JSON.stringify({ success: false, notified: 0, error: JSON.stringify(errBody) }),
+        JSON.stringify({ success: false, notified: 0, error: errBody }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
+    const result = await resp.json();
     return new Response(
-      JSON.stringify({ success: true, notified: 1, to: author?.name || authorId }),
+      JSON.stringify({ success: true, notified: result.sent }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   } catch (error: any) {
