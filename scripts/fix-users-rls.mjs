@@ -47,7 +47,7 @@ console.log(JSON.stringify(after, null, 2));
 console.log("\n== Test RLS ==");
 const lg = await (await fetch(`${URL}/auth/v1/token?grant_type=password`, {
   method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-  body: JSON.stringify({ email: "a_admin@" + DOMAIN, password: "Demo#2026" }),
+  body: JSON.stringify({ email: "a_admin@" + DOMAIN, password: process.env.DEMO_PASSWORD }),
 })).json();
 if (!lg.access_token) { console.log("login fail", lg); process.exit(0); }
 for (const t of ["companies", "users", "clients"]) {

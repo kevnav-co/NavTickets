@@ -17,7 +17,8 @@ import { readFileSync } from "node:fs";
 const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 if (!URL) { console.error("Define SUPABASE_URL (https://<project-ref>.supabase.co) del proyecto a usar."); process.exit(1); }
 const DOMAIN = "navas.com";
-const PASSWORD = "Demo#2026";
+const PASSWORD = process.env.DEMO_PASSWORD;
+if (!PASSWORD) throw new Error("Define DEMO_PASSWORD (clave de las cuentas demo; nunca se versiona)");
 
 // ─── Claves ──────────────────────────────────────────────────────────────────
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";

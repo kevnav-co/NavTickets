@@ -11,7 +11,8 @@ const ANON = process.env.VITE_SUPABASE_ANON_KEY
   ?? (await import("node:fs")).readFileSync("C:/Users/Nvas/Free Claude/NavTicket/.env", "utf8")
     .match(/VITE_SUPABASE_ANON_KEY=(\S+)/)?.[1]
   ?? "";
-const PASSWORD = "Demo#2026";
+const PASSWORD = process.env.DEMO_PASSWORD;
+if (!PASSWORD) throw new Error("Define DEMO_PASSWORD (clave de las cuentas demo; nunca se versiona)");
 const DOMAIN = "navas.com";
 
 const USERS = [

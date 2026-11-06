@@ -18,7 +18,8 @@ import { readFileSync } from "node:fs";
 const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 if (!URL) { console.error("Define SUPABASE_URL (https://<project-ref>.supabase.co) del proyecto a usar."); process.exit(1); }
 const DOMAIN = "navas.com";
-const PASSWORD = "Demo#2026";
+const PASSWORD = process.env.DEMO_PASSWORD;
+if (!PASSWORD) throw new Error("Define DEMO_PASSWORD (clave de las cuentas demo; nunca se versiona)");
 const ANON = readFileSync("C:/Users/Nvas/Free Claude/NavTicket/.env", "utf8")
   .match(/VITE_SUPABASE_ANON_KEY=(\S+)/)?.[1] ?? "";
 if (!ANON) { console.error("Falta VITE_SUPABASE_ANON_KEY en .env"); process.exit(1); }

@@ -11,14 +11,15 @@
 // existe (no falla, no duplica).
 //
 // Guard: `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>`.
-// Login (AuthContext): username@navas.com. Password común: "Demo#2026".
+// Login (AuthContext): username@navas.com. Clave común: secret DEMO_PASSWORD de la función
+// (nunca en el repositorio). Sin ese secret la función no siembra nada.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const EMAIL_DOMAIN = Deno.env.get("EMAIL_DOMAIN") ?? "navas.com";
-const DEMO_PASSWORD = "Demo#2026";
+const DEMO_PASSWORD = Deno.env.get("DEMO_PASSWORD") ?? "";
 
 interface DemoUser {
   name: string;
@@ -218,6 +219,9 @@ Deno.serve(async (req: Request) => {
   const isServiceRole = token.length > 0 && token === SERVICE_ROLE;
   if (!isServiceRole) {
     return json({ error: "Semilla rechazada (requires SERVICE_ROLE_KEY)" }, 401);
+  }
+  if (DEMO_PASSWORD.length < 12) {
+    return json({ error: "Configura el secret DEMO_PASSWORD (mínimo 12 caracteres)" }, 500);
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE, {
