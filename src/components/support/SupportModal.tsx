@@ -9,6 +9,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useCollection } from '../../hooks/useCollection';
 import { SupportTicket, SupportMessage, SupportTicketStatus } from '../../types';
+import ChatThread from './ChatThread';
+import { formatDateTime } from '../../utils/chat';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -21,10 +23,6 @@ const STATUS_META: Record<SupportTicketStatus, { label: string; cls: string }> =
   [SupportTicketStatus.CLOSED]: { label: 'Cerrado', cls: 'bg-green-100 text-green-700' },
 };
 
-const formatDate = (iso: string) => {
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-};
 
 const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const { currentUser } = useAuth();
@@ -150,7 +148,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-gray-800 truncate">{t.subject}</p>
                       <p className="text-xs text-gray-400 font-medium truncate">{t.message}</p>
-                      <span className="text-[10px] text-gray-300 font-semibold">{formatDate(t.createdAt)}</span>
+                      <span className="text-[10px] text-gray-300 font-semibold">{formatDateTime(t.createdAt)}</span>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${meta.cls} flex-shrink-0`}>{meta.label}</span>
                   </button>
@@ -182,25 +180,9 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
                 </span>
               </div>
 
-              {/* Hilo */}
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                {/* Mensaje de apertura */}
-                <div className="max-w-[85%] p-3 rounded-2xl bg-gray-100 text-sm text-gray-700">
-                  <p>{selected.message}</p>
-                  <span className="text-[10px] text-gray-400 font-semibold">{formatDate(selected.createdAt)}</span>
-                </div>
-
-                {(messages || []).map(m => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[85%] p-3 rounded-2xl text-sm text-gray-700 ${m.role === 'empresa' ? 'bg-gray-100' : 'bg-red-50 border border-red-100'}`}
-                  >
-                    <p className="whitespace-pre-wrap">{m.message}</p>
-                    <span className="text-[10px] text-gray-400 font-semibold">
-                      {m.role === 'admin' ? 'Soporte · ' : ''}{formatDate(m.createdAt)}
-                    </span>
-                  </div>
-                ))}
+              {/* Chat */}
+              <div className="flex-1 overflow-y-auto pr-1">
+                <ChatThread ticket={selected} messages={messages} viewerId={currentUser?.id} viewerRole="empresa" />
               </div>
 
               {/* Responder */}
