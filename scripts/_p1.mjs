@@ -35,7 +35,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
-const URL = "https://hvysnxvuyexacktlwsbm.supabase.co";
+const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+if (!URL) throw new Error("Define SUPABASE_URL con la URL del proyecto destino");
 const DOMAIN = "navas.com";
 const PASSWORD = "Demo#2026";
 
