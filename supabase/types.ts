@@ -28,6 +28,7 @@ export interface Database {
           name?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       users: {
         Row: {
@@ -81,6 +82,7 @@ export interface Database {
           supabase_auth_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       clients: {
         Row: {
@@ -125,6 +127,7 @@ export interface Database {
           city?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       equipment: {
         Row: {
@@ -181,6 +184,7 @@ export interface Database {
           next_maintenance_notification_sent?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       orders: {
         Row: {
@@ -294,6 +298,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       equipment_orders: {
         Row: {
@@ -314,6 +319,7 @@ export interface Database {
           order_id?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       tasks: {
         Row: {
@@ -376,6 +382,7 @@ export interface Database {
           completed_at?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       task_participants: {
         Row: {
@@ -396,6 +403,7 @@ export interface Database {
           user_id?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       notifications: {
         Row: {
@@ -437,6 +445,7 @@ export interface Database {
           path?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       seguimientos: {
         Row: {
@@ -475,6 +484,7 @@ export interface Database {
           new_status?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       support_tickets: {
         Row: {
@@ -507,6 +517,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       support_messages: {
         Row: {
@@ -533,10 +544,29 @@ export interface Database {
           message?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+    Functions: {
+      accounting_self_transfer: {
+        Args: { p_amount: number; p_from: string; p_to: string; p_created_at?: string };
+        Returns: string;
+      };
+      accounting_annul: {
+        Args: { p_kind: 'transaction' | 'expense' | 'income'; p_id: string; p_reason?: string | null };
+        Returns: undefined;
+      };
+      admin_impersonate_start: {
+        Args: { target_company: string; target_role: Database['public']['Enums']['user_role'] };
+        Returns: undefined;
+      };
+      admin_impersonate_stop: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+    };
     Enums: {
       user_role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin' | 'super_admin';
       equipment_status: 'Activa' | 'Inactiva' | 'En Mantenimiento' | 'Retirada';
