@@ -44,7 +44,7 @@ export type ClosingDataType = z.infer<typeof ClosingDataSchema>;
 export const ServiceOrderSchema = z.object({
   id: z.string(),
   companyId: z.string().min(1),
-  orderNumber: z.number().int().positive('El número de orden debe ser positivo'),
+  orderNumber: z.number().int().positive('El número de orden debe ser positivo').optional(),
   name: z.string().min(1, 'El nombre es obligatorio'),
   clientId: z.string().optional(),
   clientName: z.string().optional(),
@@ -66,7 +66,7 @@ export const ServiceOrderSchema = z.object({
   endTime: z.string().optional(),
   orderType: OrderTypeEnum,
   serviceName: z.string().min(1, 'El nombre del servicio es obligatorio'),
-  warrantyPeriod: z.number().int().positive('El período de garantía debe ser positivo').optional(),
+  warrantyPeriod: z.number().int().min(0, 'La garantía debe ser ≥ 0').optional(),
   warrantyExpiration: z.string().nullable().optional(),
   priority: PriorityEnum.default('Media'),
   isUnderWarrantyReview: z.boolean().optional().default(false),

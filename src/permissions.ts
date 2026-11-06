@@ -196,8 +196,21 @@ export const isTabVisible = (
   features: Partial<CompanyFeatures> | undefined
 ): { visible: boolean } => {
   if (!builtInComponent) return { visible: true };
-  const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
-  if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+
+  // Casos especiales con "O" lógico entre permisos
+  if (builtInComponent === 'orders') {
+    if (!hasPermission(role, PERMISSIONS.VIEW_ALL_ORDERS) && !hasPermission(role, PERMISSIONS.VIEW_OWN_ORDERS)) {
+      return { visible: false };
+    }
+  } else if (builtInComponent === 'map') {
+    if (!hasPermission(role, PERMISSIONS.VIEW_MAP) && !hasPermission(role, PERMISSIONS.VIEW_TEAM_LOCATIONS_MAP)) {
+      return { visible: false };
+    }
+  } else {
+    const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
+    if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+  }
+
   const requiredFeature = TAB_FEATURE_MAP[builtInComponent];
   if (requiredFeature && features?.[requiredFeature] === false) return { visible: false };
   return { visible: true };

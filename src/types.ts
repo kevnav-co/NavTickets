@@ -90,7 +90,7 @@ export interface WarrantyJob {
 export interface ServiceOrder {
   id:string;
   companyId: string;      // ← NUEVO
-  orderNumber: number;
+  orderNumber?: number;
   name: string;
   clientId?: string;
   clientName?: string; // Added for denormalization

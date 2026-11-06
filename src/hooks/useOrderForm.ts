@@ -177,7 +177,8 @@ export const useOrderForm = () => {
       const existing = orders.find(o => o.id === id);
       if (existing) return existing.orderNumber;
     }
-    return (orders.length > 0 ? Math.max(...orders.map(o => o.orderNumber)) : 0) + 1;
+    const orderNumbers = orders.map(o => o.orderNumber).filter((n): n is number => n !== undefined);
+    return (orderNumbers.length > 0 ? Math.max(...orderNumbers) : 0) + 1;
   }, [orders, id]);
 
   const handleServiceNameChange = (newServiceName: string) => {
@@ -206,7 +207,7 @@ export const useOrderForm = () => {
       const fileName = `${Date.now()}_${files[index].name}`;
       const storagePath = `orders/${orderIdForPath}/initialPhotos/${fileName}`;
       try {
-        if (connectivityStatus.text === 'Online') {
+        if (connectivityStatus.isOnline) {
           const { url, error } = await uploadBase64(storagePath, await blobToBase64(blob));
           if (error) throw new Error(error);
           return url!;
