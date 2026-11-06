@@ -11,6 +11,7 @@
 // key from secrets for full schema privileges (same pattern as `task-scheduler`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -161,17 +162,18 @@ function getWarrantyEmailHtml(
 
 async function sendPushNotification(userId: string, companyId: string, title: string, body: string, path: string) {
   try {
-    await supabase.from("notifications").insert({
+    const { error } = await supabase.from("notifications").insert({
       company_id: companyId,
       user_id: userId,
       title,
       body,
       text: title,
       path,
-      type: "expiration",
+      type: "alert",
       read: false,
       created_at: new Date().toISOString(),
     });
+    if (error) throw error;
   } catch (error) {
     console.error("[Expiration Check] Error sending push:", error);
   }
@@ -189,7 +191,9 @@ async function sendWhatsApp(_to: string, message: string): Promise<boolean> {
   return false;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
+  if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
+
   const now = new Date();
   const nextWeek = new Date(now);
   nextWeek.setDate(now.getDate() + 7);

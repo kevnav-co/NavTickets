@@ -199,7 +199,6 @@ const DEMO: DemoCompany[] = [
 
 const SEED_COMPANY_NAME = "Navas Servicios Técnicos"; // empresa semilla (super_admin)
 
-const PROJECT_REF = "hvysnxvuyexacktlwsbm";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -208,30 +207,15 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-// Decodifica el payload de un JWT (sin firmar) para el guard.
-function jwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const bino = atob(b64);
-    const bytes = Uint8Array.from(bino, (c) => c.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch {
-    return null;
-  }
-}
-
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  // ─── Guard: exige un JWT service_role válido del proyecto (no igualdad con ─
-  //     el secret, que puede estar rotado). Solo quien tenga una credential
-  //     service_role puede disparar el seed.
+  // ─── Guard: solo la service role de ESTE proyecto (la que inyecta el runtime).
+  //     Antes se decodificaba el JWT sin verificar la firma y se comparaba un ref
+  //     fijo: con verify_jwt desactivado bastaba un token fabricado.
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "");
-  const payload = token ? jwtPayload(token) : null;
-  const isServiceRole = payload?.role === "service_role" && payload?.ref === PROJECT_REF;
+  const isServiceRole = token.length > 0 && token === SERVICE_ROLE;
   if (!isServiceRole) {
     return json({ error: "Semilla rechazada (requires SERVICE_ROLE_KEY)" }, 401);
   }

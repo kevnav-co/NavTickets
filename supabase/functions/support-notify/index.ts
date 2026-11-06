@@ -9,6 +9,7 @@
 // sends one push that deep-links to /#/admin/support.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -23,7 +24,6 @@ const supabase = createClient(SUPABASE_URL, serviceRole);
 
 const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
 const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET"); // opcional
 const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
 
 Deno.serve(async (req: Request) => {
@@ -31,16 +31,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405 });
   }
 
-  // Webhook check defensivo: si WEBHOOK_SECRET está seteado, exigirlo.
-  // Solo rechaza si el header trae un valor real que NO coincide.
-  // Si app.webhook_secret no está en Session settings, el header
-  // viene vacío y se acepta (best-effort).
-  if (WEBHOOK_SECRET) {
-    const got = req.headers.get("x-webhook-secret");
-    if (got && got !== WEBHOOK_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
-  }
+  if (!isAuthorizedWebhook(req)) return unauthorizedWebhookResponse();
 
   try {
     const body = await req.json();

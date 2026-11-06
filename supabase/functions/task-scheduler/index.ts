@@ -11,6 +11,7 @@
 // the client off the incoming `Authorization` header to retain full schema privileges.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 
@@ -79,7 +80,9 @@ async function sendPushToUserIds(
   return playerIds.length;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
+  if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
+
   const now = new Date();
   const results: {
     reminders: number;
@@ -114,7 +117,7 @@ Deno.serve(async () => {
           body: `Recuerda la tarea: "${task.title}".`,
           text: `Recordatorio: ${task.title}`,
           path: "/tasks",
-          type: "reminder",
+          type: "info",
           read: false,
           created_at: new Date().toISOString(),
         });
@@ -166,7 +169,7 @@ Deno.serve(async () => {
             body: `La tarea "${task.title}" se vence hoy.`,
             text: `Vencimiento: ${task.title}`,
             path: "/tasks",
-            type: "due_date",
+            type: "alert",
             read: false,
             created_at: new Date().toISOString(),
           });

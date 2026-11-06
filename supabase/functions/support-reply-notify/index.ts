@@ -8,9 +8,10 @@
 // se duplican: 025 = fila en `notifications`, 027/pg_net = OneSignal al dispositivo.
 //
 // Sin JWT de sesión (verify_jwt=false, la llama pg_net). Acceso de control: cabecera
-// x-webhook-secret si se define el secret WEBHOOK_SECRET en la función.
+// x-webhook-secret (obligatoria: ver _shared/webhook-auth.ts).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -21,7 +22,6 @@ const supabase = createClient(SUPABASE_URL, serviceRole);
 
 const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
 const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET"); // opcional
 const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
 
 Deno.serve(async (req: Request) => {
@@ -29,15 +29,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405 });
   }
 
-  // Validación defensiva: solo rechaza si el header trae un valor real
-  // que NO coincide. Si app.webhook_secret no está en Session settings,
-  // el header viene vacío y se acepta (best-effort).
-  if (WEBHOOK_SECRET) {
-    const got = req.headers.get("x-webhook-secret");
-    if (got && got !== WEBHOOK_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
-  }
+  if (!isAuthorizedWebhook(req)) return unauthorizedWebhookResponse();
 
   try {
     const body = await req.json();
