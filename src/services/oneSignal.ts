@@ -11,10 +11,17 @@ const ONESIGNAL_APP_ID = import.meta.env.VITE_ONESIGNAL_APP_ID;
  * adblock o CSP— y las llamadas encoladas en window.OneSignalDeferred nunca
  * corren, así que requestPermission queda colgado sin aviso).
  */
+let initialized = false;
+
 export const initOneSignal = async (): Promise<{ ok: boolean; error?: string }> => {
   if (!ONESIGNAL_APP_ID) {
     console.warn('[OneSignal] VITE_ONESIGNAL_APP_ID not configured');
     return { ok: false, error: 'VITE_ONESIGNAL_APP_ID no configurado' };
+  }
+
+  if (initialized) {
+    console.log('[OneSignal] Already initialized');
+    return { ok: true };
   }
 
   try {
@@ -26,8 +33,10 @@ export const initOneSignal = async (): Promise<{ ok: boolean; error?: string }> 
         disable: true,
         message: '',
       },
-      // Add service worker path for PWA
-      serviceWorkerPath: '/sw.js',
+      // Separate worker for OneSignal to avoid conflicts with PWA worker
+      serviceWorkerParam: {
+        scope: '/push/onesignal/',
+      },
     });
 
     // Si el script del SDK no llega a cargarse, OneSignal.init (encolado en
@@ -64,6 +73,7 @@ export const initOneSignal = async (): Promise<{ ok: boolean; error?: string }> 
       handleNotificationOpen(event);
     });
 
+    initialized = true;
     console.log('[OneSignal] Initialized successfully');
     return { ok: true };
   } catch (error: any) {
@@ -89,11 +99,11 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
       // Wait a bit for the subscription to be ready
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const pushToken = OneSignal.User.PushSubscription.token;
+      const pushId = OneSignal.User.PushSubscription.id;
 
-      if (pushToken) {
-        console.log('[OneSignal] Push token obtained:', pushToken);
-        return pushToken;
+      if (pushId) {
+        console.log('[OneSignal] Push subscription ID obtained:', pushId);
+        return pushId;
       }
     }
 
@@ -105,13 +115,13 @@ export const requestNotificationPermission = async (): Promise<string | null> =>
 };
 
 /**
- * Get the current OneSignal push token
+ * Get the current OneSignal push subscription ID
  */
 export const getOneSignalToken = (): string | null => {
   try {
-    return OneSignal.User.PushSubscription.token ?? null;
+    return OneSignal.User.PushSubscription.id ?? null;
   } catch (error) {
-    console.error('[OneSignal] Get token error:', error);
+    console.error('[OneSignal] Get subscription ID error:', error);
     return null;
   }
 };
