@@ -5,7 +5,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
-const URL = "https://hvysnxvuyexacktlwsbm.supabase.co";
+const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+if (!URL) { console.error("Define SUPABASE_URL (https://<project-ref>.supabase.co) del proyecto a usar."); process.exit(1); }
 const SR = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 if (!SR) { console.error("Falta SUPABASE_SERVICE_ROLE_KEY"); process.exit(1); }
 
@@ -46,7 +47,7 @@ console.log(JSON.stringify(after, null, 2));
 console.log("\n== Test RLS ==");
 const lg = await (await fetch(`${URL}/auth/v1/token?grant_type=password`, {
   method: "POST", headers: { apikey: ANON, "Content-Type": "application/json" },
-  body: JSON.stringify({ email: "a_admin@" + DOMAIN, password: "Demo#2026" }),
+  body: JSON.stringify({ email: "a_admin@" + DOMAIN, password: process.env.DEMO_PASSWORD }),
 })).json();
 if (!lg.access_token) { console.log("login fail", lg); process.exit(0); }
 for (const t of ["companies", "users", "clients"]) {

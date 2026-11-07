@@ -61,7 +61,7 @@ const GESTION_ITEMS = ['inventory', 'reports', 'users'];
 
 // Mismo matiz de activo por ruta que tenía la barra plana (evita que `/admin`
 // marque como activo todo su subárbol).
-function isPathActive(item: NavItem, pathname: string): boolean {
+function isPathActive(item: Pick<NavItem, 'path'>, pathname: string): boolean {
   return pathname === item.path ||
     (item.path !== '/' && item.path !== '/admin' && pathname.startsWith(item.path));
 }
@@ -75,7 +75,7 @@ const CategorySheet: React.FC<{
   pathname: string;
   onSelect: (item: NavItem) => void;
   onClose: () => void;
-}> = ({ title, icon, items, isOffline, pathname, onSelect, onClose }) => {
+}> = ({ title, icon: Icon, items, isOffline, pathname, onSelect, onClose }) => {
   return (
     <div className="fixed inset-0 z-[60]" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -88,7 +88,7 @@ const CategorySheet: React.FC<{
         <header className="flex items-center justify-between pl-2 pr-1 py-1">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <icon size={16} className="text-primary" />
+              <Icon size={16} className="text-primary" />
             </span>
             <span className="text-xs font-black uppercase tracking-widest text-gray-700">{title}</span>
           </div>

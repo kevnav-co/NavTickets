@@ -90,7 +90,7 @@ export interface WarrantyJob {
 export interface ServiceOrder {
   id:string;
   companyId: string;      // ← NUEVO
-  orderNumber: number;
+  orderNumber?: number;
   name: string;
   clientId?: string;
   clientName?: string; // Added for denormalization
@@ -117,8 +117,8 @@ export interface ServiceOrder {
   priority: 'Baja' | 'Media' | 'Alta' | 'Urgente';
   isUnderWarrantyReview?: boolean;
   warrantyJobs?: WarrantyJob[]; // Corregido de 'Jobs' a 'warrantyJobs'
-  warrantyStartTime?: string;
-  warrantyEndTime?: string;
+  warrantyStartTime?: string | null;
+  warrantyEndTime?: string | null;
   closingData?: {
     tasksPerformed?: string[];
     additionalComments?: string;

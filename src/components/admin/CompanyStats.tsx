@@ -128,7 +128,7 @@ const CompanyStats: React.FC = () => {
 
   const error = ordersError || companiesError;
   if (error) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar estadísticas: {error.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar estadísticas: {error}</div>;
   }
 
   const KpiCard: React.FC<{ label: string; value: number; accent?: string }> = ({ label, value, accent }) => (

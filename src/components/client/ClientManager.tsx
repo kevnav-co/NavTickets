@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { OrderStatus, CuentiClient } from '../../types';
+import { OrderStatus } from '../../types';
 import { Search, Building2, UserPlus, Phone, MapPin, LayoutGrid, LayoutList, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useData } from '../../context/DataContext';
@@ -105,17 +105,11 @@ const ClientManager: React.FC = () => {
     return enrichedClients;
   }, [clients, orders, equipment, searchTerm, filterType]);
 
-  const handleSelectClientToImport = (clientToImport: CuentiClient) => {
-    setIsCuentiModalOpen(false);
-    navigate('/clients/new', { state: { clientToImport } });
-  };
-
   return (
     <>
       <CuentiClientModal 
         isOpen={isCuentiModalOpen}
         onClose={() => setIsCuentiModalOpen(false)}
-        onImportClient={handleSelectClientToImport}
         existingClients={clients}
       />
       

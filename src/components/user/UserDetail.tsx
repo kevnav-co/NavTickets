@@ -33,13 +33,12 @@ const UserDetail: React.FC = () => {
 
   const user = users.find(u => u.id === id);
 
-  const { canUpdate, canDelete, isDeveloper, isAdmin } = useMemo(() => {
+  const { canUpdate, canDelete, isDeveloper } = useMemo(() => {
     const isOwn = currentUser?.id === user?.id;
     return {
       canUpdate: isOwn || hasPermission(currentUser?.role, PERMISSIONS.UPDATE_USER),
       canDelete: !isOwn && hasPermission(currentUser?.role, PERMISSIONS.DELETE_USER),
       isDeveloper: currentUser?.role === 'developer',
-      isAdmin: currentUser?.role === 'admin',
     };
   }, [currentUser, user]);
 
@@ -117,9 +116,10 @@ const UserDetail: React.FC = () => {
   }
 
   // --- Token Display Helpers ---
-  const tokenStatus = user.fcmToken ? 'registered' : 'none';
-  const tokenPreview = user.fcmToken 
-    ? `${user.fcmToken.substring(0, 16)}...${user.fcmToken.substring(user.fcmToken.length - 8)}`
+  const pushToken = user.onesignalPlayerId;
+  const tokenStatus = pushToken ? 'registered' : 'none';
+  const tokenPreview = pushToken
+    ? `${pushToken.substring(0, 16)}...${pushToken.substring(pushToken.length - 8)}`
     : 'Sin token';
 
   return (

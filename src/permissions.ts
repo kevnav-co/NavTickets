@@ -59,6 +59,9 @@ const PERMISSIONS = {
   DELETE_INVENTORY: 'delete_inventory',
   VIEW_INVENTORY: 'view_inventory',
 
+  // Contabilidad / caja menor (migración 017). Además exige companies.features.accounting.
+  VIEW_ACCOUNTING: 'view_accounting',
+
   // Permisos de Usuarios
   CREATE_USER: 'create_user',
   UPDATE_USER: 'update_user',
@@ -95,6 +98,7 @@ const supervisorPermissions = [
   PERMISSIONS.UPDATE_EQUIPMENT,
   PERMISSIONS.VIEW_EQUIPMENT,
   PERMISSIONS.VIEW_INVENTORY,
+  PERMISSIONS.VIEW_ACCOUNTING,
   PERMISSIONS.UPLOAD_INITIAL_EVIDENCE,
   PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
   PERMISSIONS.RESTART_ORDER,
@@ -119,6 +123,7 @@ const ROLES_PERMISSIONS: Record<User['role'], string[]> = {
     PERMISSIONS.CREATE_EQUIPMENT,
     PERMISSIONS.UPDATE_EQUIPMENT,
     PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_ACCOUNTING,
     PERMISSIONS.UPLOAD_INITIAL_EVIDENCE, // Restaurado
     PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
     PERMISSIONS.VIEW_OWN_TASKS,
@@ -173,7 +178,7 @@ export const TAB_PERMISSION_MAP: Record<string, string> = {
   equipment: PERMISSIONS.VIEW_EQUIPMENT,
   users: PERMISSIONS.VIEW_USERS,
   map: PERMISSIONS.VIEW_MAP,
-  accounting: PERMISSIONS.VIEW_REPORTS,
+  accounting: PERMISSIONS.VIEW_ACCOUNTING,
   inventory: PERMISSIONS.VIEW_INVENTORY,
   reports: PERMISSIONS.VIEW_REPORTS,
 };
@@ -191,8 +196,21 @@ export const isTabVisible = (
   features: Partial<CompanyFeatures> | undefined
 ): { visible: boolean } => {
   if (!builtInComponent) return { visible: true };
-  const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
-  if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+
+  // Casos especiales con "O" lógico entre permisos
+  if (builtInComponent === 'orders') {
+    if (!hasPermission(role, PERMISSIONS.VIEW_ALL_ORDERS) && !hasPermission(role, PERMISSIONS.VIEW_OWN_ORDERS)) {
+      return { visible: false };
+    }
+  } else if (builtInComponent === 'map') {
+    if (!hasPermission(role, PERMISSIONS.VIEW_MAP) && !hasPermission(role, PERMISSIONS.VIEW_TEAM_LOCATIONS_MAP)) {
+      return { visible: false };
+    }
+  } else {
+    const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
+    if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+  }
+
   const requiredFeature = TAB_FEATURE_MAP[builtInComponent];
   if (requiredFeature && features?.[requiredFeature] === false) return { visible: false };
   return { visible: true };

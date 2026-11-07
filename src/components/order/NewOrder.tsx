@@ -29,7 +29,7 @@ const NewOrder: React.FC = () => {
     toggleEquipment, getTechLoad, handleSubmit,
   } = useOrderForm();
   
-  const { currentUser } = useAuth();
+  const { currentUser, impersonation } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -91,6 +91,20 @@ const NewOrder: React.FC = () => {
 
   if (!currentUser || (!hasPermission(currentUser.role, PERMISSIONS.CREATE_ORDER) && !isEditMode) || (!hasPermission(currentUser.role, PERMISSIONS.UPDATE_ORDER) && isEditMode) ) {
       return <Navigate to="/" />;
+  }
+
+  // Super admin sin vista previa no puede crear órdenes
+  if (!isEditMode && currentUser.role === 'super_admin' && !impersonation) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="bg-white rounded-3xl p-8 text-center max-w-md shadow-lg">
+          <AlertCircle size={48} className="text-yellow-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-black text-gray-800 mb-2">No hay empresa seleccionada</h1>
+          <p className="text-gray-500 mb-6">Para crear una orden, activa una vista previa desde el panel de administración.</p>
+          <button onClick={() => navigate('/')} className="w-full bg-primary text-white py-3 rounded-xl font-bold">Volver</button>
+        </div>
+      </div>
+    );
   }
 
   return (
