@@ -40,15 +40,15 @@ export const registerPushSubscription = async (
   userId: string,
   companyId: string,
   supabaseUrl: string,
-  supabaseKey: string
+  sessionToken: string
 ): Promise<boolean> => {
   try {
     const response = await fetch(`${supabaseUrl}/rest/v1/push_subscriptions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseKey}`,
-        "apikey": supabaseKey,
+        "Authorization": `Bearer ${sessionToken}`,
+        "apikey": sessionToken,
       },
       body: JSON.stringify({
         user_id: userId,
@@ -113,7 +113,7 @@ export const enablePushNotifications = async (
   userId: string,
   companyId: string,
   supabaseUrl: string,
-  supabaseKey: string
+  sessionToken: string
 ): Promise<boolean> => {
   // 1. Solicitar permiso
   const hasPermission = await requestNotificationPermission();
@@ -156,7 +156,7 @@ export const enablePushNotifications = async (
       userId,
       companyId,
       supabaseUrl,
-      supabaseKey
+      sessionToken
     );
   } catch (error) {
     console.error("Error enabling push notifications:", error);

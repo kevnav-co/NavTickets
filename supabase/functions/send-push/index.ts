@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 import * as webpush from "npm:web-push@3.6.7";
+import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
 
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY");
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY");
@@ -23,10 +24,12 @@ interface PushPayload {
 }
 
 serve(async (req) => {
-  // Solo POST
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
+
+  // Verificar autorización (service role o webhook secret)
+  if (!isAuthorizedWebhook(req)) return unauthorizedWebhookResponse();
 
   try {
     const payload: PushPayload = await req.json();

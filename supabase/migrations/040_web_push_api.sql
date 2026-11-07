@@ -28,7 +28,10 @@ create policy "Users see own push subscriptions"
   for select
   using (
     auth.uid() = (select supabase_auth_id from users where id = user_id)
-    or (select role from users where supabase_auth_id = auth.uid()) in ('admin', 'developer', 'super_admin')
+    or (
+      company_id = (select company_id from users where supabase_auth_id = auth.uid())
+      and (select role from users where supabase_auth_id = auth.uid()) in ('admin', 'developer', 'super_admin')
+    )
   );
 
 create policy "Users insert own push subscriptions"

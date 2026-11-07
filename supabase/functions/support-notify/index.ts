@@ -37,31 +37,51 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Enviar push a todos los super_admins de esta empresa via send-push
-    const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${serviceRole}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        companyId,
-        title: "🛟 Nueva consulta de soporte",
-        body: subject,
-        data: { path: "/admin/support" },
-      }),
-    });
+    // 1. Obtener super_admins de esta empresa
+    const { data: superAdmins, error: queryError } = await supabase
+      .from("users")
+      .select("id")
+      .eq("company_id", companyId)
+      .eq("role", "super_admin");
 
-    if (!pushResp.ok) {
-      const err = await pushResp.text();
-      console.error("[Support Notify] send-push error:", err);
+    if (queryError) {
+      console.error("[Support Notify] Error querying super_admins:", queryError);
       return new Response(
-        JSON.stringify({ success: false, error: "Failed to send push" }),
+        JSON.stringify({ error: "Failed to query super_admins" }),
         { status: 500, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    const pushResult = await pushResp.json();
+    // 2. Enviar push a cada super_admin vía send-push
+    const superAdminIds = (superAdmins || []).map((sa) => sa.id);
+    let sent = 0;
+    let failed = 0;
+
+    for (const userId of superAdminIds) {
+      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRole}`,
+          "Content-Type": "application/json",
+          "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") || "",
+        },
+        body: JSON.stringify({
+          userId,
+          title: "🛟 Nueva consulta de soporte",
+          body: subject,
+          data: { path: "/admin/support" },
+        }),
+      });
+
+      if (pushResp.ok) {
+        sent++;
+      } else {
+        console.error(`[Support Notify] Failed to send push to ${userId}:`, await pushResp.text());
+        failed++;
+      }
+    }
+
+    const pushResult = { sent, failed, total: superAdminIds.length };
     return new Response(
       JSON.stringify({ success: true, ...pushResult }),
       { status: 200, headers: { "Content-Type": "application/json" } },
