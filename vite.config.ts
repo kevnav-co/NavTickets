@@ -128,13 +128,10 @@ export default defineConfig(({ mode }) => {
             // Offline DB
             'vendor-dexie': ['dexie'],
 
-            // Notifications
-            'vendor-onesignal': ['react-onesignal'],
-
             // Form/Input helpers
             'vendor-forms': ['react-currency-input-field', 'react-textarea-autosize'],
 
-            // OneSignal service worker (auto-loaded)
+            // Workbox - service worker
             'workbox-runtime': ['workbox-core', 'workbox-routing', 'workbox-strategies', 'workbox-cacheable-response', 'workbox-expiration', 'workbox-precaching'],
           },
           // Optimize chunk naming for better caching
