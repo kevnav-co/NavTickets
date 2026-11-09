@@ -26,9 +26,9 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   setDeleteConfirm,
 }) => {
   const isActive = company.status !== 'suspended';
-  const statusColor = isActive ? 'emerald' : 'amber';
   const statusText = isActive ? 'Activa' : 'Suspendida';
   const statusIcon = isActive ? <CheckCircle size={14} /> : <Lock size={14} />;
+  const statusClass = isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700';
 
   const getLastActivityText = () => {
     if (!company.lastActivityAt) return 'Sin actividad';
@@ -62,7 +62,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           <div className="flex items-center gap-2 mb-2">
             <h3 className="font-bold text-gray-900 truncate">{company.name}</h3>
             <span
-              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-${statusColor}-50 text-${statusColor}-700`}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}`}
             >
               {statusIcon}
               {statusText}
