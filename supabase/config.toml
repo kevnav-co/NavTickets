@@ -392,9 +392,9 @@ schedule = "0 8 * * *"
 enabled = true
 verify_jwt = false
 
-# Support Reply Notify — push OneSignal al autor del caso cuando el super_admin
+# Support Reply Notify — push al autor del caso cuando el super_admin
 # responde. Lo dispara el trigger support_message_notify_author vía pg_net
-# (migración 027), sin JWT de sesión -> verify_jwt = false. Mismo accceso por
+# (migración 027), sin JWT de sesión -> verify_jwt = false. Mismo acceso por
 # x-webhook-secret (WEBHOOK_SECRET).
 [functions.support-reply-notify]
 enabled = true
