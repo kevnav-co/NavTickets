@@ -12,7 +12,7 @@ No contiene valores de secretos: solo sus nombres y dónde se configuran.
 | Base de datos Postgres | Supabase (`hvysnxvuyexacktlwsbm`) | Datos multiempresa protegidos con RLS |
 | Edge Functions | Supabase | Tareas programadas, avisos de asignación y soporte, alta de usuarios y empresas, claves |
 | Storage | Supabase | Fotos de evidencia, firmas, logos |
-| Push | OneSignal | Notificaciones a dispositivos suscritos |
+| Push | Web Push (VAPID) via Edge Function `send-push` | Notificaciones a dispositivos suscritos |
 
 La seguridad real está en la base de datos (RLS y triggers). La interfaz solo oculta opciones;
 nunca debe considerarse una barrera de seguridad.
@@ -25,7 +25,7 @@ nunca debe considerarse una barrera de seguridad.
 | `app.webhook_secret` | Base de datos (`ALTER DATABASE … SET`) | Lo envían los triggers (024–029) | `WEBHOOK_SECRET` |
 | `CRON_SECRET` | Supabase (`supabase secrets`) y Vault (`cron_secret`) | Autentica `task-scheduler` y `daily-expiration-check` | Valor guardado en Vault |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel (env); automático en Edge Functions | Acceso administrativo desde el servidor | Supabase → Settings → API |
-| `ONESIGNAL_APP_ID` / `ONESIGNAL_API_KEY` | Vercel (env) y Supabase (`supabase secrets`) | Envío de push | Panel de OneSignal |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Supabase (`supabase secrets`) | Envío de Web Push (VAPID) | Generados con `web-push generate-vapid-keys` |
 | `CUENTI_API_TOKEN`, `CUENTI_EMPRESA_ID`, `CUENTI_USER_ID` | Vercel (env) | Proxy al ERP Cuenti | Cuenta Cuenti de la empresa |
 | `CUENTI_COMPANY_ID` | Vercel (env) | Limita el proxy Cuenti a la empresa dueña | `companies.id` de esa empresa |
 
@@ -64,7 +64,8 @@ Rotar al menos una vez al año, al salir una persona con acceso o ante sospecha 
   (no afecta los datos: los triggers nunca bloquean la escritura).
 - `CRON_SECRET`: actualizar `supabase secrets` y el valor en Vault (`vault.update_secret`).
 - Service role de Supabase: regenerar en Supabase → Settings → API y actualizar Vercel.
-- OneSignal y Cuenti: regenerar en cada proveedor y actualizar las variables.
+- VAPID keys: regenerar con `npx web-push generate-vapid-keys` y actualizar en Supabase secrets.
+- Cuenti: regenerar en el proveedor y actualizar las variables.
 
 ## 5. Tareas programadas
 

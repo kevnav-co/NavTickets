@@ -55,11 +55,11 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 
 **Webhooks de la base de datos (fail-closed):** todas las Edge Functions que llama pg_net (`support-*`, `on-*-assigned`) usan `_shared/webhook-auth.ts`: exigen `x-webhook-secret` o `Authorization: Bearer` igual al secret `WEBHOOK_SECRET`, que a su vez debe coincidir con `app.webhook_secret`. Sin ese secret configurado rechazan todo.
 
-### Communication Channels (`communicationChannels.js`)
+### Communication Channels
 
-- **WhatsApp**: Twilio (stubs out gracefully if no credentials configured)
-- **Email**: Nodemailer via Gmail SMTP with branded HTML templates
-- **Internal Notification**: Supabase `notifications` table + Web Push (VAPID) via `send-push` Edge Function
+- **WhatsApp**: Twilio via Edge Functions (stubs out gracefully if no credentials configured)
+- **Email**: Nodemailer via Gmail SMTP with branded HTML templates (Edge Functions `_shared/email.ts`)
+- **Internal Notification**: Supabase `notifications` table + Web Push (VAPID) via `send-push` Edge Function (`_shared/push.ts`)
 
 ### Data Model (Supabase Tables)
 
