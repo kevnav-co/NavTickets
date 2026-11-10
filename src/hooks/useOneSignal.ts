@@ -110,21 +110,28 @@ export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; ones
     }
   }, [currentUser?.id, state.isSupported, updateUserFcmToken, state.isLoading]);
 
-  // Monitorear cambios de permiso
+  // Monitorear cambios de permiso vía Permissions API (sin polling)
   useEffect(() => {
     if (typeof Notification === 'undefined') {
       setState(prev => ({ ...prev, permission: 'unsupported' }));
       return;
     }
 
-    const handlePermissionChange = () => {
+    setState(prev => ({ ...prev, permission: Notification.permission }));
+
+    let permStatus: PermissionStatus | null = null;
+    const handleChange = () => {
       setState(prev => ({ ...prev, permission: Notification.permission }));
     };
 
-    const interval = setInterval(handlePermissionChange, 5000);
-    handlePermissionChange();
+    navigator.permissions?.query({ name: 'notifications' }).then(status => {
+      permStatus = status;
+      status.addEventListener('change', handleChange);
+    }).catch(() => {});
 
-    return () => clearInterval(interval);
+    return () => {
+      permStatus?.removeEventListener('change', handleChange);
+    };
   }, []);
 
   return {
