@@ -48,17 +48,7 @@ serve(async (req) => {
       data: payload.data || {},
     };
 
-    // Obtener suscripciones según el filtro
-    let query = "select * from push_subscriptions";
-    const params: unknown[] = [];
-
-    if (payload.userId) {
-      query += " where user_id = $1";
-      params.push(payload.userId);
-    } else if (payload.companyId) {
-      query += " where company_id = $1";
-      params.push(payload.companyId);
-    } else {
+    if (!payload.userId && !payload.companyId) {
       return new Response("Must specify userId or companyId", { status: 400 });
     }
 
