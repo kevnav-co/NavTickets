@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, WifiOff, Key, LogOut, PenLine, Shield, BarChart3, LifeBuoy,
+  WifiOff, Key, LogOut, PenLine, Shield, BarChart3, LifeBuoy,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -13,14 +13,7 @@ import { useSupportUnread } from '../../hooks/useSupportUnread';
 import CompanyLogo from '../shared/CompanyLogo';
 import PERMISSIONS, { hasPermission, isTabVisible } from '../../permissions';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
-
-// Dynamic icon resolution
-import * as LucideIcons from 'lucide-react';
-
-function resolveIcon(iconName: string): LucideIcon {
-  const icons = LucideIcons as unknown as Record<string, LucideIcon>;
-  return icons[iconName] || Home;
-}
+import { resolveIcon } from '../../utils/iconMap';
 
 interface NavItem {
   icon: LucideIcon;
@@ -76,8 +69,8 @@ export const DesktopSidebar: React.FC = React.memo(() => {
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0 z-50 shadow-xl">
-      <div className="p-6 flex justify-center items-center border-b border-gray-100 min-h-[88px]">
-        <CompanyLogo forceCompany className="w-full max-w-[160px] object-contain hover:scale-105 transition-transform duration-300" />
+      <div className="px-4 py-3 flex justify-center items-center border-b border-gray-100 bg-white">
+        <CompanyLogo className="max-h-[48px] max-w-[140px] object-contain hover:scale-105 transition-transform duration-300" />
       </div>
       <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
         {navItems.map((item) => {

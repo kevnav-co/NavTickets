@@ -33,13 +33,12 @@ const UserDetail: React.FC = () => {
 
   const user = users.find(u => u.id === id);
 
-  const { canUpdate, canDelete, isDeveloper, isAdmin } = useMemo(() => {
+  const { canUpdate, canDelete, isDeveloper } = useMemo(() => {
     const isOwn = currentUser?.id === user?.id;
     return {
       canUpdate: isOwn || hasPermission(currentUser?.role, PERMISSIONS.UPDATE_USER),
       canDelete: !isOwn && hasPermission(currentUser?.role, PERMISSIONS.DELETE_USER),
       isDeveloper: currentUser?.role === 'developer',
-      isAdmin: currentUser?.role === 'admin',
     };
   }, [currentUser, user]);
 
@@ -117,9 +116,10 @@ const UserDetail: React.FC = () => {
   }
 
   // --- Token Display Helpers ---
-  const tokenStatus = user.fcmToken ? 'registered' : 'none';
-  const tokenPreview = user.fcmToken 
-    ? `${user.fcmToken.substring(0, 16)}...${user.fcmToken.substring(user.fcmToken.length - 8)}`
+  const pushToken = user.onesignalPlayerId;
+  const tokenStatus = pushToken ? 'registered' : 'none';
+  const tokenPreview = pushToken
+    ? `${pushToken.substring(0, 16)}...${pushToken.substring(pushToken.length - 8)}`
     : 'Sin token';
 
   return (
@@ -153,7 +153,7 @@ const UserDetail: React.FC = () => {
               {/* Token Status */}
               <div className="bg-white rounded-xl p-4 border border-purple-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-gray-500 uppercase">Estado del Token FCM</span>
+                  <span className="text-xs font-bold text-gray-500 uppercase">Estado del Token Push</span>
                   {tokenStatus === 'registered' ? (
                     <span className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-green-50 text-green-600 border border-green-200">
                       <Wifi size={12} /> Registrado
@@ -176,7 +176,7 @@ const UserDetail: React.FC = () => {
                   <div className="bg-orange-50 rounded-lg px-3 py-2.5 flex items-start gap-2">
                     <AlertTriangle size={14} className="text-orange-500 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-orange-700">
-                      Este usuario no tiene un token FCM. Necesita activar notificaciones desde su dispositivo (botón de campana en el header).
+                      Este usuario no tiene un token de push. Necesita activar notificaciones desde su dispositivo (botón de campana en el header).
                       {user.role === 'technician' && ' En iPhone, la app debe estar instalada como PWA.'}
                     </p>
                   </div>
@@ -193,7 +193,7 @@ const UserDetail: React.FC = () => {
                     <p className="text-[10px] font-bold text-gray-400 uppercase">Plataforma</p>
                     <p className="text-xs font-semibold text-gray-700">
                       {tokenStatus === 'registered' 
-                        ? 'Web Push (FCM detectará iOS/Android automáticamente)' 
+                        ? 'Web Push (detecta iOS/Android automáticamente)'
                         : 'No determinada — sin token activo'}
                     </p>
                   </div>

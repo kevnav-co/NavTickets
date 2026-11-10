@@ -6,61 +6,37 @@ export const config = {
 
 const supabase = createClient(
   process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } },
 );
 
-interface NotificationPayload {
-  userId: string;
-  title: string;
-  body: string;
-  path: string;
-  companyId?: string;
-}
+const MANAGER_ROLES = ['admin', 'developer', 'super_admin'];
 
-async function sendOneSignalNotification(userId: string, payload: NotificationPayload, _companyName: string, companyLogo: string) {
-  const oneSignalAppId = process.env.ONESIGNAL_APP_ID;
-  const oneSignalApiKey = process.env.ONESIGNAL_API_KEY;
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-  if (!oneSignalAppId || !oneSignalApiKey) {
-    console.warn('[Send Test Notification] OneSignal not configured');
-    return { success: false, error: 'ONESIGNAL_NOT_CONFIGURED' };
-  }
+async function sendOneSignalPush(playerId: string, title: string, body: string, icon: string) {
+  const appId = process.env.ONESIGNAL_APP_ID;
+  const apiKey = process.env.ONESIGNAL_API_KEY;
+  if (!appId || !apiKey) return { success: false, error: 'ONESIGNAL_NOT_CONFIGURED' };
 
-  // Get user's OneSignal player ID from Supabase (stored in fcm_token column)
-  const { data: user } = await supabase
-    .from('users')
-    .select('fcm_token')
-    .eq('id', userId)
-    .single();
-
-  if (!user?.fcm_token) {
-    return { success: false, error: 'NO_PLAYER_ID' };
-  }
-
+  const appUrl = process.env.APP_URL || 'https://navtickets.vercel.app';
   try {
-    const response = await fetch(`https://onesignal.com/api/v1/notifications`, {
+    const response = await fetch('https://onesignal.com/api/v1/notifications', {
       method: 'POST',
-      headers: {
-        'Authorization': `Basic ${oneSignalApiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: `Basic ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        app_id: oneSignalAppId,
-        include_player_ids: [user.fcm_token],
-        headings: { en: payload.title },
-        contents: { en: payload.body },
-        data: { url: payload.path },
-        url: `${process.env.VERCEL_API_BASE || 'https://your-app.vercel.app'}#${payload.path}`,
-        chrome_web_icon: companyLogo,
-        chrome_web_badge: companyLogo,
+        app_id: appId,
+        include_player_ids: [playerId],
+        headings: { en: title },
+        contents: { en: body },
+        data: { path: '/' },
+        url: `${appUrl}/#/`,
+        chrome_web_icon: icon,
+        chrome_web_badge: icon,
       }),
     });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(JSON.stringify(error));
-    }
-
+    if (!response.ok) throw new Error(JSON.stringify(await response.json()));
     const result = await response.json();
     return { success: true, notificationId: result.id };
   } catch (error) {
@@ -70,124 +46,80 @@ async function sendOneSignalNotification(userId: string, payload: NotificationPa
 }
 
 export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
-  }
+  if (req.method !== 'POST') return json({ error: 'Method Not Allowed' }, 405);
 
-  // Verify admin/developer role
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response('Unauthorized', { status: 401 });
-  }
-
-  const token = authHeader.substring(7);
+  const authHeader = req.headers.get('authorization') ?? '';
+  if (!authHeader.startsWith('Bearer ')) return json({ error: 'Unauthorized' }, 401);
 
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.substring(7));
+    if (authError || !user) return json({ error: 'Invalid token' }, 401);
 
-    if (authError || !user) {
-      return new Response('Invalid token', { status: 401 });
-    }
-
-    const { data: profile } = await supabase
+    const { data: caller } = await supabase
       .from('users')
       .select('role, company_id')
-      .eq('id', user.id)
+      .eq('supabase_auth_id', user.id)
       .single();
-
-    if (!profile || !['admin', 'developer', 'super_admin'].includes(profile.role)) {
-      return new Response('Forbidden: Admin or Developer only', { status: 403 });
+    if (!caller || !MANAGER_ROLES.includes(caller.role)) {
+      return json({ error: 'Forbidden: Admin or Developer only' }, 403);
     }
 
-    const body = await req.json();
-    const { userId } = body as { userId: string };
+    const { userId } = (await req.json()) as { userId?: string };
+    if (!userId) return json({ error: 'userId required' }, 400);
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'userId required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Get target user
-    const { data: targetUser, error: targetError } = await supabase
+    const { data: targetUser } = await supabase
       .from('users')
-      .select('id, name, company_id, fcm_token')
+      .select('id, name, company_id, onesignal_player_id')
       .eq('id', userId)
       .single();
+    if (!targetUser) return json({ success: false, error: 'USER_NOT_FOUND' }, 404);
 
-    if (targetError || !targetUser) {
-      return new Response(JSON.stringify({ success: false, error: 'USER_NOT_FOUND' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (caller.role !== 'super_admin' && targetUser.company_id !== caller.company_id) {
+      return json({ error: 'Forbidden: user belongs to another company' }, 403);
     }
 
-    // Resolve company branding
-    const companyId = targetUser.company_id || 'default';
     let companyName = 'Empresa';
     let companyLogo = '/assets/icon-app.png';
-
     const { data: company } = await supabase
       .from('companies')
       .select('name, theme')
-      .eq('id', companyId)
+      .eq('id', targetUser.company_id)
       .single();
-
     if (company) {
-      companyName = company.name || 'Empresa';
-      companyLogo = company.theme?.logoUrl || '/assets/logo-inicio.png';
+      companyName = company.name || companyName;
+      companyLogo = company.theme?.iconUrl || company.theme?.logoUrl || companyLogo;
     }
 
     const title = `🔔 Test Push - ${companyName}`;
     const message = `Notificación de prueba enviada a ${targetUser.name || 'usuario'}. Si ves esto, ¡las notificaciones funcionan correctamente!`;
 
-    // 1. Create internal notification in Supabase
-    await supabase.from('notifications').insert({
-      user_id: userId,
-      company_id: companyId,
+    const { error: notifError } = await supabase.from('notifications').insert({
+      company_id: targetUser.company_id,
+      user_id: targetUser.id,
       title,
       body: message,
-      // `text` es NOT NULL; sin él el insert falla 500 y el push de prueba nunca
-      // crea la notificación interna.
       text: message,
       path: '/',
-      type: 'test',
+      type: 'info',
       read: false,
-      created_at: new Date().toISOString(),
     });
+    if (notifError) console.error('[Send Test Notification] Insert error:', notifError);
 
-    // 2. Send push via OneSignal
-    const pushResult = await sendOneSignalNotification(userId, {
-      userId,
-      title,
-      body: message,
-      path: '/',
-      companyId,
-    }, companyName, companyLogo);
+    const playerId: string | null = targetUser.onesignal_player_id;
+    const pushResult = playerId
+      ? await sendOneSignalPush(playerId, title, message, companyLogo)
+      : { success: false, error: 'NO_PLAYER_ID' };
 
-    // 3. Also try Web Push if user has subscription (for PWA)
-    // This would require storing Web Push subscriptions in the users table
-
-    return new Response(JSON.stringify({
+    return json({
       success: pushResult.success,
       message: pushResult.success
         ? `Push enviado exitosamente a ${targetUser.name}.`
         : `Push falló: ${pushResult.error}. Notificación interna creada.`,
       userName: targetUser.name,
-      playerIdPreview: targetUser.fcm_token
-        ? `${targetUser.fcm_token.substring(0, 12)}...`
-        : 'NO_TOKEN',
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      playerIdPreview: playerId ? `${playerId.substring(0, 12)}...` : 'NO_TOKEN',
     });
-
   } catch (error: any) {
     console.error('[Send Test Notification] Error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: error.message }, 500);
   }
 }

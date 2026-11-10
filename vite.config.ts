@@ -56,8 +56,8 @@ export default defineConfig(({ mode }) => {
             { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
           ],
           shortcuts: [
-            { name: "Nueva Orden", short_name: "Orden", description: "Crear una nueva orden de servicio", url: "/orders/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] },
-            { name: "Nuevo Cliente", short_name: "Cliente", description: "Registrar un nuevo cliente", url: "/clients/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] }
+            { name: "Nueva Orden", short_name: "Orden", description: "Crear una nueva orden de servicio", url: "/#/orders/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] },
+            { name: "Nuevo Cliente", short_name: "Cliente", description: "Registrar un nuevo cliente", url: "/#/clients/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] }
           ],
           screenshots: [
             { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", form_factor: "wide", label: "Pantalla de Inicio" },
@@ -82,9 +82,9 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
       terserOptions: {
         compress: {
-          drop_console: true,
           drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+          // console.warn/error se conservan: son el único rastro de fallos en producción.
+          pure_funcs: ['console.log', 'console.info', 'console.debug'],
           passes: 2,
         },
         mangle: {
@@ -100,9 +100,6 @@ export default defineConfig(({ mode }) => {
             // React core - always loaded
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
 
-            // State management & data fetching
-            'vendor-tanstack': ['@tanstack/react-query', '@tanstack/react-query-devtools'],
-
             // Supabase - heavy, load on demand
             'vendor-supabase': ['@supabase/supabase-js'],
 
@@ -116,7 +113,6 @@ export default defineConfig(({ mode }) => {
 
             // Maps - only for client map view
             'vendor-leaflet': ['leaflet', 'react-leaflet'],
-            'vendor-google-maps': ['@vis.gl/react-google-maps'],
 
             // PDF/Export - heavy, on demand
             'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
@@ -128,13 +124,10 @@ export default defineConfig(({ mode }) => {
             // Offline DB
             'vendor-dexie': ['dexie'],
 
-            // Notifications
-            'vendor-onesignal': ['react-onesignal'],
-
             // Form/Input helpers
             'vendor-forms': ['react-currency-input-field', 'react-textarea-autosize'],
 
-            // OneSignal service worker (auto-loaded)
+            // Workbox - service worker
             'workbox-runtime': ['workbox-core', 'workbox-routing', 'workbox-strategies', 'workbox-cacheable-response', 'workbox-expiration', 'workbox-precaching'],
           },
           // Optimize chunk naming for better caching
@@ -181,7 +174,6 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
         'react-router-dom',
-        '@tanstack/react-query',
         '@supabase/supabase-js',
         'lucide-react',
         'zod',

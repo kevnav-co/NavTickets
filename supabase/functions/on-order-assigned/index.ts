@@ -3,23 +3,17 @@
 // Disparado por el trigger `trg_order_assigned_webhook` (PostgreSQL) vía pg_net.
 //
 // 1) Inserta una fila en la tabla `notifications` (bandeja interna de la app).
-// 2) Envía una notificación push en tiempo real vía OneSignal REST API al técnico asignado.
+// 2) Envía una notificación push en tiempo real vía send-push.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
+import { sendPush } from "../_shared/push.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
 if (!serviceRole) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
 }
-
-const supabase = createClient(SUPABASE_URL, serviceRole);
-
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET");
-const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -29,23 +23,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Validación de seguridad defensiva si WEBHOOK_SECRET está configurado.
-  // Solo rechaza si el header trae un valor real que NO coincide.
-  // Si app.webhook_secret no está configurado en Session settings, el header
-  // viene vacío y se acepta (best-effort).
-  if (WEBHOOK_SECRET) {
-    const authHeader = req.headers.get("authorization");
-    const customHeader = req.headers.get("x-webhook-secret");
-    const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-    const provided = customHeader || bearer;
-
-    if (provided && provided !== WEBHOOK_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-  }
+  if (!isAuthorizedWebhook(req)) return unauthorizedWebhookResponse();
 
   try {
     const body = await req.json();
@@ -67,7 +45,6 @@ Deno.serve(async (req: Request) => {
     const orderName = record.name || (orderNumber ? `Orden #${orderNumber}` : "Orden de servicio");
     const previousTechnicianId = oldRecord?.technician_id;
 
-    // Si no hay técnico asignado, no notificar
     if (!technicianId) {
       return new Response(
         JSON.stringify({ message: "Sin técnico asignado, no se notifica" }),
@@ -88,7 +65,6 @@ Deno.serve(async (req: Request) => {
     const orderMsg = `Te han asignado la orden: ${orderName}`;
     const targetPath = `/orders/${orderId}`;
 
-    // 1) Crear notificación en la bandeja interna (tabla `notifications`)
     const { error: notifError } = await supabase.from("notifications").insert({
       company_id: companyId,
       user_id: technicianId,
@@ -105,72 +81,19 @@ Deno.serve(async (req: Request) => {
       console.error("[OnOrderAssigned] Error al insertar notificación interna:", notifError);
     }
 
-    // 2) Enviar Push OneSignal si está configurado y el técnico tiene player ID
-    let pushSent = false;
-    if (ONESIGNAL_APP_ID && ONESIGNAL_API_KEY) {
-      const { data: techUsers } = await supabase
-        .from("users")
-        .select("onesignal_player_id, fcm_token, name")
-        .eq("id", technicianId);
+    const pushSent = await sendPush({
+      userId: technicianId,
+      title: `📋 ${notifTitle}`,
+      body: orderMsg,
+      data: { path: targetPath },
+    });
 
-      const playerId =
-        (techUsers || [])[0]?.onesignal_player_id || (techUsers || [])[0]?.fcm_token;
-
-      if (playerId) {
-        // Obtener datos de la empresa para personalizar el push con branding
-        let companyName = "NavTicket";
-        let companyLogo: string | undefined;
-        if (companyId) {
-          const { data: company } = await supabase
-            .from("companies")
-            .select("name, theme")
-            .eq("id", companyId)
-            .single();
-          if (company?.name) companyName = company.name;
-          companyLogo = company?.theme?.logoUrl || undefined;
-        }
-
-        const pushPayload: Record<string, unknown> = {
-          app_id: ONESIGNAL_APP_ID,
-          include_player_ids: [playerId],
-          headings: { en: `📋 ${notifTitle}` },
-          contents: { en: `${companyName}: ${orderMsg}` },
-          url: `${base}/#${targetPath}`,
-          data: { path: targetPath, url: `${base}/#${targetPath}` },
-        };
-
-        if (companyLogo) {
-          pushPayload.chrome_web_icon = companyLogo;
-          pushPayload.chrome_web_badge = companyLogo;
-        }
-
-        const pushResp = await fetch("https://onesignal.com/api/v1/notifications", {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${ONESIGNAL_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(pushPayload),
-        });
-
-        if (!pushResp.ok) {
-          const errText = await pushResp.text();
-          console.error("[OnOrderAssigned] Error OneSignal:", errText);
-        } else {
-          pushSent = true;
-        }
-      }
-    } else {
-      console.warn("[OnOrderAssigned] OneSignal no configurado (faltan secretos)");
+    if (!pushSent) {
+      console.error("[OnOrderAssigned] Error send-push para", technicianId);
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        orderId,
-        technicianId,
-        pushSent,
-      }),
+      JSON.stringify({ success: true, orderId, technicianId, pushSent }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {

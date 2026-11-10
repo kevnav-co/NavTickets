@@ -11,6 +11,7 @@
 // key from secrets for full schema privileges (same pattern as `task-scheduler`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -22,60 +23,45 @@ if (!serviceRole) {
 }
 const supabase = createClient(SUPABASE_URL, serviceRole);
 
-// Push OneSignal: opcional (mismo patrón que support-notify). Sin secrets, el
-// cron degrada a solo-notificación-interna (sendPushNotification) sin romperse.
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
-
-// Envía un push OneSignal a un conjunto de user ids de la app (mantenimiento y
-// garantías por vencer para los admins del tenant). Resuelve el player id desde
-// users.onesignal_player_id (fallback fcm_token legado).
+// Envía un push Web Push API a un conjunto de user ids (vencimientos/mantenimiento).
 async function sendPushToUserIds(
   userIds: (string | null)[],
   title: string,
   body: string,
   path: string,
 ): Promise<number> {
-  if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) {
-    console.warn("[Expiration Check] OneSignal no configurado (solo notificación interna)");
-    return 0;
-  }
   const unique = [...new Set(userIds.filter(Boolean))];
   if (unique.length === 0) return 0;
 
-  const { data: users, error } = await supabase
-    .from("users")
-    .select("onesignal_player_id, fcm_token")
-    .in("id", unique);
-  if (error) throw error;
+  let sent = 0;
+  for (const userId of unique) {
+    try {
+      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRole}`,
+          "Content-Type": "application/json",
+          "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") || "",
+        },
+        body: JSON.stringify({
+          userId,
+          title,
+          body,
+          data: { path },
+        }),
+      });
 
-  const playerIds = (users || [])
-    .map((u) => u.onesignal_player_id || u.fcm_token)
-    .filter(Boolean);
-  if (playerIds.length === 0) return 0;
-
-  const pushBody = {
-    app_id: ONESIGNAL_APP_ID,
-    include_player_ids: playerIds,
-    headings: { en: title },
-    contents: { en: body },
-    url: `${base}/#${path}`,
-    data: { path },
-  };
-  const resp = await fetch("https://onesignal.com/api/v1/notifications", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${ONESIGNAL_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(pushBody),
-  });
-  if (!resp.ok) {
-    console.error("[Expiration Check] OneSignal error:", await resp.text());
-    return 0;
+      if (pushResp.ok) {
+        sent++;
+      } else {
+        console.error(`[Expiration Check] Failed to send push to ${userId}:`, await pushResp.text());
+      }
+    } catch (error) {
+      console.error(`[Expiration Check] Error sending push to ${userId}:`, error);
+    }
   }
-  return playerIds.length;
+
+  return sent;
 }
 
 interface CompanyBranding {
@@ -161,17 +147,18 @@ function getWarrantyEmailHtml(
 
 async function sendPushNotification(userId: string, companyId: string, title: string, body: string, path: string) {
   try {
-    await supabase.from("notifications").insert({
+    const { error } = await supabase.from("notifications").insert({
       company_id: companyId,
       user_id: userId,
       title,
       body,
       text: title,
       path,
-      type: "expiration",
+      type: "alert",
       read: false,
       created_at: new Date().toISOString(),
     });
+    if (error) throw error;
   } catch (error) {
     console.error("[Expiration Check] Error sending push:", error);
   }
@@ -189,7 +176,9 @@ async function sendWhatsApp(_to: string, message: string): Promise<boolean> {
   return false;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
+  if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
+
   const now = new Date();
   const nextWeek = new Date(now);
   nextWeek.setDate(now.getDate() + 7);

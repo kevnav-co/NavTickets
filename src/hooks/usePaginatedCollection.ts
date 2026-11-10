@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import type { QueryFilter } from './useSupabaseQuery';
+import { snakeToCamel } from '../utils/caseConverter';
 
 /**
  * Options for the pagination hook.
@@ -83,10 +84,11 @@ export const usePaginatedCollection = <T extends { id: string }>(
         // Apply range for pagination.
         query = query.range(from, to);
 
-        const { data: newDocs, error: err } = await query;
+        const { data: rows, error: err } = await query;
         if (err) throw new Error(err.message);
+        const newDocs = (rows || []).map((row: Record<string, any>) => snakeToCamel(row));
 
-        const finalHasMore = (newDocs || []).length === pageSize;
+        const finalHasMore = newDocs.length === pageSize;
         setHasMore(finalHasMore);
         if (isInitialLoad) {
           setPage(0);

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Shield, BarChart3, LifeBuoy, Check, Folder, FolderCog, WifiOff, X,
+  Shield, BarChart3, LifeBuoy, Check, Folder, FolderCog, WifiOff, X,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -10,14 +10,7 @@ import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useSupportUnread } from '../../hooks/useSupportUnread';
 import PERMISSIONS, { hasPermission, isTabVisible } from '../../permissions';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
-
-// Dynamic icon resolution
-import * as LucideIcons from 'lucide-react';
-
-function resolveIcon(iconName: string): LucideIcon {
-  const icons = LucideIcons as unknown as Record<string, LucideIcon>;
-  return icons[iconName] || Home;
-}
+import { resolveIcon } from '../../utils/iconMap';
 
 interface NavItem {
   icon: LucideIcon;
@@ -61,7 +54,7 @@ const GESTION_ITEMS = ['inventory', 'reports', 'users'];
 
 // Mismo matiz de activo por ruta que tenía la barra plana (evita que `/admin`
 // marque como activo todo su subárbol).
-function isPathActive(item: NavItem, pathname: string): boolean {
+function isPathActive(item: Pick<NavItem, 'path'>, pathname: string): boolean {
   return pathname === item.path ||
     (item.path !== '/' && item.path !== '/admin' && pathname.startsWith(item.path));
 }
@@ -75,7 +68,7 @@ const CategorySheet: React.FC<{
   pathname: string;
   onSelect: (item: NavItem) => void;
   onClose: () => void;
-}> = ({ title, icon, items, isOffline, pathname, onSelect, onClose }) => {
+}> = ({ title, icon: Icon, items, isOffline, pathname, onSelect, onClose }) => {
   return (
     <div className="fixed inset-0 z-[60]" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
@@ -88,7 +81,7 @@ const CategorySheet: React.FC<{
         <header className="flex items-center justify-between pl-2 pr-1 py-1">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <icon size={16} className="text-primary" />
+              <Icon size={16} className="text-primary" />
             </span>
             <span className="text-xs font-black uppercase tracking-widest text-gray-700">{title}</span>
           </div>

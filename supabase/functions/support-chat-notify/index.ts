@@ -1,45 +1,24 @@
 // Supabase Edge Function — Support Chat Notify.
-// Push OneSignal a los super_admins cuando un usuario de EMPRESA escribe un
-// mensaje en el chat de soporte (support_messages con role <> 'admin'). Es la
-// direccion inversa a support-reply-notify (027), que avisa al AUTOR cuando el
-// super_admin responde. Juntos cubren ambos lados del hilo de soporte.
-//
-// Lo dispara el trigger `support_message_notify_staff` (migración 028) vía
-// pg_net cuando se inserta una fila con role='empresa' (o cualquier no-admin).
-// Igual que support-notify (011): push solo, sin fila en `notifications` (para no
-// inflar la bandeja del super_admin con cada mensaje del hilo).
-//
-// Sin JWT de sesión (verify_jwt=false, la llama pg_net). Acceso de control:
-// cabecera x-webhook-secret si se define el secret WEBHOOK_SECRET en la función.
+// Push Web Push API a los super_admins cuando un usuario de EMPRESA escribe un
+// mensaje en el chat de soporte (support_messages con role <> 'admin').
+// Lo dispara el trigger `support_message_notify_staff` (migración 028) vía pg_net.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
+import { sendPushToMany } from "../_shared/push.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!serviceRole) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
 }
-const supabase = createClient(SUPABASE_URL, serviceRole);
-
-const ONESIGNAL_APP_ID = Deno.env.get("ONESIGNAL_APP_ID");
-const ONESIGNAL_API_KEY = Deno.env.get("ONESIGNAL_API_KEY");
-const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET"); // opcional
-const base = Deno.env.get("APP_URL") || "https://navtickets.vercel.app";
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405 });
   }
 
-  // Validación defensiva: solo rechaza si el header trae un valor real
-  // que NO coincide. Si app.webhook_secret no está en Session settings,
-  // el header viene vacío y se acepta (best-effort).
-  if (WEBHOOK_SECRET) {
-    const got = req.headers.get("x-webhook-secret");
-    if (got && got !== WEBHOOK_SECRET) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-    }
-  }
+  if (!isAuthorizedWebhook(req)) return unauthorizedWebhookResponse();
 
   try {
     const body = await req.json();
@@ -54,77 +33,55 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!ONESIGNAL_APP_ID || !ONESIGNAL_API_KEY) {
-      console.warn("[Support Chat Notify] OneSignal no configurado");
-      return new Response(
-        JSON.stringify({ success: true, notified: 0, reason: "ONESIGNAL_NOT_CONFIGURED" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
-
-    // Contexto del ticket (empresa + asunto) para un body más claro.
     const { data: ticket } = await supabase
       .from("support_tickets")
       .select("subject, company_id")
       .eq("id", ticketId)
       .single();
-    let companyName = "una empresa";
-    if (ticket?.company_id) {
-      const { data: company } = await supabase
-        .from("companies")
-        .select("name")
-        .eq("id", ticket.company_id)
-        .single();
-      if (company?.name) companyName = company.name;
-    }
-    const subject = ticket?.subject || "";
 
-    // Destinatarios: todos los super_admins con player id (patrón de support-notify).
-    const { data: superAdmins } = await supabase
+    if (!ticket?.company_id) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Ticket o empresa no encontrado" }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const { data: superAdmins, error: queryError } = await supabase
       .from("users")
-      .select("id, onesignal_player_id, fcm_token")
+      .select("id")
+      .eq("company_id", ticket.company_id)
       .eq("role", "super_admin");
-    const targets = (superAdmins || []).filter(
-      (sa) => sa.onesignal_player_id || sa.fcm_token,
-    );
-    if (targets.length === 0) {
+
+    if (queryError) {
+      console.error("[Support Chat Notify] Error querying super_admins:", queryError);
       return new Response(
-        JSON.stringify({ success: true, notified: 0, reason: "NO_SUPER_ADMIN_PLAYER_IDS" }),
+        JSON.stringify({ error: "Failed to query super_admins" }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
+    const superAdminIds = (superAdmins || []).map((sa: { id: string }) => sa.id);
+    if (superAdminIds.length === 0) {
+      return new Response(
+        JSON.stringify({ success: true, notified: 0, message: "No super_admins found" }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       );
     }
 
-    const playerIds = targets.map((t) => t.onesignal_player_id || t.fcm_token);
-    const summary = `Empresa: ${companyName}${subject ? ` · ${subject}` : ""}\n${message}`.slice(0, 300);
-    const pushBody: Record<string, unknown> = {
-      app_id: ONESIGNAL_APP_ID,
-      include_player_ids: playerIds,
-      headings: { en: "💬 Nuevo mensaje del chat de soporte" },
-      contents: { en: summary },
-      url: `${base}/#/admin/support`,
-      data: { path: "/admin/support" },
-    };
+    const summary = message.slice(0, 200);
 
-    const resp = await fetch("https://onesignal.com/api/v1/notifications", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${ONESIGNAL_API_KEY}`,
-        "Content-Type": "application/json",
+    const result = await sendPushToMany(
+      superAdminIds,
+      {
+        title: "💬 Nuevo mensaje del chat de soporte",
+        body: summary,
+        data: { path: "/admin/support" },
       },
-      body: JSON.stringify(pushBody),
-    });
-
-    if (!resp.ok) {
-      const errBody = await resp.json();
-      console.error("[Support Chat Notify] OneSignal error:", JSON.stringify(errBody));
-      return new Response(
-        JSON.stringify({ success: false, notified: 0, error: JSON.stringify(errBody) }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    }
+      "Support Chat Notify",
+    );
 
     return new Response(
-      JSON.stringify({ success: true, notified: targets.length, to: targets.length }),
+      JSON.stringify({ success: true, notified: result.sent, failed: result.failed, total: result.total }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   } catch (error: any) {

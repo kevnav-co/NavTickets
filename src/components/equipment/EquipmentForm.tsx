@@ -18,18 +18,19 @@ import ClientSearchModal from '../shared/ClientSearchModal';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 
-const initialFormData: Partial<Equipment> = {
+const createInitialFormData = (): Partial<Equipment> => ({
+  id: crypto.randomUUID(),
   name: '',
   description: '',
   serialNumber: '',
   clientId: '',
   voltage: '110V',
   gasType: 'No usa',
-  status: 'Activa', 
+  status: 'Activa',
   imageUrl: '',
   lastMaintenanceDate: new Date().toISOString().split('T')[0],
   maintenanceFrequency: 3,
-};
+});
 
 const EquipmentForm: React.FC = () => {
   const { clients, equipment, orders } = useData();
@@ -41,7 +42,8 @@ const EquipmentForm: React.FC = () => {
   const isEditMode = !!id;
 
   const localStorageKey = isEditMode ? `equipment-form-${id}` : 'new-equipment-form';
-  const [formData, setFormData] = useLocalStorage<Partial<Equipment>>(localStorageKey, initialFormData);
+  const stableInitial = useMemo(() => createInitialFormData(), []);
+  const [formData, setFormData] = useLocalStorage<Partial<Equipment>>(localStorageKey, stableInitial);
   const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
   const initialLoad = useRef(true);
 
@@ -69,7 +71,7 @@ const EquipmentForm: React.FC = () => {
       }
       setFormData(prev => ({...prev, ...updates}));
     },
-    storagePath: 'equipment_photos',
+    storagePath: 'equipment',
   });
 
   const selectedClient = useMemo(() => clients.find(c => c.id === formData.clientId), [formData.clientId, clients]);
@@ -91,7 +93,7 @@ const EquipmentForm: React.FC = () => {
       if (initialLoad.current) {
         const itemToEdit = equipment.find(e => e.id === id);
         if (itemToEdit) {
-           if (JSON.stringify(formData) === JSON.stringify(initialFormData)) {
+           if (JSON.stringify(formData) === JSON.stringify(stableInitial)) {
               const lastClosedOrder = orders.filter(o => o.equipmentIds.includes(itemToEdit.id) && o.status === OrderStatus.CLOSED).sort((a,b) => new Date(b.scheduledDate).getTime() - new Date(a.scheduledDate).getTime())[0];
               setFormData({...itemToEdit, lastMaintenanceDate: lastClosedOrder?.scheduledDate || itemToEdit.lastMaintenanceDate });
            }
@@ -103,7 +105,7 @@ const EquipmentForm: React.FC = () => {
     } else {
       const prefill = location.state as Partial<Equipment> || {};
        if (initialLoad.current) {
-        setFormData(prev => ({ ...initialFormData, ...prev, ...prefill, serialNumber: generateNextSerial }));
+        setFormData(prev => ({ ...stableInitial, ...prev, ...prefill, serialNumber: generateNextSerial }));
         initialLoad.current = false;
        }
     }
@@ -203,7 +205,7 @@ const EquipmentForm: React.FC = () => {
             }
             // OJO RLS: addItem NO inyecta companyId; el INSERT exige
             // company_id = current_company_id(), así que va en el payload.
-            await addValidated('equipment', { ...dataToSave, companyId: currentUser.companyId }, EquipmentSchema.omit({ id: true }));
+            await addValidated('equipment', { ...dataToSave, id: formData.id, companyId: currentUser.companyId }, EquipmentSchema);
             alert('Máquina registrada con éxito');
             window.localStorage.removeItem(localStorageKey);
             navigate('/equipment');

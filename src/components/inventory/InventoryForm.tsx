@@ -36,7 +36,6 @@ const InventoryForm: React.FC = () => {
 
   const canEdit = hasPermission(currentUser?.role, PERMISSIONS.UPDATE_INVENTORY);
   const canCreate = hasPermission(currentUser?.role, PERMISSIONS.CREATE_INVENTORY);
-  const canDelete = hasPermission(currentUser?.role, PERMISSIONS.DELETE_INVENTORY);
   const permissionOk = isEditMode ? canEdit : canCreate;
 
   const lowStock = (formData.lowStockThreshold ?? 0) > 0 && (formData.quantity ?? 0) <= (formData.lowStockThreshold ?? 0);

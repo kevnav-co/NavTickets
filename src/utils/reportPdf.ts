@@ -54,7 +54,6 @@ export const exportReportPdf = async (
   });
 
   // Paginación en footer
-  const finalY = (doc as any).lastAutoTable?.finalY ?? 30;
   return new Promise<void>((resolve) => {
     // Guardar en cada página un footer simple.
     const pageCount = (doc as any).internal.getNumberOfPages();

@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff, CheckCircle2, XCircle, ChevronLeft, Loader2, ShieldCheck } from 'lucide-react';
+import { Lock, Eye, EyeOff, CheckCircle2, XCircle, ChevronLeft, ShieldCheck } from 'lucide-react';
 import { supabase } from '../../services/supabase';
 
 const ResetPassword: React.FC = () => {

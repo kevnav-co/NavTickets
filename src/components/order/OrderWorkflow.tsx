@@ -16,9 +16,8 @@ import { Loader2, Package, Plus, X } from 'lucide-react';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
 import { useCollection } from '../../hooks/useCollection';
-import { QueryFilter } from '../../hooks/useSupabaseQuery';
 import PERMISSIONS, { hasPermission } from '../../permissions';
-import { supabase } from '../../services/supabase';
+import { deleteOrderEvidenceFiles } from '../../services/data';
 
 const OrderWorkflow: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +39,7 @@ const OrderWorkflow: React.FC = () => {
   const [showUserSearch, setShowUserSearch] = useState(false);
 
   // Repuestos usados en esta orden (tabla M:N order_inventory_lines).
-  const { data: orderLines } = useCollection<OrderInventoryLine>('order_inventory_lines', {
+  const { data: orderLines } = useCollection<OrderInventoryLine & { id: string }>('order_inventory_lines', {
     filters: id ? [{ column: 'order_id', operator: 'eq', value: id }] : [],
   });
 
@@ -80,8 +79,9 @@ const OrderWorkflow: React.FC = () => {
     sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
   }, [order, updateValidated]);
 
+  const placeholderDoc = useMemo(() => ({ id: '' }), []);
   const { selectedImage, handleSelectImage, handleCloseModal, isUploading, error: fileError, getFileUrl, handleUpload, handleRemove } = useFileHandler({
-    doc: order!,
+    doc: (order ?? placeholderDoc) as ServiceOrder,
     updateDoc: handleUpdateOrder,
     storagePath: 'orders',
   });
@@ -104,37 +104,8 @@ const OrderWorkflow: React.FC = () => {
     if (!order || !window.confirm('¿Estás seguro de que quieres eliminar esta orden? Esta acción es irreversible y borrará todos los datos y fotos asociadas.')) return;
     setIsDeleting(true);
     try {
-      // Delete order evidence images from Supabase Storage
-      const evidenceItems = [
-        ...(order.initialEvidence || []),
-        ...(order.closingData?.evidenceImages || []),
-      ];
-      const storageUrls = evidenceItems.filter(
-        (item): item is string => typeof item === 'string' && item.includes('supabase.co/storage/v1/object/public')
-      );
-
-      if (storageUrls.length > 0) {
-        const pathsToDelete = storageUrls.map(url => {
-          try {
-            const [, rest] = url.split('/public/');
-            const parts = rest[0].split('/');
-            parts.shift();
-            return parts.join('/');
-          } catch {
-            return null;
-          }
-        }).filter(Boolean) as string[];
-
-        if (pathsToDelete.length > 0) {
-          const { error: storageError } = await supabase.storage.from('order-photos').remove(pathsToDelete);
-          if (storageError) {
-            console.warn('Failed to delete some evidence files from Supabase Storage:', storageError.message);
-          }
-        }
-      }
-
-      // Delete the order record from Supabase
       await deleteItem('orders', order.id);
+      await deleteOrderEvidenceFiles(order);
       sessionStorage.removeItem('accountingOrdersCache');
       navigate('/orders');
     } catch (error) {
@@ -147,11 +118,7 @@ const OrderWorkflow: React.FC = () => {
 
   const handleClientUpdate = useCallback(async (selectedClient: Client) => {
     if (order) {
-      // OJO: NO mandar `equipmentIds` ni `equipmentIds: []` aquí: la tabla `orders`
-      // NO tiene columna `equipment_ids` (la relación orden↔equipo vive en
-      // `equipment_orders`). Incluirlo hace que PostgREST devuelva 400
-      // "column equipment_ids does not exist" y el UPDATE de cliente nunca se
-      // persiste (el modal se cerraba/otro quedaba sin guardar).
+      // Solo actualizar cliente; no incluir equipmentIds para no sobreescribirlos.
       await updateValidated('orders', order.id, {
         clientId: selectedClient.id,
         clientName: selectedClient.name,
@@ -191,7 +158,7 @@ const OrderWorkflow: React.FC = () => {
   }, [order, navigate, location.pathname]);
 
   // Guarda las líneas de repuestos de la orden (reemplazo del set completo).
-  const handleInventoryLinesSave = useCallback(async (lines: OrderInventoryLine[]) => {
+  const handleInventoryLinesSave = useCallback(async (lines: Omit<OrderInventoryLine, 'orderId'>[]) => {
     if (!order) return;
     try {
       const current = orderLines || [];
@@ -264,7 +231,7 @@ const OrderWorkflow: React.FC = () => {
 
   const anyError = orderError || dataError;
   if (anyError) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError instanceof Error ? anyError.message : anyError}</div>;
   }
 
   if (!order) {

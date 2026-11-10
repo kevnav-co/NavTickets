@@ -10,6 +10,8 @@ import { useData } from '../../context/DataContext';
 import { useCollection } from '../../hooks/useCollection';
 import { SupportTicket, SupportMessage, SupportTicketStatus } from '../../types';
 import { CompanyConfig } from '../../types/company';
+import ChatThread from '../support/ChatThread';
+import { formatDateTime } from '../../utils/chat';
 
 const STATUS_META: Record<SupportTicketStatus, { label: string; cls: string }> = {
   [SupportTicketStatus.OPEN]: { label: 'Abierto', cls: 'bg-amber-100 text-amber-700' },
@@ -22,10 +24,6 @@ const STATUS_ORDER: SupportTicketStatus[] = [
   SupportTicketStatus.CLOSED,
 ];
 
-const formatDate = (iso: string) => {
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-};
 
 const SupportAdmin: React.FC = () => {
   const { currentUser } = useAuth();
@@ -103,7 +101,7 @@ const SupportAdmin: React.FC = () => {
     return <div className="w-full h-96 flex items-center justify-center gap-3 text-gray-400"><Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando soportes...</span></div>;
   }
   if (error) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error}</div>;
   }
 
   return (
@@ -157,7 +155,7 @@ const SupportAdmin: React.FC = () => {
                 </div>
                 <p className="text-sm font-bold text-gray-800 truncate mt-0.5">{t.subject}</p>
                 <p className="text-xs text-gray-400 truncate">{t.message}</p>
-                <span className="text-[10px] text-gray-300 font-semibold">{formatDate(t.createdAt)}</span>
+                <span className="text-[10px] text-gray-300 font-semibold">{formatDateTime(t.createdAt)}</span>
               </button>
             );
           })}
@@ -185,7 +183,7 @@ const SupportAdmin: React.FC = () => {
                 </button>
                 <div className="min-w-0">
                   <h3 className="font-black text-gray-800 truncate">{selected.subject}</h3>
-                  <p className="text-xs font-bold text-gray-400">{companyName(selected.companyId)} · {formatDate(selected.createdAt)}</p>
+                  <p className="text-xs font-bold text-gray-400">{companyName(selected.companyId)} · {formatDateTime(selected.createdAt)}</p>
                 </div>
               </div>
               <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).cls}`}>
@@ -193,23 +191,9 @@ const SupportAdmin: React.FC = () => {
               </span>
             </div>
 
-            {/* Mensaje de apertura */}
-            <div className="max-w-[85%] p-3 rounded-2xl bg-gray-100 text-sm text-gray-700 self-start mb-2">
-              <p className="whitespace-pre-wrap">{selected.message}</p>
-              <span className="text-[10px] text-gray-400 font-semibold">{formatDate(selected.createdAt)}</span>
-            </div>
-
-            {/* Hilo */}
-            <div className="flex-1 overflow-y-auto space-y-2 mb-4 min-h-0">
-              {(messages || []).map(m => (
-                <div
-                  key={m.id}
-                  className={`max-w-[85%] p-3 rounded-2xl text-sm text-gray-700 ${m.role === 'admin' ? 'bg-red-50 border border-red-100 self-end' : 'bg-gray-100 self-start'}`}
-                >
-                  <p className="whitespace-pre-wrap">{m.message}</p>
-                  <span className="text-[10px] text-gray-400 font-semibold">{m.role === 'admin' ? 'Soporte · ' : ''}{formatDate(m.createdAt)}</span>
-                </div>
-              ))}
+            {/* Chat */}
+            <div className="flex-1 overflow-y-auto mb-4 min-h-0">
+              <ChatThread ticket={selected} messages={messages} viewerId={currentUser?.id} viewerRole="admin" />
             </div>
 
             {/* Controles de estado */}

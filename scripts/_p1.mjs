@@ -35,9 +35,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
-const URL = "https://hvysnxvuyexacktlwsbm.supabase.co";
+const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+if (!URL) throw new Error("Define SUPABASE_URL con la URL del proyecto destino");
 const DOMAIN = "navas.com";
-const PASSWORD = "Demo#2026";
+const PASSWORD = process.env.DEMO_PASSWORD;
+if (!PASSWORD) throw new Error("Define DEMO_PASSWORD (clave de las cuentas demo; nunca se versiona)");
 
 // ─── Claves ──────────────────────────────────────────────────────────────────
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";

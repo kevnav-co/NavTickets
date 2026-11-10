@@ -100,7 +100,7 @@ const OrderList: React.FC = () => {
     if (query) {
       const q = query.toLowerCase();
       result = result.filter(o =>
-        o.orderNumber.toString().includes(q) ||
+        (o.orderNumber?.toString() || '').includes(q) ||
         getClientName(o.clientId).toLowerCase().includes(q) ||
         getTechName(o.technicianId).toLowerCase().includes(q) ||
         (o.serviceName || '').toLowerCase().includes(q)

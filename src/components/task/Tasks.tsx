@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus, Check, ChevronDown, ChevronRight,
   Bell, Calendar, Repeat, X, User as UserIcon, Users, FileText, Search,
@@ -70,7 +70,7 @@ const Tasks: React.FC = () => {
           createdAt: new Date().toISOString(),
           createdBy: currentUser.id,
           assignedTo: currentUser.id,
-          participants: [currentUser.id]
+          participants: [currentUser.id],
       };
       const result = TaskSchema.omit({ id: true }).safeParse(newTask);
       if (!result.success) {

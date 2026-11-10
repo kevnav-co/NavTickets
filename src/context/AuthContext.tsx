@@ -1,6 +1,5 @@
 // src/context/AuthContext.tsx
 //
-// Migrado a Supabase Auth — reemplaza Firebase Auth.
 // El login usa el formato {username}@navas.com (compatible con usuarios existentes).
 
 import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
@@ -115,126 +114,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [mounted, setMounted] = useState(false);
   const [profileVersion, setProfileVersion] = useState(0);
   const [impersonation, setImpersonation] = useState<{ companyId: string; role: User['role'] } | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
 
-  // Refetch del perfil (p. ej. tras un cambio de contraseña forzado, para que
-  // must_reset_password se entere de que ya se cambió y desbloquee la app).
   const refreshProfile = useCallback(() => setProfileVersion(v => v + 1), []);
 
+  // Sincroniza impersonation desde los metadatos del JWT
+  const syncImpersonation = useCallback((session: any) => {
+    const meta: any = session?.user?.app_metadata;
+    const impCompanyId = meta?.imp_company_id;
+    const impRole = meta?.imp_role;
+    if (impCompanyId || impRole) {
+      setImpersonation({ companyId: impCompanyId, role: impRole ?? 'admin' });
+    } else {
+      setImpersonation(null);
+    }
+  }, []);
+
+  // Una única suscripción a onAuthStateChange que maneja:
+  // - authUserId (para cargar el perfil vía useUserProfile)
+  // - impersonation (desde JWT app_metadata)
+  // - limpieza en SIGNED_OUT
   useEffect(() => {
     setMounted(true);
-    console.log("🔍 Iniciando AuthContext (Supabase)...");
 
     if (!isSupabaseConfigured()) {
-      console.warn('⚠️ Supabase no configurado — Auth deshabilitado');
+      console.warn('[Auth] Supabase no configurado');
       setLoading(false);
       return;
     }
 
-    let isMounted = true;
+    let alive = true;
 
-    // 1. Obtener sesión actual - Supabase ya persiste la sesión en localStorage
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
+        if (!alive) return;
 
         if (session?.user) {
-          console.log("👤 Sesión activa detectada");
-        } else {
-          console.log("👤 Sin sesión activa");
+          setAuthUserId(session.user.id);
+          syncImpersonation(session);
         }
       } catch (e) {
-        console.error("❌ Error iniciando auth:", e);
+        console.error('[Auth] Error iniciando auth:', e);
       } finally {
-        if (isMounted) {
-          console.log("✅ Auth init completado");
-          setLoading(false);
-        }
+        if (alive) setLoading(false);
       }
     };
 
     initAuth();
 
-    // 2. Suscripción a cambios de auth en tiempo real
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("👤 Auth Event:", event, session ? "Sesión presente" : "Sin sesión");
+      (event, session) => {
+        if (!alive) return;
 
-        if (!isMounted) return;
+        if (event === 'SIGNED_OUT') {
+          setCurrentUser(null);
+          setAuthUserId(null);
+          setImpersonation(null);
+          return;
+        }
 
-        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
-          // El perfil se cargará via useUserProfile hook en el componente que lo necesite
-          // Aquí solo actualizamos el estado mínimo
-        } else if (event === 'SIGNED_OUT') {
-          if (isMounted) {
-            setCurrentUser(null);
-          }
+        if (session?.user) {
+          setAuthUserId(session.user.id);
+          syncImpersonation(session);
+        } else {
+          setAuthUserId(null);
         }
       }
     );
 
     return () => {
-      isMounted = false;
+      alive = false;
       subscription.unsubscribe();
     };
-  }, []);
-
-  // Obtener el auth user ID desde la sesión actual
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Obtener el user ID de la sesión actual al montar
-    const getAuthUserId = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setAuthUserId(session.user.id);
-      }
-    };
-    getAuthUserId();
-
-    // Escuchar cambios de auth para actualizar authUserId
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setAuthUserId(session.user.id);
-      } else {
-        setAuthUserId(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Hidratar `impersonation` desde el JWT de sesión (migración 018). Un override
-  // de vista previa vive en `auth.users.raw_app_meta_data` y sobrevive al logout,
-  // así que un login nuevo lo vuelve a heredar. Sin esta hidratación, un override
-  // estancado ni siquiera mostraba el banner "Salir de la vista" → el super_admin
-  // quedaba sin forma de limpiarlo desde la UI. Con esto: si el JWT trae
-  // imp_company_id/imp_role se muestra la vista previa (y su salida); si no, no.
-  useEffect(() => {
-    const sync = (session: any) => {
-      const meta: any = session?.user?.app_metadata;
-      const impCompanyId = meta?.imp_company_id;
-      const impRole = meta?.imp_role;
-      if (impCompanyId || impRole) {
-        setImpersonation({ companyId: impCompanyId, role: impRole ?? 'admin' });
-      } else {
-        setImpersonation(null);
-      }
-    };
-    let alive = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (alive) sync(data?.session);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setImpersonation(null);
-        return;
-      }
-      sync(session);
-    });
-    return () => { alive = false; subscription.unsubscribe(); };
-  }, []);
+  }, [syncImpersonation]);
 
   // Perfil del usuario actual
   const { profile: userProfile, loading: userProfileLoading } = useUserProfile(authUserId, profileVersion);

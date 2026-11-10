@@ -161,18 +161,11 @@ const AvailabilityModal: React.FC<AvailabilityModalProps> = ({ technician, order
     return weekDays.findIndex(d => d.toDateString() === currentTime.toDateString());
   }, [weekDays, currentTime]);
   
-  // --- FUNCIÓN DE DEBUG PARA EL BOTÓN DE CHECK ---
   const handleCheckClick = () => {
-    console.log('[DEBUG] Check icon clicked in AvailabilityModal.');
-    if (!draftSlot) {
-      console.error('[DEBUG] DraftSlot is null. Cannot apply time.');
-      return;
-    }
+    if (!draftSlot) return;
     const date = draftSlot.date.toISOString().split('T')[0];
     const time = formatMinutes(draftSlot.hour * 60 + draftSlot.minute);
     const duration = formatMinutes(draftSlot.durationMinutes);
-
-    console.log('[DEBUG] Calling onApplyTime with:', { date, time, duration });
     onApplyTime(date, time, duration);
   };
 

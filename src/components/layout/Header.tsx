@@ -9,7 +9,7 @@ import { useModal } from '../../context/ModalContext.tsx';
 import { NotificationsModal } from './NotificationsModal';
 import SupportModal from '../support/SupportModal';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
-import { useOneSignal } from '../../hooks/useOneSignal';
+import { useWebPush } from '../../hooks/useWebPush';
 
 interface HeaderProps {
   title: string;
@@ -43,13 +43,13 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
     if (currentUser) loadNotifications();
   }, [currentUser, loadNotifications]);
 
-  // OneSignal push notifications
-  const { permission, isSupported, isLoading, initError, actionError, enableNotifications } = useOneSignal(
+  // Web Push notifications (VAPID)
+  const { permission, isSupported, isLoading, initError, actionError, enableNotifications } = useWebPush(
     currentUser,
     async (userId, token) => updateItem('users', userId, { onesignalPlayerId: token })
   );
 
-  // Aviso de diagnóstico visible cuando OneSignal no inicia o el permiso falla
+  // Aviso de diagnóstico visible cuando el push no inicia o el permiso falla
   // (antes toda falla se perdía en console y el botón parecía no hacer nada).
   const [dismissNotifError, setDismissNotifError] = useState(false);
   const notifError = dismissNotifError ? null : (actionError || initError);

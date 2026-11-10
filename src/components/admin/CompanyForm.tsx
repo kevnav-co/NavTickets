@@ -1,50 +1,21 @@
-// src/components/admin/CompanyForm.tsx
-// Create/Edit company form with full configuration: theme, features, auth, and custom tabs.
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import {
-  Save, X, Layers, Palette, Globe, Shield, Plus, Trash2, MoveUp, MoveDown,
-  ExternalLink, FileText, Monitor, AlertTriangle, Building2
-} from 'lucide-react';
+import { Save, Shield, AlertTriangle, Building2 } from 'lucide-react';
 import { CompanyTheme, CompanyFeatures, CompanyAuth, TabConfig } from '../../types/company';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
 import * as adminService from '../../services/adminService';
 import { useAuth } from '../../context/AuthContext';
 import Toast from '../ui/Toast';
 import InfoTip from '../ui/InfoTip';
+import { safeUrl } from '../../utils/html';
+import ThemeSection from './company/ThemeSection';
+import FeaturesSection from './company/FeaturesSection';
+import TabsEditor, { ALL_ROLES, ROLE_LABELS } from './company/TabsEditor';
 
 interface CompanyFormProps {
   companyId: string | null;
   onSaved: (message: string) => void;
   onCancel: () => void;
 }
-
-const BUILT_IN_OPTIONS = [
-  { value: 'dashboard', label: 'Dashboard' },
-  { value: 'orders', label: 'Órdenes' },
-  { value: 'clients', label: 'Clientes' },
-  { value: 'equipment', label: 'Máquinas' },
-  { value: 'users', label: 'Equipo' },
-  { value: 'map', label: 'Mapa' },
-  { value: 'tasks', label: 'Tareas' },
-];
-
-const TAB_TYPES: { value: TabConfig['type']; label: string; icon: React.ReactNode }[] = [
-  { value: 'built-in', label: 'Componente Interno', icon: <Monitor size={14} /> },
-  { value: 'iframe', label: 'Iframe (URL)', icon: <ExternalLink size={14} /> },
-  { value: 'markdown', label: 'Markdown', icon: <FileText size={14} /> },
-  { value: 'external', label: 'Enlace Externo', icon: <Globe size={14} /> },
-];
-
-const ALL_ROLES = ['technician', 'supervisor', 'admin', 'aux_admin', 'developer'];
-
-const ROLE_LABELS: Record<string, string> = {
-  technician: 'Técnico',
-  supervisor: 'Supervisor',
-  admin: 'Admin',
-  aux_admin: 'Aux. Admin',
-  developer: 'Developer',
-};
 
 const EMPTY_TAB: TabConfig = {
   id: '',
@@ -60,24 +31,14 @@ const EMPTY_TAB: TabConfig = {
   requiresOnline: false,
 };
 
-// Genera un slug seguro a partir de un nombre.
-// Se usa para que una empresa editada sin slug (p. ej. las sembradas) pueda
-// guardar cambios parciales sin bloquear por un campo "obligatorio" vacío.
 function slugify(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel }) => {
   const isEditMode = !!companyId;
-  // Fase 4 (self-serve): un admin/developer del tenant edita SOLO el branding de
-  // su propia empresa. La sección de identidad (nombre/slug/auth) y el admin
-  // inicial quedan reservados a super_admin.
   const { currentUser } = useAuth();
   const isSuperAdmin = currentUser?.role === 'super_admin';
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const iconInputRef = useRef<HTMLInputElement>(null);
-  const logoWhiteInputRef = useRef<HTMLInputElement>(null);
-  const faviconInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Form State ───
   const [name, setName] = useState('');
@@ -106,12 +67,11 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   const [tabs, setTabs] = useState<TabConfig[]>([]);
   const [loading, setLoading] = useState(isEditMode);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Errors de carga (banner superior)
-  const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string; admin?: string }>({});
-  const [saveErrorToast, setSaveErrorToast] = useState<string | null>(null); // Feedback elegante al guardar
+  const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: string; slug?: string; admin?: string; tabs?: string }>({});
+  const [saveErrorToast, setSaveErrorToast] = useState<string | null>(null);
   const [uploading, setUploading] = useState<'logo' | 'icon' | 'logoWhite' | 'favicon' | null>(null);
 
-  // Refs para enfocar el primer campo con error.
   const nameRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
 
@@ -129,10 +89,6 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         if (company) {
           setName(company.name || '');
           setSlug(company.slug || '');
-          // Merge con defaults: las columnas jsonb (theme/features/auth) pueden
-          // venir como {} vacío (migración 007) → de lo contrario subcampos como
-          // auth.allowedRoles quedan undefined y p.ej. el .includes() del render
-          // de roles revienta (pantalla blanca).
           setTheme(prev => ({ ...prev, ...(company.theme || {}) }));
           setFeatures(prev => ({ ...prev, ...(company.features || {}) }));
           setAuth(prev => ({ ...prev, ...(company.auth || {}) }));
@@ -182,7 +138,6 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
   const handleImageUpload = async (file: File, type: 'logo' | 'icon' | 'logoWhite' | 'favicon') => {
     const targetId = companyId ?? createdCompanyId;
     if (!targetId) {
-      // For new companies, save first then upload
       alert('Guarda la empresa primero antes de subir imágenes.');
       return;
     }
@@ -199,13 +154,6 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     }
   };
 
-  const triggerFileInput = (type: 'logo' | 'icon' | 'logoWhite' | 'favicon') => {
-    if (type === 'logo') fileInputRef.current?.click();
-    else if (type === 'icon') iconInputRef.current?.click();
-    else if (type === 'logoWhite') logoWhiteInputRef.current?.click();
-    else faviconInputRef.current?.click();
-  };
-
   // ─── Slug auto-generation ───
   const handleNameChange = (value: string) => {
     setName(value);
@@ -216,17 +164,15 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
   // ─── Save ───
   const handleSave = async () => {
-    // ── Validación por campo: marca el error en el campo + toast elegante + foco al primero ──
-    // Solo el nombre se exige de verdad: el slug, si falta (p. ej. empresas
-    // sembradas), se deriva del nombre automáticamente para permitir guardar
-    // actualizaciones parciales sin completar toda la información obligatoria.
     const newErrors: typeof fieldErrors = {};
     if (!name.trim()) newErrors.name = 'El nombre de la empresa es obligatorio.';
 
-    // En modo crear, el admin inicial es obligatorio.
     if (!isEditMode && (!adminUsername.trim() || adminPassword.length < 6)) {
       newErrors.admin = 'Crea el administrador inicial: usuario y contraseña (mínimo 6 caracteres).';
     }
+
+    const badTab = tabs.find(t => (t.type === 'iframe' || t.type === 'external') && !safeUrl(t.content || '', ['https:']));
+    if (badTab) newErrors.tabs = `La pestaña "${badTab.label || badTab.id}" debe usar una URL https:// válida.`;
 
     if (Object.keys(newErrors).length > 0) {
       setFieldErrors(newErrors);
@@ -238,14 +184,12 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     setFieldErrors({});
     setSaveErrorToast(null);
 
-    // Slug resuelto: usa el escrito, o si está vacío lo deriva del nombre.
     const resolvedSlug = slug.trim().toLowerCase() || slugify(name.trim());
     setSaving(true);
     setError(null);
 
     try {
       if (!isEditMode) {
-        // Bootstrap completo: empresa + perfil Auth + fila users (service-role).
         const result = await adminService.bootstrapCompany({
           companyName: name.trim(),
           slug: resolvedSlug,
@@ -260,7 +204,6 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         }
         setCreatedCompanyId(result.companyId);
 
-        // Persistir el resto de configuración (tema/features/tabs).
         await adminService.updateCompany(result.companyId, {
           theme,
           features,
@@ -270,8 +213,6 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
         alert(`Empresa creada. El administrador entra con:\n\nUsuario: ${result.email}\nContraseña: (la que definiste)`);
       } else if (companyId) {
-        // Self-serve (Fase 4): un admin/developer NO envía name/slug/auth (el DB
-        // los bloquea vía trigger migración 012). Solo branding: theme/features/tabs.
         const companyData = isSuperAdmin
           ? { name: name.trim(), slug: resolvedSlug, theme, features, auth, tabs: tabs.filter(t => t.label.trim()) }
           : { theme, features, tabs: tabs.filter(t => t.label.trim()) };
@@ -297,10 +238,8 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
-      {/* Feedback elegante al intentar guardar (validación/error de servidor) */}
       <Toast message={saveErrorToast} variant="error" onDismiss={() => setSaveErrorToast(null)} />
 
-      {/* Error de carga (banner) */}
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-sm text-red-700">
           <AlertTriangle size={16} />
@@ -308,7 +247,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
         </div>
       )}
 
-      {/* ─── Basic Info (solo super_admin: identidad de la empresa) ─── */}
+      {/* ─── Basic Info (solo super_admin) ─── */}
       {isSuperAdmin && (
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -426,192 +365,19 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       )}
 
       {/* ─── Theme ─── */}
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Palette size={18} className="text-primary" /> Tema y Branding
-        </h2>
-        <div className="space-y-4">
-          {/* Primary Color */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Color Principal</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={theme.primaryColor}
-                onChange={e => setTheme(prev => ({ ...prev, primaryColor: e.target.value }))}
-                className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
-              />
-              <span className="text-sm font-mono text-gray-600">{theme.primaryColor}</span>
-            </div>
-          </div>
-
-          {/* Logo */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Logo (fondo claro)</label>
-            <div className="flex items-center gap-3">
-              {theme.logoUrl && (
-                <img src={theme.logoUrl} alt="Logo" className="w-16 h-16 object-contain rounded-xl border border-gray-100" />
-              )}
-              <button
-                type="button"
-                onClick={() => triggerFileInput('logo')}
-                disabled={uploading === 'logo'}
-                className="h-11 px-4 bg-gray-100 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                {uploading === 'logo' ? 'Subiendo...' : theme.logoUrl ? 'Cambiar' : 'Subir Logo'}
-              </button>
-              {theme.logoUrl && (
-                <button
-                  type="button"
-                  onClick={() => setTheme(prev => ({ ...prev, logoUrl: '' }))}
-                  className="p-2 text-gray-400 hover:text-red-500"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'logo')} />
-          </div>
-
-          {/* Logo White */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Logo (fondo oscuro, opcional)</label>
-            <div className="flex items-center gap-3">
-              {theme.logoWhiteUrl && (
-                <img src={theme.logoWhiteUrl} alt="Logo White" className="w-16 h-16 object-contain rounded-xl border border-gray-800 bg-gray-800" />
-              )}
-              <button
-                type="button"
-                onClick={() => triggerFileInput('logoWhite')}
-                disabled={uploading === 'logoWhite'}
-                className="h-11 px-4 bg-gray-100 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                {uploading === 'logoWhite' ? 'Subiendo...' : theme.logoWhiteUrl ? 'Cambiar' : 'Subir'}
-              </button>
-              {theme.logoWhiteUrl && (
-                <button onClick={() => setTheme(prev => ({ ...prev, logoWhiteUrl: '' }))} className="p-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-              )}
-            </div>
-            <input ref={logoWhiteInputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'logoWhite')} />
-          </div>
-
-          {/* Icon */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Icono de App</label>
-            <div className="flex items-center gap-3">
-              {theme.iconUrl && (
-                <img src={theme.iconUrl} alt="Icon" className="w-12 h-12 object-contain rounded-xl border border-gray-100" />
-              )}
-              <button
-                type="button"
-                onClick={() => triggerFileInput('icon')}
-                disabled={uploading === 'icon'}
-                className="h-11 px-4 bg-gray-100 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                {uploading === 'icon' ? 'Subiendo...' : theme.iconUrl ? 'Cambiar' : 'Subir Icono'}
-              </button>
-              {theme.iconUrl && (
-                <button onClick={() => setTheme(prev => ({ ...prev, iconUrl: '' }))} className="p-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-              )}
-            </div>
-            <input ref={iconInputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'icon')} />
-          </div>
-
-          {/* Favicon */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Favicon</label>
-            <div className="flex items-center gap-3">
-              {theme.faviconUrl && (
-                <img src={theme.faviconUrl} alt="Favicon" className="w-8 h-8 object-contain rounded-lg border border-gray-100" />
-              )}
-              <button
-                type="button"
-                onClick={() => triggerFileInput('favicon')}
-                disabled={uploading === 'favicon'}
-                className="h-11 px-4 bg-gray-100 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
-              >
-                {uploading === 'favicon' ? 'Subiendo...' : theme.faviconUrl ? 'Cambiar' : 'Subir Favicon'}
-              </button>
-              {theme.faviconUrl && (
-                <button onClick={() => setTheme(prev => ({ ...prev, faviconUrl: undefined }))} className="p-2 text-gray-400 hover:text-red-500"><X size={16} /></button>
-              )}
-            </div>
-            <input ref={faviconInputRef} type="file" accept="image/*" className="hidden" onChange={e => e.target.files?.[0] && handleImageUpload(e.target.files[0], 'favicon')} />
-          </div>
-
-          {/* Accent Color */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Color de Acento</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={theme.accentColor || theme.primaryColor}
-                onChange={e => setTheme(prev => ({ ...prev, accentColor: e.target.value }))}
-                className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
-              />
-              <span className="text-sm font-mono text-gray-600">{theme.accentColor || '— (usa primary)'}</span>
-            </div>
-          </div>
-
-          {/* Secondary Color */}
-          <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Color Secundario</label>
-            <div className="flex items-center gap-3">
-              <input
-                type="color"
-                value={theme.secondaryColor || theme.primaryColor}
-                onChange={e => setTheme(prev => ({ ...prev, secondaryColor: e.target.value }))}
-                className="w-12 h-12 rounded-xl border border-gray-200 cursor-pointer"
-              />
-              <span className="text-sm font-mono text-gray-600">{theme.secondaryColor || '— (usa primary oscuro)'}</span>
-            </div>
-          </div>
-
-          {/* Suffix de la app (Fase 4) */}
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <label className="text-xs font-bold text-gray-500">Sufijo del nombre de la app</label>
-              <InfoTip text="Texto que acompaña al nombre de la empresa en el título de la ventana/PWA. Default: ' - Gestión de Mantenimiento'. Déjalo vacío para mostrar solo el nombre." />
-            </div>
-            <input
-              type="text"
-              value={theme.titleSuffix ?? ''}
-              onChange={e => setTheme(prev => ({ ...prev, titleSuffix: e.target.value }))}
-              placeholder=" - Gestión de Mantenimiento"
-              className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-        </div>
-      </section>
+      <ThemeSection
+        theme={theme}
+        setTheme={setTheme}
+        companyId={companyId}
+        createdCompanyId={createdCompanyId}
+        uploading={uploading}
+        onImageUpload={handleImageUpload}
+      />
 
       {/* ─── Features ─── */}
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Layers size={18} className="text-primary" /> Funcionalidades
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {([
-            { key: 'accounting' as const, label: 'Contabilidad' },
-            { key: 'maps' as const, label: 'Mapas' },
-            { key: 'aiAssistant' as const, label: 'Asistente IA' },
-            { key: 'equipmentManagement' as const, label: 'Gestión Máquinas' },
-            { key: 'excelUpload' as const, label: 'Subida de datos (Excel)' },
-            { key: 'cuenti' as const, label: 'Integración Cuenti' },
-          ]).map(feat => (
-            <label key={feat.key} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors">
-              <input
-                type="checkbox"
-                checked={features[feat.key]}
-                onChange={e => setFeatures(prev => ({ ...prev, [feat.key]: e.target.checked }))}
-                className="w-4 h-4 rounded accent-primary"
-              />
-              <span className="text-sm font-medium text-gray-700">{feat.label}</span>
-            </label>
-          ))}
-        </div>
-      </section>
+      <FeaturesSection features={features} setFeatures={setFeatures} />
 
-      {/* ─── Auth (solo super_admin: identidad del tenant) ─── */}
+      {/* ─── Auth (solo super_admin) ─── */}
       {isSuperAdmin && (
       <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -656,205 +422,16 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       )}
 
       {/* ─── Tabs Editor ─── */}
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-gray-900 flex items-center gap-2">
-            <Layers size={18} className="text-primary" /> Pestañas Personalizadas
-          </h2>
-          <button
-            type="button"
-            onClick={addTab}
-            className="h-9 px-3 bg-primary text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm"
-          >
-            <Plus size={14} /> Añadir Pestaña
-          </button>
-        </div>
-        <p className="text-xs text-gray-400 mb-4">
-          Define las pestañas que verán los usuarios. Pueden ser componentes internos, iframes, contenido markdown o enlaces externos.
-        </p>
-
-        {tabs.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-xl">
-            <Layers size={24} className="mx-auto mb-2 opacity-50" />
-            <p className="text-sm font-bold">Sin pestañas personalizadas</p>
-            <p className="text-xs mt-1">Añade la primera pestaña para comenzar.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {tabs.map((tab, index) => (
-              <div key={tab.id} className="border border-gray-200 rounded-xl p-4 hover:border-gray-300 transition-colors bg-gray-50/30">
-                {/* Tab Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">{index + 1}</span>
-                    <input
-                      type="text"
-                      value={tab.label}
-                      onChange={e => updateTab(tab.id, { label: e.target.value })}
-                      placeholder="Nombre de la pestaña"
-                      className="font-bold text-sm bg-transparent border-b border-transparent focus:border-primary focus:outline-none px-1 py-0.5 min-w-[120px]"
-                    />
-                    {/* Indicador de obligatoriedad: el título es el campo obligatorio de cada pestaña */}
-                    <span
-                      title="Título obligatorio: sin él la pestaña no se guarda."
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                        tab.label.trim() ? 'bg-emerald-50 text-emerald-600' : 'bg-red-100 text-red-600'
-                      }`}
-                    >
-                      {tab.label.trim() ? 'Obligatoria ✓' : 'Obligatoria · falta título'}
-                    </span>
-                    <InfoTip side="bottom" text={'Nombre de la pestaña que verán los usuarios en la barra de navegación. Es obligatorio: las pestañas sin título se descartan al guardar. Puedes renombrarla como quieras (p. ej. "Órdenes" → "Trabajos"). El resto de campos de esta pestaña (icono, ruta, roles) son opcionales y puedes ignorarlos si no los necesitas.'} />
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button type="button" onClick={() => moveTab(index, -1)} disabled={index === 0} className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveUp size={14} /></button>
-                    <button type="button" onClick={() => moveTab(index, 1)} disabled={index === tabs.length - 1} className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><MoveDown size={14} /></button>
-                    <button type="button" onClick={() => removeTab(tab.id)} className="p-1.5 text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
-                  </div>
-                </div>
-
-                {/* Tab Type */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                  {TAB_TYPES.map(tt => (
-                    <button
-                      key={tt.value}
-                      type="button"
-                      onClick={() => updateTab(tab.id, { type: tt.value, content: tt.value !== 'built-in' ? tab.content : undefined })}
-                      className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-colors ${
-                        tab.type === tt.value
-                          ? 'bg-primary text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      {tt.icon} {tt.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Tab Fields based on type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {/* Icon Name */}
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Icono (lucide-react)</span>
-                      <span className="text-[9px] font-bold text-gray-300 uppercase">Opcional</span>
-                      <InfoTip text="Icono de la pestaña en la barra de navegación, usando un nombre válido de lucide-react (p. ej. Home, Users, Settings2, Map, ClipboardList). Si no lo sabes, déjalo vacío: se usará un icono por defecto." side="top" />
-                    </div>
-                    <input
-                      type="text"
-                      value={tab.icon}
-                      onChange={e => updateTab(tab.id, { icon: e.target.value })}
-                      placeholder="Home, Settings, Users..."
-                      className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  {/* Route */}
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Ruta</span>
-                      <span className="text-[9px] font-bold text-gray-300 uppercase">Opcional</span>
-                      <InfoTip text="Ruta dentro de la app a la que navega la pestaña (debe empezar con '/'). Para componentes internos (Órdenes, Clientes, etc.) usa la ruta real del proyecto: /, /orders, /clients, /equipment, /users, /map, /tasks. No la cambies por algo que no exista o la pestaña no abrirá." side="top" />
-                    </div>
-                    <input
-                      type="text"
-                      value={tab.route}
-                      onChange={e => updateTab(tab.id, { route: e.target.value.startsWith('/') ? e.target.value : `/${e.target.value}` })}
-                      placeholder="/custom/mi-pagina"
-                      className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </div>
-                  {/* Content (for iframe, markdown, external) */}
-                  {tab.type !== 'built-in' && (
-                    <div className="md:col-span-2">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
-                        {tab.type === 'iframe' ? 'URL del Iframe' : tab.type === 'external' ? 'URL Externa' : 'Contenido Markdown'}
-                      </label>
-                      {tab.type === 'markdown' ? (
-                        <textarea
-                          value={tab.content || ''}
-                          onChange={e => updateTab(tab.id, { content: e.target.value })}
-                          placeholder="# Mi contenido en Markdown"
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 font-mono"
-                        />
-                      ) : (
-                        <input
-                          type="url"
-                          value={tab.content || ''}
-                          onChange={e => updateTab(tab.id, { content: e.target.value })}
-                          placeholder={tab.type === 'iframe' ? 'https://ejemplo.com/mi-pagina' : 'https://ejemplo.com'}
-                          className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      )}
-                    </div>
-                  )}
-                  {/* Built-in component selector */}
-                  {tab.type === 'built-in' && (
-                    <div>
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Componente</label>
-                      <select
-                        value={tab.builtInComponent || 'dashboard'}
-                        onChange={e => updateTab(tab.id, { builtInComponent: e.target.value })}
-                        className="w-full h-9 px-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
-                      >
-                        {BUILT_IN_OPTIONS.map(opt => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {/* Roles */}
-                  <div>
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Roles que pueden ver esta pestaña</label>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
-                      {ALL_ROLES.filter(r => auth.allowedRoles.includes(r)).map(role => (
-                        <label key={role} className="flex items-center gap-1 px-2 py-1 rounded-md border border-gray-200 cursor-pointer text-[10px] font-medium">
-                          <input
-                            type="checkbox"
-                            checked={tab.roles.includes(role)}
-                            onChange={e => {
-                              const newRoles = e.target.checked
-                                ? [...tab.roles, role]
-                                : tab.roles.filter(r => r !== role);
-                              updateTab(tab.id, { roles: newRoles });
-                            }}
-                            className="w-3 h-3 accent-primary"
-                          />
-                          {ROLE_LABELS[role] || role}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  {/* Toggles */}
-                  <div className="flex items-center gap-4">
-                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={tab.enabled}
-                        onChange={e => updateTab(tab.id, { enabled: e.target.checked })}
-                        className="w-3.5 h-3.5 accent-primary"
-                      />
-                      Habilitado
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-medium text-gray-600 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={tab.requiresOnline || false}
-                        onChange={e => updateTab(tab.id, { requiresOnline: e.target.checked })}
-                        className="w-3.5 h-3.5 accent-primary"
-                      />
-                      Requiere Internet
-                    </label>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <TabsEditor
+        tabs={tabs}
+        addTab={addTab}
+        removeTab={removeTab}
+        moveTab={moveTab}
+        updateTab={updateTab}
+        allowedRoles={auth.allowedRoles}
+      />
 
       {/* ─── Action Buttons ─── */}
-      {/* z-[60]: por encima de la barra de navegación inferior (z-50) para que el
-          botón de guardar siempre sea visible en móvil. — 2026-08-25 */}
       <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-[60]">
         <div className="max-w-4xl mx-auto flex items-center justify-end gap-3">
           <button

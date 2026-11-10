@@ -52,7 +52,7 @@ const EquipmentDetail: React.FC = () => {
         await updateValidated('equipment', item.id, updates, EquipmentSchema);
       }
     },
-    storagePath: 'equipment_photos',
+    storagePath: 'equipment',
   });
 
   const permissions = useMemo(() => ({

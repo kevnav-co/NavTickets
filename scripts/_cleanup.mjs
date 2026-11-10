@@ -5,7 +5,8 @@
 //   inventory_items por sku (prefijos FA-/HC-/CP-), tasks por títulos, notifications text='Seed'.
 // NO toca datos preexistentes de los tenants demo.
 import { createClient } from "@supabase/supabase-js";
-const URL = "https://hvysnxvuyexacktlwsbm.supabase.co";
+const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+if (!URL) throw new Error("Define SUPABASE_URL con la URL del proyecto destino");
 const DOMAIN = "navas.com";
 
 const svc = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { autoRefreshToken: false, persistSession: false } });

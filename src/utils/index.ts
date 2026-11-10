@@ -101,7 +101,6 @@ export const deleteImageFromStorage = async (imageUrl: string): Promise<void> =>
       console.error('Error eliminando imagen de storage:', error);
       throw error;
     }
-    console.log("Imagen eliminada correctamente:", pathToDelete);
   } catch (error: any) {
     console.error("Error eliminando imagen de storage:", error);
     throw error;
