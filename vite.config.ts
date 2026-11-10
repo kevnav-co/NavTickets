@@ -116,7 +116,6 @@ export default defineConfig(({ mode }) => {
 
             // Maps - only for client map view
             'vendor-leaflet': ['leaflet', 'react-leaflet'],
-            'vendor-google-maps': ['@vis.gl/react-google-maps'],
 
             // PDF/Export - heavy, on demand
             'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
