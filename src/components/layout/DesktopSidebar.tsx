@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, WifiOff, Key, LogOut, PenLine, Shield, BarChart3, LifeBuoy,
+  WifiOff, Key, LogOut, PenLine, Shield, BarChart3, LifeBuoy,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -13,14 +13,7 @@ import { useSupportUnread } from '../../hooks/useSupportUnread';
 import CompanyLogo from '../shared/CompanyLogo';
 import PERMISSIONS, { hasPermission, isTabVisible } from '../../permissions';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
-
-// Dynamic icon resolution
-import * as LucideIcons from 'lucide-react';
-
-function resolveIcon(iconName: string): LucideIcon {
-  const icons = LucideIcons as unknown as Record<string, LucideIcon>;
-  return icons[iconName] || Home;
-}
+import { resolveIcon } from '../../utils/iconMap';
 
 interface NavItem {
   icon: LucideIcon;

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
-  Home, Shield, BarChart3, LifeBuoy, Check, Folder, FolderCog, WifiOff, X,
+  Shield, BarChart3, LifeBuoy, Check, Folder, FolderCog, WifiOff, X,
   type LucideIcon
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -10,14 +10,7 @@ import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useSupportUnread } from '../../hooks/useSupportUnread';
 import PERMISSIONS, { hasPermission, isTabVisible } from '../../permissions';
 import { DEFAULT_BUILT_IN_TABS } from '../../types/company';
-
-// Dynamic icon resolution
-import * as LucideIcons from 'lucide-react';
-
-function resolveIcon(iconName: string): LucideIcon {
-  const icons = LucideIcons as unknown as Record<string, LucideIcon>;
-  return icons[iconName] || Home;
-}
+import { resolveIcon } from '../../utils/iconMap';
 
 interface NavItem {
   icon: LucideIcon;
