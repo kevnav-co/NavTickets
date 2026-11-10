@@ -117,11 +117,7 @@ const OrderWorkflow: React.FC = () => {
 
   const handleClientUpdate = useCallback(async (selectedClient: Client) => {
     if (order) {
-      // OJO: NO mandar `equipmentIds` ni `equipmentIds: []` aquí: la tabla `orders`
-      // NO tiene columna `equipment_ids` (la relación orden↔equipo vive en
-      // `equipment_orders`). Incluirlo hace que PostgREST devuelva 400
-      // "column equipment_ids does not exist" y el UPDATE de cliente nunca se
-      // persiste (el modal se cerraba/otro quedaba sin guardar).
+      // Solo actualizar cliente; no incluir equipmentIds para no sobreescribirlos.
       await updateValidated('orders', order.id, {
         clientId: selectedClient.id,
         clientName: selectedClient.name,

@@ -16,7 +16,7 @@ export interface PushSubscriptionJSON {
  */
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (!("Notification" in window)) {
-    console.log("Notificaciones no soportadas en este navegador");
+    console.warn("Notificaciones no soportadas en este navegador");
     return false;
   }
 
@@ -65,7 +65,6 @@ export const registerPushSubscription = async (
       return false;
     }
 
-    console.log("Push subscription registered successfully");
     return true;
   } catch (error) {
     console.error("Error registering push subscription:", error);
@@ -98,7 +97,6 @@ export const unregisterPushSubscription = async (
       return false;
     }
 
-    console.log("Push subscription unregistered");
     return true;
   } catch (error) {
     console.error("Error unregistering push subscription:", error);
@@ -118,13 +116,13 @@ export const enablePushNotifications = async (
   // 1. Solicitar permiso
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) {
-    console.log("Notificaciones no permitidas por el usuario");
+    console.warn("Notificaciones no permitidas por el usuario");
     return false;
   }
 
   // 2. Verificar si el navegador soporta service workers
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.log("Push notifications no soportadas");
+    console.warn("Push notifications no soportadas");
     return false;
   }
 

@@ -319,7 +319,7 @@ const ClientMap: React.FC = () => {
               setCachedGps(client.address, latitude, longitude);
               updatedCount++;
             } else {
-              console.log(`No results found for address: ${client.address}`);
+              console.warn(`No results found for address: ${client.address}`);
               notFoundCount++;
             }
           }
