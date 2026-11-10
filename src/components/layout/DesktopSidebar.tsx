@@ -69,8 +69,8 @@ export const DesktopSidebar: React.FC = React.memo(() => {
 
   return (
     <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0 z-50 shadow-xl">
-      <div className="px-4 py-3 flex justify-center items-center border-b border-gray-100 bg-gray-800 rounded-b-2xl">
-        <CompanyLogo forceCompany variant="white" className="max-h-[48px] max-w-[140px] object-contain hover:scale-105 transition-transform duration-300" />
+      <div className="px-4 py-3 flex justify-center items-center border-b border-gray-100 bg-white">
+        <CompanyLogo className="max-h-[48px] max-w-[140px] object-contain hover:scale-105 transition-transform duration-300" />
       </div>
       <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
         {navItems.map((item) => {
