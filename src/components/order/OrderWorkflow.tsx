@@ -79,8 +79,9 @@ const OrderWorkflow: React.FC = () => {
     sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
   }, [order, updateValidated]);
 
+  const placeholderDoc = useMemo(() => ({ id: '' }), []);
   const { selectedImage, handleSelectImage, handleCloseModal, isUploading, error: fileError, getFileUrl, handleUpload, handleRemove } = useFileHandler({
-    doc: order!,
+    doc: (order ?? placeholderDoc) as ServiceOrder,
     updateDoc: handleUpdateOrder,
     storagePath: 'orders',
   });

@@ -4,7 +4,7 @@ import { ServiceOrder, OrderStatus, User } from '../types';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useValidatedActions } from './useValidatedActions';
-import { NewServiceOrderSchema, ServiceOrderSchema } from '../schemas/order.schema';
+import { ServiceOrderSchema } from '../schemas/order.schema';
 import { compressImage } from '../utils/index';
 import PERMISSIONS, { ROLES, hasPermission } from '../permissions';
 import { useSupabaseStorage } from './useSupabaseStorage';
@@ -38,6 +38,7 @@ export const useOrderForm = () => {
   const { id } = useParams<{ id: string }>();
   const isEditMode = !!id;
   const connectivityStatus = useConnectivityStatus();
+  const newOrderIdRef = useRef(crypto.randomUUID());
 
   // Supabase storage hook for order photos
   const { uploadBase64, deleteFile } = useSupabaseStorage({ bucket: 'order-photos' });
@@ -201,7 +202,7 @@ export const useOrderForm = () => {
       return;
     }
     setLoadingMessage(`Subiendo ${files.length} imagen(es)...`);
-    const orderIdForPath = id || 'new_order_temp_id';
+    const orderIdForPath = id || newOrderIdRef.current;
 
     const uploadPromises = compressedBlobs.map(async (blob, index) => {
       const fileName = `${Date.now()}_${files[index].name}`;
@@ -310,7 +311,7 @@ export const useOrderForm = () => {
         navigate(`/orders/${id}`);
       } else {
         if (!currentUser || !hasPermission(currentUser.role, PERMISSIONS.CREATE_ORDER)) throw new Error('Permiso denegado.');
-        const newOrderId = await addValidated('orders', orderData, NewServiceOrderSchema);
+        const newOrderId = await addValidated('orders', { ...orderData, id: newOrderIdRef.current }, ServiceOrderSchema);
         await purgeRemovedEvidence();
         alert(`Orden ${nextOrderNumber} creada`);
         navigate(`/orders/${newOrderId}`);
