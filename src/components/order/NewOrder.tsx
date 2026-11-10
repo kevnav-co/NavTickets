@@ -79,11 +79,11 @@ const NewOrder: React.FC = () => {
   };
 
   const getPriorityStyle = (p: string) => {
-      if (formData.priority !== p) return 'bg-white text-gray-400 border-gray-100 hover:bg-gray-50';
+      if (formData.priority !== p) return 'bg-raised text-ink-faint border-line-soft hover:bg-sunken';
       switch(p) {
           case 'Urgente': return 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-100';
           case 'Alta': return 'bg-orange-500 text-white border-orange-500 shadow-md ring-2 ring-orange-100';
-          case 'Media': return 'bg-yellow-400 text-gray-900 border-yellow-400 shadow-md ring-2 ring-yellow-100';
+          case 'Media': return 'bg-yellow-400 text-ink border-yellow-400 shadow-md ring-2 ring-yellow-100';
           case 'Baja': return 'bg-green-500 text-white border-green-500 shadow-md ring-2 ring-green-100';
           default: return '';
       }
@@ -96,11 +96,11 @@ const NewOrder: React.FC = () => {
   // Super admin sin vista previa no puede crear órdenes
   if (!isEditMode && currentUser.role === 'super_admin' && !impersonation) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-gray-50 p-6">
-        <div className="bg-white rounded-3xl p-8 text-center max-w-md shadow-lg">
+      <div className="w-full h-screen flex items-center justify-center bg-sunken p-6">
+        <div className="bg-raised rounded-3xl p-8 text-center max-w-md shadow-lg">
           <AlertCircle size={48} className="text-yellow-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-black text-gray-800 mb-2">No hay empresa seleccionada</h1>
-          <p className="text-gray-500 mb-6">Para crear una orden, activa una vista previa desde el panel de administración.</p>
+          <h1 className="text-2xl font-black text-ink mb-2">No hay empresa seleccionada</h1>
+          <p className="text-ink-soft mb-6">Para crear una orden, activa una vista previa desde el panel de administración.</p>
           <button onClick={() => navigate('/')} className="w-full bg-primary text-white py-3 rounded-xl font-bold">Volver</button>
         </div>
       </div>
@@ -108,15 +108,15 @@ const NewOrder: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-24">
+    <div className="bg-sunken/50 min-h-screen pb-24">
       {notification.show && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in">
-           <div className="bg-white rounded-[2rem] p-8 w-full max-w-xs shadow-2xl border-t-4 border-red-500 text-center animate-in zoom-in-95">
+           <div className="bg-raised rounded-[2rem] p-8 w-full max-w-xs shadow-2xl border-t-4 border-red-500 text-center animate-in zoom-in-95">
               <div className="bg-red-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
                   <AlertCircle size={24} />
               </div>
-              <h3 className="font-black text-gray-900 mb-2 uppercase tracking-tight">{notification.title}</h3>
-              <p className="text-sm text-gray-500 mb-6 font-medium leading-relaxed">{notification.message}</p>
+              <h3 className="font-black text-ink mb-2 uppercase tracking-tight">{notification.title}</h3>
+              <p className="text-sm text-ink-soft mb-6 font-medium leading-relaxed">{notification.message}</p>
               <button onClick={() => setNotification({ ...notification, show: false })} className="w-full bg-gray-900 text-white py-3.5 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all">Entendido</button>
            </div>
         </div>
@@ -147,28 +147,28 @@ const NewOrder: React.FC = () => {
         />
       )}
 
-      <header className="px-5 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-40 shadow-sm">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors"><X size={20} /></button>
-        <h1 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em]">{id ? 'Editar Orden' : formData.orderType === 'Preventivo' ? `MP-${nextOrderNumber}` : `MC-${nextOrderNumber}`}</h1>
+      <header className="px-5 py-4 flex items-center justify-between border-b border-line-soft sticky top-0 bg-raised/80 backdrop-blur-md z-40 shadow-sm">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-sunken text-ink-faint rounded-full hover:bg-line transition-colors"><X size={20} /></button>
+        <h1 className="text-sm font-black text-ink uppercase tracking-[0.2em]">{id ? 'Editar Orden' : formData.orderType === 'Preventivo' ? `MP-${nextOrderNumber}` : `MC-${nextOrderNumber}`}</h1>
         <div className="w-10"></div>
       </header>
 
       <form onSubmit={handleSubmit} className="p-4 space-y-6 max-w-2xl mx-auto w-full">
         <div className="space-y-4">
-            <div className="flex bg-gray-200/50 p-1 rounded-2xl border border-gray-100">
+            <div className="flex bg-line/50 p-1 rounded-2xl border border-line-soft">
                 {(['Correctivo', 'Preventivo'] as const).map(t => (
                 <button 
                     key={t} 
                     type="button" 
                     onClick={() => setFormData(prev => ({ ...prev, orderType: t }))}
-                    className={`flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${formData.orderType === t ? 'bg-primary text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`flex-1 py-3 rounded-xl font-black text-[11px] uppercase tracking-[0.1em] transition-all duration-300 ${formData.orderType === t ? 'bg-primary text-white shadow-lg' : 'text-ink-faint hover:text-ink-soft'}`}
                 >
                     {t}
                 </button>
                 ))}
             </div>
             
-            <div className="grid grid-cols-4 gap-1 bg-gray-100 p-1 rounded-2xl border border-gray-200">
+            <div className="grid grid-cols-4 gap-1 bg-sunken p-1 rounded-2xl border border-line">
                {['Baja', 'Media', 'Alta', 'Urgente'].map(p => (
                    <button 
                     key={p} 
@@ -183,20 +183,20 @@ const NewOrder: React.FC = () => {
         </div>
 
         {/* Client and Equipment Section */}
-        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 space-y-6">
+        <div className="bg-raised rounded-[2rem] p-6 shadow-sm border border-line-soft space-y-6">
           <div className="space-y-3">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Información del Cliente</label>
+              <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Información del Cliente</label>
               <div className="flex gap-2 items-center">
                   {selectedClient ? (
-                      <div className="flex-1 bg-gray-50 border border-gray-100 rounded-[1.25rem] py-3.5 px-4 flex items-center justify-between shadow-sm ring-1 ring-primary/20">
+                      <div className="flex-1 bg-sunken border border-line-soft rounded-[1.25rem] py-3.5 px-4 flex items-center justify-between shadow-sm ring-1 ring-primary/20">
                           <div className="min-w-0" onClick={() => setShowClientSearch(true)}>
                               <p className="text-[8px] font-black text-primary uppercase tracking-widest leading-none mb-1">Empresa / Propietario</p>
-                              <p className="text-sm font-black text-gray-800 truncate">{selectedClient.name}</p>
+                              <p className="text-sm font-black text-ink truncate">{selectedClient.name}</p>
                           </div>
                           <button
                               type="button"
                               onClick={() => setFormData(prev => ({ ...prev, clientId: '', selectedEquipmentIds: [] }))}
-                              className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors ml-2"
+                              className="p-2 text-ink-faint hover:text-red-500 hover:bg-red-50 rounded-full transition-colors ml-2"
                               title="Limpiar cliente"
                           >
                               <X size={16} />
@@ -206,10 +206,10 @@ const NewOrder: React.FC = () => {
                       <button 
                           type="button" 
                           onClick={() => setShowClientSearch(true)}
-                          className="flex-1 bg-gray-50 border border-gray-100 rounded-[1.25rem] py-3.5 px-4 text-left flex items-center justify-between shadow-sm active:scale-[0.98] transition-all group"
+                          className="flex-1 bg-sunken border border-line-soft rounded-[1.25rem] py-3.5 px-4 text-left flex items-center justify-between shadow-sm active:scale-[0.98] transition-all group"
                       >
-                          <span className="text-sm font-bold text-gray-300">Seleccionar Cliente... (Opcional)</span>
-                          <Search size={20} className="text-gray-300 group-hover:text-primary transition-colors" />
+                          <span className="text-sm font-bold text-ink-faint">Seleccionar Cliente... (Opcional)</span>
+                          <Search size={20} className="text-ink-faint group-hover:text-primary transition-colors" />
                       </button>
                   )}
                   {currentUser && hasPermission(currentUser.role, PERMISSIONS.CREATE_CLIENT) && (
@@ -223,19 +223,19 @@ const NewOrder: React.FC = () => {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 px-1 gap-2">
                       <div className="flex items-center gap-2">
                           <Zap size={14} className="text-yellow-500 fill-yellow-500 flex-shrink-0" />
-                          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Activos del Cliente</span>
+                          <span className="text-[10px] font-black text-ink-faint uppercase tracking-widest whitespace-nowrap">Activos del Cliente</span>
                       </div>
                       
                       <div className="flex-1 w-full relative sm:mx-2 min-w-[120px]">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
-                              <Search size={12} className="text-gray-400" />
+                              <Search size={12} className="text-ink-faint" />
                           </div>
                           <input 
                               type="text" 
                               placeholder="Buscar..." 
                               value={equipmentSearchTerm}
                               onChange={(e) => setEquipmentSearchTerm(e.target.value)}
-                              className="w-full bg-gray-50 border border-gray-100 rounded-xl py-1.5 px-3 pl-8 text-xs font-bold text-gray-700 focus:outline-none focus:ring-1 focus:ring-red-200 transition-all placeholder:text-gray-300 placeholder:font-medium"
+                              className="w-full bg-sunken border border-line-soft rounded-xl py-1.5 px-3 pl-8 text-xs font-bold text-ink-soft focus:outline-none focus:ring-1 focus:ring-red-200 transition-all placeholder:text-ink-faint placeholder:font-medium"
                           />
                       </div>
 
@@ -254,14 +254,14 @@ const NewOrder: React.FC = () => {
                               key={equip.id} 
                               type="button" 
                               onClick={() => toggleEquipment(equip.id)} 
-                              className={`flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition-all ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-red-50 border-primary text-primary shadow-md' : 'bg-gray-50/50 border-gray-100 text-gray-400 hover:bg-gray-50'}`}
+                              className={`flex items-start gap-3 p-3 rounded-2xl border-2 text-left transition-all ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-red-50 border-primary text-primary shadow-md' : 'bg-sunken/50 border-line-soft text-ink-faint hover:bg-sunken'}`}
                           >
-                              <div className={`mt-0.5 w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-primary' : 'bg-white border-2 border-gray-200'}`}>
+                              <div className={`mt-0.5 w-4 h-4 rounded-md flex items-center justify-center flex-shrink-0 ${formData.selectedEquipmentIds.includes(equip.id) ? 'bg-primary' : 'bg-raised border-2 border-line'}`}>
                                   {formData.selectedEquipmentIds.includes(equip.id) && <Check size={10} className="text-white" strokeWidth={4} />}
                               </div>
                               <div className="flex-1">
                                   <p className="text-xs font-black leading-tight uppercase tracking-tighter">{equip.name}</p>
-                                  {equip.serialNumber && <p className="text-[10px] font-mono text-gray-400 mt-0.5">S/N: {equip.serialNumber}</p>}
+                                  {equip.serialNumber && <p className="text-[10px] font-mono text-ink-faint mt-0.5">S/N: {equip.serialNumber}</p>}
                               </div>
                           </button>
                       ))}
@@ -271,9 +271,9 @@ const NewOrder: React.FC = () => {
       </div>
 
         {/* Service Details Section */}
-        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 space-y-5">
+        <div className="bg-raised rounded-[2rem] p-6 shadow-sm border border-line-soft space-y-5">
             <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Concepto de Servicio</label>
+                <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Concepto de Servicio</label>
                 <div className="relative">
                     <div className="absolute top-4 left-0 flex items-center pl-4 pointer-events-none">
                         <Zap size={18} className="text-red-400" />
@@ -282,7 +282,7 @@ const NewOrder: React.FC = () => {
                         ref={serviceNameRef}
                         value={formData.serviceName} 
                         onChange={(e) => handleServiceNameChange(e.target.value)} 
-                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-4 pl-12 text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all uppercase resize-none overflow-hidden"
+                        className="w-full bg-sunken border border-line-soft rounded-2xl p-4 pl-12 text-sm font-black text-ink focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all uppercase resize-none overflow-hidden"
                         placeholder="Nombre del Servicio"
                         rows={1}
                         required 
@@ -292,7 +292,7 @@ const NewOrder: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Técnico Responsable</label>
+                    <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Técnico Responsable</label>
                     <div className="relative">
                          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                             <HardHat size={18} className="text-blue-400" />
@@ -300,25 +300,25 @@ const NewOrder: React.FC = () => {
                         <select 
                             value={formData.technicianId} 
                             onChange={(e) => setFormData(prev => ({...prev, technicianId: e.target.value}))}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 pl-12 appearance-none text-sm font-black text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                            className="w-full bg-sunken border border-line-soft rounded-2xl py-4 px-4 pl-12 appearance-none text-sm font-black text-ink focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
                             required
                         >
-                            <option value="" className="text-gray-300">Asignar Personal...</option>
+                            <option value="" className="text-ink-faint">Asignar Personal...</option>
                             {users.filter(u => u.role && (assignableRoles as readonly string[]).includes(u.role)).map(u => (
-                            <option key={u.id} value={u.id} className="text-gray-900 font-bold">{u.name} (Activas: {getTechLoad(u.id)})</option>
+                            <option key={u.id} value={u.id} className="text-ink font-bold">{u.name} (Activas: {getTechLoad(u.id)})</option>
                             ))}
                         </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" size={16} />
                     </div>
                 </div>
 
                 <div className="space-y-3">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Verificar Agenda</label>
+                    <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Verificar Agenda</label>
                     <button 
                         type="button" 
                         onClick={() => setShowAvailability(true)} 
                         disabled={!formData.technicianId} 
-                        className="w-full h-[54px] bg-gray-50 text-green-600 border border-gray-100 rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-40"
+                        className="w-full h-[54px] bg-sunken text-green-600 border border-line-soft rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-40"
                     >
                         <CalendarRange size={18} /> Disponibilidad
                     </button>
@@ -326,19 +326,19 @@ const NewOrder: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Descripción Técnica</label>
+                <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Descripción Técnica</label>
                 <div className="relative">
                     <textarea 
                         value={formData.description} 
                         onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))} 
-                        className="w-full bg-gray-50 border border-gray-100 rounded-[1.5rem] p-4 pr-12 min-h-[120px] text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all no-scrollbar" 
+                        className="w-full bg-sunken border border-line-soft rounded-[1.5rem] p-4 pr-12 min-h-[120px] text-sm font-medium text-ink-soft focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all no-scrollbar" 
                         placeholder="Detalles de la falla, solicitud del cliente o notas internas..." 
                         required 
                     />
                     <button 
                         type="button" 
                         onClick={toggleListening} 
-                        className={`absolute right-4 bottom-4 p-2.5 rounded-2xl shadow-sm border transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-gray-400 bg-white border-gray-100'}`}
+                        className={`absolute right-4 bottom-4 p-2.5 rounded-2xl shadow-sm border transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-ink-faint bg-raised border-line-soft'}`}
                     >
                         {isListening ? <MicOff size={18} /> : <Mic size={18} />}
                     </button>
@@ -347,19 +347,19 @@ const NewOrder: React.FC = () => {
         </div>
 
         {/* Scheduling Section */}
-        <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 space-y-6">
+        <div className="bg-raised rounded-[2rem] p-6 shadow-sm border border-line-soft space-y-6">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Fecha Servicio</label>
+                    <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Fecha Servicio</label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                             <CalendarIcon size={18} className="text-green-600" />
                         </div>
-                        <input type="date" value={formData.date} min={!isEditMode ? today : undefined} onChange={(e) => setFormData(prev => ({...prev, date: e.target.value}))} className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 pl-12 text-sm font-black text-gray-800 focus:outline-none transition-all" />
+                        <input type="date" value={formData.date} min={!isEditMode ? today : undefined} onChange={(e) => setFormData(prev => ({...prev, date: e.target.value}))} className="w-full bg-sunken border border-line-soft rounded-2xl py-4 px-4 pl-12 text-sm font-black text-ink focus:outline-none transition-all" />
                     </div>
                 </div>
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">Garantía (Días)</label>
+                    <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">Garantía (Días)</label>
                     <div className="relative">
                         <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
                             <ShieldCheck size={18} className="text-green-600" />
@@ -368,7 +368,7 @@ const NewOrder: React.FC = () => {
                             type="number"
                             value={formData.warrantyPeriod}
                             onChange={(e) => setFormData(prev => ({...prev, warrantyPeriod: parseInt(e.target.value) || 0}))}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-4 pl-12 text-sm font-black text-gray-800 focus:outline-none transition-all"
+                            className="w-full bg-sunken border border-line-soft rounded-2xl py-4 px-4 pl-12 text-sm font-black text-ink focus:outline-none transition-all"
                             placeholder="Ej: 90"
                         />
                     </div>
@@ -379,7 +379,7 @@ const NewOrder: React.FC = () => {
                 <div className="grid grid-cols-3 gap-4">
                     <div className="text-center space-y-1">
                         <label className="text-[8px] font-black text-blue-400 uppercase tracking-widest block">Hora Inicio</label>
-                        <input type="text" value={formData.time} onChange={(e) => setFormData(prev => ({...prev, time: e.target.value}))} className="w-full bg-white border border-blue-100 rounded-xl py-2.5 text-center text-sm font-black text-blue-700 shadow-sm focus:outline-none" />
+                        <input type="text" value={formData.time} onChange={(e) => setFormData(prev => ({...prev, time: e.target.value}))} className="w-full bg-raised border border-blue-100 rounded-xl py-2.5 text-center text-sm font-black text-blue-700 shadow-sm focus:outline-none" />
                     </div>
                     <div className="text-center space-y-1">
                         <label className="text-[8px] font-black text-blue-400 uppercase tracking-widest block">Duración</label>
@@ -395,18 +395,18 @@ const NewOrder: React.FC = () => {
                     </div>
                     <div className="text-center space-y-1">
                         <label className="text-[8px] font-black text-blue-400 uppercase tracking-widest block">Fin Estimado</label>
-                        <div className="w-full bg-white/50 border border-dashed border-blue-200 rounded-xl py-2.5 text-center text-sm font-black text-blue-400">{endTime}</div>
+                        <div className="w-full bg-raised/50 border border-dashed border-blue-200 rounded-xl py-2.5 text-center text-sm font-black text-blue-400">{endTime}</div>
                     </div>
                 </div>
             </div>
         </div>
 
         {/* Evidence Section */}
-        <div className="bg-white rounded-[2.2rem] p-6 shadow-sm border border-gray-100 space-y-4">
+        <div className="bg-raised rounded-[2.2rem] p-6 shadow-sm border border-line-soft space-y-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <ImageIcon size={18} className="text-primary" />
-              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest"> Fotos Iniciales </h3>
+              <h3 className="text-[10px] font-black text-ink-faint uppercase tracking-widest"> Fotos Iniciales </h3>
             </div>
             
             <div className="flex gap-2">
@@ -456,7 +456,7 @@ const NewOrder: React.FC = () => {
 
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
               {initialEvidence.map((evidence: string | Blob, index: number) => (
-                <div key={index} className="aspect-square rounded-xl overflow-hidden border border-gray-200 relative group shadow-sm hover:shadow-md transition-shadow">
+                <div key={index} className="aspect-square rounded-xl overflow-hidden border border-line relative group shadow-sm hover:shadow-md transition-shadow">
                   <img src={getImageUrl(evidence)} alt={`evidence-${index}`} className="w-full h-full object-cover" />
                   <button 
                     type="button" 
@@ -471,8 +471,8 @@ const NewOrder: React.FC = () => {
                 </div>
               ))}
               {initialEvidence.length === 0 && !loadingMessage && (
-                <div className="col-span-full py-10 text-center text-gray-300 text-xs italic border-2 border-dashed border-gray-200 rounded-2xl bg-gray-50/50">
-                  <div className="flex flex-col items-center gap-2"><ImageIcon size={24} className="text-gray-200" /><span>Sin evidencia adjunta</span><span className="text-[10px] text-gray-400">Usa los botones para agregar fotos</span></div>
+                <div className="col-span-full py-10 text-center text-ink-faint text-xs italic border-2 border-dashed border-line rounded-2xl bg-sunken/50">
+                  <div className="flex flex-col items-center gap-2"><ImageIcon size={24} className="text-gray-200" /><span>Sin evidencia adjunta</span><span className="text-[10px] text-ink-faint">Usa los botones para agregar fotos</span></div>
                 </div>
               )}
             </div>

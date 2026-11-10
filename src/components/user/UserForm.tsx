@@ -223,7 +223,7 @@ const UserForm: React.FC<Props> = ({ users }) => {
   const GpsIndicator = () => {
     if (isEditMode) return null;
     return (
-        <div className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide flex items-center gap-1 ${gpsStatus === 'locating' ? 'bg-yellow-50 text-yellow-600' : gpsStatus === 'found' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'}`}>
+        <div className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide flex items-center gap-1 ${gpsStatus === 'locating' ? 'bg-yellow-50 text-yellow-600' : gpsStatus === 'found' ? 'bg-green-50 text-green-600' : 'bg-sunken text-ink-faint'}`}>
             {gpsStatus === 'locating' && <Loader2 size={10} className="animate-spin" />}
             {gpsStatus === 'found' && <MapPin size={10} />}
             {gpsStatus === 'locating' ? 'OBTENIENDO GPS...' : gpsStatus === 'found' ? 'UBICACIÓN LISTA' : 'SIN GPS'}
@@ -233,10 +233,10 @@ const UserForm: React.FC<Props> = ({ users }) => {
 
   return (
     <>
-    <div className="bg-white min-h-screen pb-32">
-      <header className="px-4 py-3 flex items-center gap-2 sticky top-0 bg-white border-b border-gray-100 z-10">
-        <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-gray-100 rounded-full transition-colors"><ChevronLeft size={22} /></button>
-        <h1 className="text-lg font-bold text-gray-800 tracking-tight">{isEditMode ? 'Editar Usuario' : 'Nuevo Usuario'}</h1>
+    <div className="bg-raised min-h-screen pb-32">
+      <header className="px-4 py-3 flex items-center gap-2 sticky top-0 bg-raised border-b border-line-soft z-10">
+        <button onClick={() => navigate(-1)} className="p-1 -ml-1 hover:bg-sunken rounded-full transition-colors"><ChevronLeft size={22} /></button>
+        <h1 className="text-lg font-bold text-ink tracking-tight">{isEditMode ? 'Editar Usuario' : 'Nuevo Usuario'}</h1>
       </header>
 
       <form onSubmit={handleSubmit} className="p-5 space-y-6 max-w-sm mx-auto">
@@ -244,37 +244,37 @@ const UserForm: React.FC<Props> = ({ users }) => {
           <div className="w-20 h-20 bg-red-50 rounded-3xl flex items-center justify-center text-primary mb-3 shadow-inner">
             {isEditMode ? <UserIcon size={40} /> : <UserPlus size={40} />}
           </div>
-          { !isEditMode ? <GpsIndicator /> : <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Modificar Perfil</p> }
+          { !isEditMode ? <GpsIndicator /> : <p className="text-[10px] text-ink-faint font-black uppercase tracking-[0.2em]">Modificar Perfil</p> }
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Nombre Completo</label>
-            <input type="text" name="name" placeholder="Ej: Nombre Completo" value={formData.name || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
+            <label className="block text-xs font-semibold text-ink-soft mb-2 ml-1">Nombre Completo</label>
+            <input type="text" name="name" placeholder="Ej: Nombre Completo" value={formData.name || ''} onChange={handleInputChange} className={`w-full bg-sunken border ${validationErrors.name ? 'border-red-500' : 'border-line'} rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             {validationErrors.name && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.name}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Identificación</label>
+            <label className="block text-xs font-semibold text-ink-soft mb-2 ml-1">Identificación</label>
             <div className="relative flex items-center">
               <div className="absolute left-0 pl-4 pointer-events-none">
-                <IdCard size={18} className="text-gray-400" />
+                <IdCard size={18} className="text-ink-faint" />
               </div>
-              <input type="text" name="identification" placeholder="CC o NIT" value={formData.identification || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.identification ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
+              <input type="text" name="identification" placeholder="CC o NIT" value={formData.identification || ''} onChange={handleInputChange} className={`w-full bg-sunken border ${validationErrors.identification ? 'border-red-500' : 'border-line'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             </div>
             {validationErrors.identification && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.identification}</p>}
           </div>
 
           {currentUser && hasPermission(currentUser.role, PERMISSIONS.UPDATE_USER_ROLE) && (
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Rol Operativo</label>
+              <label className="block text-xs font-semibold text-ink-soft mb-2 ml-1">Rol Operativo</label>
               <div className="grid grid-cols-2 gap-3">
                 {availableRoles.map(role => (
                   <button 
                     type="button" 
                     key={role as React.Key}
                     onClick={() => setFormData({...formData, role: role as User['role']})}
-                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm capitalize ${formData.role === role ? 'border-primary bg-red-50 text-primary' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border-2 transition-all font-bold text-sm capitalize ${formData.role === role ? 'border-primary bg-red-50 text-primary' : 'border-line bg-sunken text-ink-soft'}`}>
                       {role === 'technician' ? <HardHat size={16} /> : <Shield size={16} />} 
                       {role as React.ReactNode}
                   </button>
@@ -292,36 +292,36 @@ const UserForm: React.FC<Props> = ({ users }) => {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Usuario de Sistema</label>
+            <label className="block text-xs font-semibold text-ink-soft mb-2 ml-1">Usuario de Sistema</label>
             <div className="relative flex items-center">
                 <div className="absolute left-0 pl-4 pointer-events-none">
-                    <AtSign size={18} className="text-gray-400" />
+                    <AtSign size={18} className="text-ink-faint" />
                 </div>
-              <input type="text" name="username" value={formData.username || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.username ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
+              <input type="text" name="username" value={formData.username || ''} onChange={handleInputChange} className={`w-full bg-sunken border ${validationErrors.username ? 'border-red-500' : 'border-line'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             </div>
             {validationErrors.username && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.username}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Correo de Recuperación</label>
+            <label className="block text-xs font-semibold text-ink-soft mb-2 ml-1">Correo de Recuperación</label>
             <div className="relative flex items-center">
                 <div className="absolute left-0 pl-4 pointer-events-none">
-                    <Mail size={18} className="text-gray-400" />
+                    <Mail size={18} className="text-ink-faint" />
                 </div>
-              <input type="email" name="email" placeholder="correo@ejemplo.com" value={formData.email || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.email ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
+              <input type="email" name="email" placeholder="correo@ejemplo.com" value={formData.email || ''} onChange={handleInputChange} className={`w-full bg-sunken border ${validationErrors.email ? 'border-red-500' : 'border-line'} rounded-xl py-3 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
             </div>
-            <p className="text-[10px] text-gray-400 mt-1 ml-1">Se usa para recuperar tu contraseña si la olvidas. Opcional.</p>
+            <p className="text-[10px] text-ink-faint mt-1 ml-1">Se usa para recuperar tu contraseña si la olvidas. Opcional.</p>
             {validationErrors.email && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.email}</p>}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-2 ml-1">Contraseña</label>
+            <label className="block text-xs font-semibold text-ink-soft mb-2 ml-1">Contraseña</label>
             <div className="relative flex items-center">
                 <div className="absolute left-0 pl-4 pointer-events-none">
-                    <Lock size={18} className="text-gray-400" />
+                    <Lock size={18} className="text-ink-faint" />
                 </div>
-              <input type={showPassword ? "text" : "password"} name="password" placeholder={isEditMode ? "Dejar en blanco para no cambiar" : "••••••••"} value={formData.password || ''} onChange={handleInputChange} className={`w-full bg-gray-50 border ${validationErrors.password ? 'border-red-500' : 'border-gray-200'} rounded-xl py-3 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 pr-4 text-gray-400 hover:text-gray-600 transition-colors">
+              <input type={showPassword ? "text" : "password"} name="password" placeholder={isEditMode ? "Dejar en blanco para no cambiar" : "••••••••"} value={formData.password || ''} onChange={handleInputChange} className={`w-full bg-sunken border ${validationErrors.password ? 'border-red-500' : 'border-line'} rounded-xl py-3 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium transition-all`} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-0 pr-4 text-ink-faint hover:text-ink-soft transition-colors">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>

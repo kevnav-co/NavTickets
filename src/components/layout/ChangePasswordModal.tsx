@@ -92,17 +92,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95">
+      <div className="bg-raised w-full max-w-sm rounded-[2rem] p-6 shadow-2xl animate-in zoom-in-95">
         <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-black text-gray-900">Cambiar Contraseña</h3>
-          <button onClick={onClose} disabled={isSaving}><X size={20} className="text-gray-400 hover:text-gray-600" /></button>
+          <h3 className="text-lg font-black text-ink">Cambiar Contraseña</h3>
+          <button onClick={onClose} disabled={isSaving}><X size={20} className="text-ink-faint hover:text-ink-soft" /></button>
         </div>
 
         {success ? (
           <div className="text-center py-8 flex flex-col items-center justify-center">
             <ShieldCheck size={48} className="text-green-500 mb-4" />
-            <h4 className="font-bold text-lg text-gray-800">¡Contraseña Actualizada!</h4>
-            <p className="text-sm text-gray-500">Tu contraseña se ha cambiado correctamente.</p>
+            <h4 className="font-bold text-lg text-ink">¡Contraseña Actualizada!</h4>
+            <p className="text-sm text-ink-soft">Tu contraseña se ha cambiado correctamente.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -112,12 +112,12 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ isOpen
               { label: 'Confirmar Nueva', value: confirmPass, setter: setConfirmPass }
             ].map((field, i) => (
               <div key={i}>
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">{field.label}</label>
+                <label className="text-[10px] font-bold text-ink-faint uppercase tracking-widest ml-1">{field.label}</label>
                 <input
                   type="password"
                   value={field.value}
                   onChange={e => field.setter(e.target.value)}
-                  className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
+                  className="w-full bg-sunken border border-line-soft rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
                   required
                 />
               </div>

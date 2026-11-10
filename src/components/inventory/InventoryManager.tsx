@@ -55,7 +55,7 @@ const InventoryManager: React.FC = () => {
   const Card: React.FC<{ item: (typeof filtered)[number]; onClick: () => void }> = React.memo(({ item, onClick }) => {
     const low = isLowStock(item);
     return (
-      <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
+      <div onClick={onClick} className="bg-raised rounded-lg shadow-sm cursor-pointer h-full relative overflow-hidden active:scale-[0.98] transition-all hover:shadow-md hover:border-red-100 border border-transparent">
         <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${low ? 'bg-red-500' : 'bg-emerald-500'}`} />
         <div className="p-4 pl-5 flex flex-col gap-2 h-full">
           <div className="flex items-start gap-3">
@@ -63,19 +63,19 @@ const InventoryManager: React.FC = () => {
               <Package className="text-primary" size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="font-bold text-sm text-gray-800 leading-snug truncate">{item.name}</h3>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400">
+              <h3 className="font-bold text-sm text-ink leading-snug truncate">{item.name}</h3>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-ink-faint">
                 <Hash size={10} /> {item.sku || 'sin ref'}
               </div>
             </div>
           </div>
           <div className="flex items-end justify-between mt-auto">
             <div>
-              <p className={`text-2xl font-black ${low ? 'text-red-600' : 'text-gray-800'}`}>
+              <p className={`text-2xl font-black ${low ? 'text-red-600' : 'text-ink'}`}>
                 {item.quantity}
-                <span className="text-[10px] font-bold text-gray-400 ml-1">{item.unit}</span>
+                <span className="text-[10px] font-bold text-ink-faint ml-1">{item.unit}</span>
               </p>
-              <p className="text-[10px] font-bold text-gray-400">Costo {fmtMoney(item.unitCost)}</p>
+              <p className="text-[10px] font-bold text-ink-faint">Costo {fmtMoney(item.unitCost)}</p>
             </div>
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${low ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
               {low ? 'Stock bajo' : 'OK'}
@@ -89,15 +89,15 @@ const InventoryManager: React.FC = () => {
   const Row: React.FC<{ item: (typeof filtered)[number]; onClick: () => void }> = React.memo(({ item, onClick }) => {
     const low = isLowStock(item);
     return (
-      <div onClick={onClick} className="bg-white rounded-lg shadow-sm cursor-pointer active:scale-[0.99] transition-all hover:shadow-md border border-transparent p-3 flex items-center gap-3">
+      <div onClick={onClick} className="bg-raised rounded-lg shadow-sm cursor-pointer active:scale-[0.99] transition-all hover:shadow-md border border-transparent p-3 flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg bg-primary/10 flex-shrink-0 flex items-center justify-center">
           <Package className="text-primary" size={18} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-sm text-gray-800 truncate">{item.name}</p>
-          <p className="text-[10px] font-bold text-gray-400 font-mono">{item.sku || 'sin ref'} • {item.unit}</p>
+          <p className="font-bold text-sm text-ink truncate">{item.name}</p>
+          <p className="text-[10px] font-bold text-ink-faint font-mono">{item.sku || 'sin ref'} • {item.unit}</p>
         </div>
-        <div className={`text-sm font-black shrink-0 ${low ? 'text-red-600' : 'text-gray-800'}`}>{item.quantity}</div>
+        <div className={`text-sm font-black shrink-0 ${low ? 'text-red-600' : 'text-ink'}`}>{item.quantity}</div>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${low ? 'bg-red-100 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
           {low ? 'Bajo' : 'OK'}
         </span>
@@ -107,21 +107,21 @@ const InventoryManager: React.FC = () => {
 
   return (
     <div className="w-full h-full max-w-7xl mx-auto">
-      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm pt-4 pb-3 px-4 md:px-6">
+      <div className="sticky top-0 z-10 bg-sunken/95 backdrop-blur-sm pt-4 pb-3 px-4 md:px-6">
         <div className="flex gap-2 mb-3">
           <div className="relative flex-1">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Search className="text-gray-400" size={18} /></div>
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Search className="text-ink-faint" size={18} /></div>
             <input
               type="text"
               placeholder="Buscar repuestos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-12 bg-white border border-gray-200 rounded-xl py-3 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full h-12 bg-raised border border-line rounded-xl py-3 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
             />
           </div>
           <button
             onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-            className="h-12 w-12 flex-shrink-0 bg-white border border-gray-200 rounded-xl text-gray-500 shadow-sm flex items-center justify-center hover:bg-gray-100 transition-colors"
+            className="h-12 w-12 flex-shrink-0 bg-raised border border-line rounded-xl text-ink-soft shadow-sm flex items-center justify-center hover:bg-sunken transition-colors"
             title={viewMode === 'list' ? 'Cuadrícula' : 'Lista'}
           >
             {viewMode === 'list' ? <Layers size={20} /> : <Package size={20} />}
@@ -134,10 +134,10 @@ const InventoryManager: React.FC = () => {
           </button>
         )}
 
-        <div className="flex bg-gray-200/80 p-1 rounded-lg text-center">
-          <button onClick={() => setFilter('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'all' ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>Todos ({inventoryItems.length})</button>
-          <button onClick={() => setFilter('low')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'low' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500'}`}>Stock bajo ({lowCount})</button>
-          <button onClick={() => setFilter('ok')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'ok' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500'}`}>OK</button>
+        <div className="flex bg-line/80 p-1 rounded-lg text-center">
+          <button onClick={() => setFilter('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'all' ? 'bg-raised text-primary shadow-sm' : 'text-ink-soft'}`}>Todos ({inventoryItems.length})</button>
+          <button onClick={() => setFilter('low')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'low' ? 'bg-raised text-red-600 shadow-sm' : 'text-ink-soft'}`}>Stock bajo ({lowCount})</button>
+          <button onClick={() => setFilter('ok')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'ok' ? 'bg-raised text-emerald-600 shadow-sm' : 'text-ink-soft'}`}>OK</button>
         </div>
       </div>
 
@@ -153,10 +153,10 @@ const InventoryManager: React.FC = () => {
             </div>
           )
         ) : (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-ink-faint">
             <Package size={32} className="mx-auto mb-2 opacity-50" />
             <p className="font-medium">No hay repuestos</p>
-            <p className="text-sm text-gray-400">Ajusta la búsqueda o registra el primero.</p>
+            <p className="text-sm text-ink-faint">Ajusta la búsqueda o registra el primero.</p>
           </div>
         )}
       </div>

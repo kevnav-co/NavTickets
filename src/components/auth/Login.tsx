@@ -61,7 +61,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex bg-white overflow-hidden font-sans">
+    <div className="h-[100dvh] w-full flex bg-raised overflow-hidden font-sans">
       <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-primary">
         {/* Fondo decorativo en CSS puro: sin descarga externa, no se rompe sin red. */}
         <div className="absolute inset-0 z-0" aria-hidden="true">
@@ -73,7 +73,7 @@ const Login: React.FC = () => {
               backgroundSize: '48px 48px',
             }}
           />
-          <div className="absolute -top-32 -right-24 w-[26rem] h-[26rem] rounded-full bg-white/[0.06] blur-3xl" />
+          <div className="absolute -top-32 -right-24 w-[26rem] h-[26rem] rounded-full bg-raised/[0.06] blur-3xl" />
           <div className="absolute -bottom-40 -left-20 w-[30rem] h-[30rem] rounded-full bg-black/20 blur-3xl" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/[0.04]" />
         </div>
@@ -111,7 +111,7 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-       <div className="flex-1 overflow-y-auto bg-white relative">
+       <div className="flex-1 overflow-y-auto bg-raised relative">
         <div className="min-h-full flex flex-col justify-center px-8 py-12 sm:px-12 w-full max-w-md mx-auto">
           
           <div className="lg:hidden mb-12 flex justify-center w-full">

@@ -24,11 +24,11 @@ const ResetPassword: React.FC = () => {
 
   if (!token) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center bg-gray-50 p-6 font-sans">
-        <div className="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-sunken p-6 font-sans">
+        <div className="bg-raised w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
           <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-5"><XCircle size={32} /></div>
-          <h3 className="text-lg font-bold text-gray-900">Enlace inválido</h3>
-          <p className="text-sm text-gray-500 mt-2">Falta el token de recuperación en la URL.</p>
+          <h3 className="text-lg font-bold text-ink">Enlace inválido</h3>
+          <p className="text-sm text-ink-soft mt-2">Falta el token de recuperación en la URL.</p>
           <button onClick={() => navigate('/')} className="mt-6 w-full py-3 bg-primary text-white rounded-xl font-bold text-sm">Ir al inicio de sesión</button>
         </div>
       </div>
@@ -74,7 +74,7 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex bg-white overflow-hidden font-sans">
+    <div className="min-h-[100dvh] w-full flex bg-raised overflow-hidden font-sans">
       <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0">
           <img src="https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&q=80" alt="Fondo Industrial" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
@@ -85,9 +85,9 @@ const ResetPassword: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-white relative">
+      <div className="flex-1 overflow-y-auto bg-raised relative">
         <div className="min-h-full flex flex-col justify-center px-8 py-10 sm:px-12 md:px-20 lg:px-24 xl:px-32 w-full max-w-3xl mx-auto">
-          <button onClick={() => navigate('/')} className="mb-10 inline-flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-gray-800 transition-colors">
+          <button onClick={() => navigate('/')} className="mb-10 inline-flex items-center gap-1 text-sm font-bold text-ink-soft hover:text-ink transition-colors">
             <ChevronLeft size={18} /> Volver al inicio de sesión
           </button>
 
@@ -95,52 +95,52 @@ const ResetPassword: React.FC = () => {
             {expired ? (
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
                 <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><XCircle size={28} /></div>
-                <h3 className="text-lg font-bold text-gray-900">El enlace ha expirado</h3>
-                <p className="text-sm text-gray-600 mt-2">El enlace es de un solo uso y caduca a los 30 minutos. Solicita uno nuevo.</p>
+                <h3 className="text-lg font-bold text-ink">El enlace ha expirado</h3>
+                <p className="text-sm text-ink-soft mt-2">El enlace es de un solo uso y caduca a los 30 minutos. Solicita uno nuevo.</p>
                 <button onClick={() => navigate('/forgot-password')} className="mt-6 w-full py-3 bg-primary text-white rounded-xl font-bold text-sm">Solicitar otro enlace</button>
               </div>
             ) : done ? (
               <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
                 <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4"><CheckCircle2 size={28} /></div>
-                <h3 className="text-lg font-bold text-gray-900">Contraseña actualizada</h3>
-                <p className="text-sm text-gray-600 mt-2">Ya puedes iniciar sesión con tu nueva contraseña.</p>
+                <h3 className="text-lg font-bold text-ink">Contraseña actualizada</h3>
+                <p className="text-sm text-ink-soft mt-2">Ya puedes iniciar sesión con tu nueva contraseña.</p>
                 <button onClick={() => navigate('/')} className="mt-6 w-full py-3 bg-primary text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2"><ShieldCheck size={16} /> Ir al inicio de sesión</button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="mb-8 text-center lg:text-left">
-                  <h2 className="text-3xl font-bold text-gray-900 tracking-tight mb-3">Nueva contraseña</h2>
-                  <p className="text-gray-500">Elige una contraseña nueva para tu cuenta.</p>
+                  <h2 className="text-3xl font-bold text-ink tracking-tight mb-3">Nueva contraseña</h2>
+                  <p className="text-ink-soft">Elige una contraseña nueva para tu cuenta.</p>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Nueva contraseña</label>
-                  <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
-                    <Lock size={20} className="ml-2 text-gray-400" />
+                  <label className="text-xs font-bold text-ink uppercase tracking-wide">Nueva contraseña</label>
+                  <div className="flex items-center border-b-2 border-line-soft focus-within:border-primary transition-colors">
+                    <Lock size={20} className="ml-2 text-ink-faint" />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-transparent py-3 pl-3 text-base text-gray-900 placeholder:text-gray-300 focus:outline-none rounded-none"
+                      className="w-full bg-transparent py-3 pl-3 text-base text-ink placeholder:text-ink-faint focus:outline-none rounded-none"
                       autoFocus
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-gray-400 hover:text-gray-600 transition-colors p-2">
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-ink-faint hover:text-ink-soft transition-colors p-2">
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Confirmar contraseña</label>
-                  <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
-                    <Lock size={20} className="ml-2 text-gray-400" />
+                  <label className="text-xs font-bold text-ink uppercase tracking-wide">Confirmar contraseña</label>
+                  <div className="flex items-center border-b-2 border-line-soft focus-within:border-primary transition-colors">
+                    <Lock size={20} className="ml-2 text-ink-faint" />
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
-                      className="w-full bg-transparent py-3 pl-3 text-base text-gray-900 placeholder:text-gray-300 focus:outline-none rounded-none"
+                      className="w-full bg-transparent py-3 pl-3 text-base text-ink placeholder:text-ink-faint focus:outline-none rounded-none"
                     />
                   </div>
                 </div>

@@ -171,30 +171,30 @@ const AvailabilityModal: React.FC<AvailabilityModalProps> = ({ technician, order
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white h-full max-h-[90vh] w-full max-w-4xl rounded-3xl shadow-2xl border border-gray-100 flex flex-col">
-        <header className="p-4 flex items-center justify-between border-b border-gray-100 flex-wrap gap-y-3 flex-shrink-0">
+      <div className="bg-raised h-full max-h-[90vh] w-full max-w-4xl rounded-3xl shadow-2xl border border-line-soft flex flex-col">
+        <header className="p-4 flex items-center justify-between border-b border-line-soft flex-wrap gap-y-3 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-500"><HardHat size={22} /></div>
+            <div className="w-10 h-10 bg-sunken rounded-xl flex items-center justify-center text-ink-soft"><HardHat size={22} /></div>
             <div>
-              <p className="text-sm font-black text-gray-900 uppercase tracking-tight">Agenda de {technician.name.split(' ')[0]}</p>
-              <p className="text-[10px] font-bold text-gray-400 capitalize">{currentWeekStart.toLocaleString('es-ES', { month: 'long' })} {currentWeekStart.getFullYear()}</p>
+              <p className="text-sm font-black text-ink uppercase tracking-tight">Agenda de {technician.name.split(' ')[0]}</p>
+              <p className="text-[10px] font-bold text-ink-faint capitalize">{currentWeekStart.toLocaleString('es-ES', { month: 'long' })} {currentWeekStart.getFullYear()}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() - 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-gray-100 rounded-full"><ChevronLeft size={20} /></button>
-            <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() + 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-gray-100 rounded-full"><ChevronRight size={20} /></button>
-            <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full ml-4"><X size={20} /></button>
+            <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() - 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-sunken rounded-full"><ChevronLeft size={20} /></button>
+            <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() + 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-sunken rounded-full"><ChevronRight size={20} /></button>
+            <button onClick={onClose} className="p-2 text-ink-faint hover:bg-sunken rounded-full ml-4"><X size={20} /></button>
           </div>
         </header>
 
         <div ref={scrollContainerRef} className="overflow-auto relative flex-1">
           <div className="min-w-[800px]">
-            <div className="grid grid-cols-[60px_repeat(6,1fr)] sticky top-0 bg-white z-30 border-b border-gray-200">
-              <div className="h-12 bg-white sticky left-0 z-40 border-r border-gray-200"></div>
+            <div className="grid grid-cols-[60px_repeat(6,1fr)] sticky top-0 bg-raised z-30 border-b border-line">
+              <div className="h-12 bg-raised sticky left-0 z-40 border-r border-line"></div>
               {weekDays.map((d, i) => (
-                <div key={i} className={`flex flex-col items-center justify-center py-2 border-r border-gray-100 ${i === currentDayIndex ? 'bg-red-50' : ''}`}>
-                  <span className="text-[8px] font-black uppercase text-gray-400">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
-                  <span className={`text-sm font-black ${i === currentDayIndex ? 'text-primary' : 'text-gray-800'}`}>{d.getDate()}</span>
+                <div key={i} className={`flex flex-col items-center justify-center py-2 border-r border-line-soft ${i === currentDayIndex ? 'bg-red-50' : ''}`}>
+                  <span className="text-[8px] font-black uppercase text-ink-faint">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
+                  <span className={`text-sm font-black ${i === currentDayIndex ? 'text-primary' : 'text-ink'}`}>{d.getDate()}</span>
                 </div>
               ))}
             </div>
@@ -223,8 +223,8 @@ const AvailabilityModal: React.FC<AvailabilityModalProps> = ({ technician, order
               {hours.map(h => {
                   const isLunch = h >= 12 && h < 14;
                   return (
-                  <div key={h} className="grid grid-cols-[60px_repeat(6,1fr)] h-[60px] border-b border-gray-200/70 group">
-                    <div className="text-[10px] text-gray-500 font-bold flex items-start justify-center pt-1 border-r border-gray-200/70 sticky left-0 bg-white z-20 shadow-[2px_0_4px_rgba(0,0,0,0.01)]">{h.toString().padStart(2, '0')}:00</div>
+                  <div key={h} className="grid grid-cols-[60px_repeat(6,1fr)] h-[60px] border-b border-line/70 group">
+                    <div className="text-[10px] text-ink-soft font-bold flex items-start justify-center pt-1 border-r border-line/70 sticky left-0 bg-raised z-20 shadow-[2px_0_4px_rgba(0,0,0,0.01)]">{h.toString().padStart(2, '0')}:00</div>
                     {Array.from({ length: 6 }).map((_, i) => {
                       const isPastSlot = (() => {
                         const slotDate = new Date(weekDays[i]);
@@ -234,8 +234,8 @@ const AvailabilityModal: React.FC<AvailabilityModalProps> = ({ technician, order
                       const isSaturdayAfternoon = i === 5 && h >= 14;
                       const isGraySlot = isPastSlot || isLunch || isSaturdayAfternoon;
                       return (
-                        <div key={i} className={`border-r border-gray-100 last:border-0 relative h-full flex flex-col ${isGraySlot ? 'bg-gray-100/50' : 'bg-white hover:bg-red-50/50'}`}>
-                          {[0, 15, 30, 45].map((m) => (<div key={m} className="flex-1 border-b border-dashed border-gray-100 last:border-b-0" onClick={() => !isGraySlot && setDraftSlot({ date: weekDays[i], hour: h, minute: m, dayIndex: i, durationMinutes: 60 })}></div>))}
+                        <div key={i} className={`border-r border-line-soft last:border-0 relative h-full flex flex-col ${isGraySlot ? 'bg-sunken/50' : 'bg-raised hover:bg-red-50/50'}`}>
+                          {[0, 15, 30, 45].map((m) => (<div key={m} className="flex-1 border-b border-dashed border-line-soft last:border-b-0" onClick={() => !isGraySlot && setDraftSlot({ date: weekDays[i], hour: h, minute: m, dayIndex: i, durationMinutes: 60 })}></div>))}
                         </div>
                       );
                     })}
@@ -246,7 +246,7 @@ const AvailabilityModal: React.FC<AvailabilityModalProps> = ({ technician, order
               {draftSlot && (
                  <div className="absolute bg-red-500/10 border-l-[4px] border-red-500 rounded-r-lg shadow-xl z-30 flex flex-col justify-center box-border px-1 select-none" style={{ top: `${((draftSlot.hour - 6) * rowHeight) + draftSlot.minute}px`, left: `calc(60px + ((100% - 60px) / 6 * ${draftSlot.dayIndex}))`, width: `calc((100% - 60px) / 6)`, height: `${draftSlot.durationMinutes}px` }} onMouseDown={(e) => handleDragStart(e, 'move')} onTouchStart={(e) => handleDragStart(e, 'move')}>
                     <div className="flex flex-col items-center justify-center pointer-events-none text-center">
-                        <span className="text-[9px] font-black text-gray-800">
+                        <span className="text-[9px] font-black text-ink">
                           {formatMinutes(draftSlot.hour * 60 + draftSlot.minute)} - {formatMinutes((draftSlot.hour * 60 + draftSlot.minute) + draftSlot.durationMinutes)}
                         </span>
                         <span className="text-[8px] font-black text-red-600 mt-0.5 bg-red-500/10 px-1.5 py-0.5 rounded">

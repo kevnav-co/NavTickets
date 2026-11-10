@@ -297,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 // Importar LoadingFallback aquí para evitar importación circular
 const LoadingFallback = () => (
-  <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+  <div className="flex h-screen w-screen items-center justify-center bg-sunken">
     <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#7b1113] border-t-transparent"></div>
   </div>
 );

@@ -186,8 +186,8 @@ const ClientMap: React.FC = () => {
         
         const popupContent = el('div', 'p-3 text-center');
         const body = popupContent.appendChild(el('div', 'flex flex-col items-center'));
-        body.appendChild(el('h3', 'font-bold text-gray-900 text-sm mb-1 line-clamp-1', client.name));
-        body.appendChild(el('p', 'text-[10px] text-gray-500 mb-3 line-clamp-2', client.address ?? ''));
+        body.appendChild(el('h3', 'font-bold text-ink text-sm mb-1 line-clamp-1', client.name));
+        body.appendChild(el('p', 'text-[10px] text-ink-soft mb-3 line-clamp-2', client.address ?? ''));
         const viewClient = body.appendChild(el('button', 'w-full bg-primary text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-transform', 'Ver Expediente'));
         viewClient.addEventListener('click', () => navigate(`/clients/${client.id}`));
 
@@ -238,13 +238,13 @@ const ClientMap: React.FC = () => {
         const lastSeen = user.locationUpdatedAt ? new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(user.locationUpdatedAt)) : 'N/A';
 
         const statusText = hasActiveOrder ? '🟢 En servicio' : isRecent ? '🔵 Activo ahora' : `🔴 Visto: ${lastSeen}`;
-        const statusColor = hasActiveOrder ? 'text-green-600 font-bold' : isRecent ? 'text-blue-600 font-bold' : 'text-gray-500';
+        const statusColor = hasActiveOrder ? 'text-green-600 font-bold' : isRecent ? 'text-blue-600 font-bold' : 'text-ink-soft';
 
         const popupContent = el('div', 'p-3 text-center');
-        popupContent.appendChild(el('p', 'text-[10px] font-black text-gray-400 uppercase mb-1', `Técnico ${isMe ? '(Yo)' : ''}`));
-        popupContent.appendChild(el('h3', 'font-bold text-gray-900 text-sm mb-1', user.name));
+        popupContent.appendChild(el('p', 'text-[10px] font-black text-ink-faint uppercase mb-1', `Técnico ${isMe ? '(Yo)' : ''}`));
+        popupContent.appendChild(el('h3', 'font-bold text-ink text-sm mb-1', user.name));
         popupContent.appendChild(el('p', `text-[10px] ${statusColor} mb-3`, statusText));
-        const viewUser = popupContent.appendChild(el('button', 'w-full bg-gray-100 text-gray-800 py-2 rounded-lg text-[10px] font-bold uppercase active:scale-95 transition-transform border border-gray-200', 'Ver Perfil'));
+        const viewUser = popupContent.appendChild(el('button', 'w-full bg-sunken text-ink py-2 rounded-lg text-[10px] font-bold uppercase active:scale-95 transition-transform border border-line', 'Ver Perfil'));
         viewUser.addEventListener('click', () => navigate(`/users/${user.id}`));
 
         marker.bindPopup(popupContent);
@@ -354,11 +354,11 @@ const ClientMap: React.FC = () => {
   const userHasAdminRights = currentUser.role === ROLES.ADMIN || currentUser.role === ROLES.DEVELOPER;
 
   return (
-    <div className="relative w-full h-[calc(100vh-140px)] md:h-[calc(100vh-80px)] rounded-t-[2.5rem] shadow-inner bg-gray-100 overflow-hidden border-t border-gray-200">
+    <div className="relative w-full h-[calc(100vh-140px)] md:h-[calc(100vh-80px)] rounded-t-[2.5rem] shadow-inner bg-sunken overflow-hidden border-t border-line">
       {!isMapReady && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 z-10">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-sunken z-10">
           <Loader2 size={32} className="animate-spin text-primary" />
-          <p className="mt-4 text-sm font-bold text-gray-500">Cargando mapa...</p>
+          <p className="mt-4 text-sm font-bold text-ink-soft">Cargando mapa...</p>
         </div>
       )}
       <div ref={mapContainerRef} className="w-full h-full z-0" />
@@ -371,18 +371,18 @@ const ClientMap: React.FC = () => {
       )}
 
       <div className={`absolute left-4 z-[1000] flex flex-col gap-2 ${!isOnline ? 'top-12' : 'top-4'}`}>
-        <button onClick={handleLocate} className="w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-primary active:scale-90 transition-transform border border-gray-100">
+        <button onClick={handleLocate} className="w-11 h-11 bg-raised rounded-2xl shadow-xl flex items-center justify-center text-primary active:scale-90 transition-transform border border-line-soft">
           {isLocating ? <Loader2 size={20} className="animate-spin" /> : <Navigation size={20} />}
         </button>
         <div className="relative">
-            <button onClick={() => setShowLayerMenu(!showLayerMenu)} className={`w-11 h-11 rounded-2xl shadow-xl flex items-center justify-center active:scale-90 transition-transform border border-gray-100 ${showLayerMenu ? 'bg-primary text-white' : 'bg-white text-gray-700'}`}>
+            <button onClick={() => setShowLayerMenu(!showLayerMenu)} className={`w-11 h-11 rounded-2xl shadow-xl flex items-center justify-center active:scale-90 transition-transform border border-line-soft ${showLayerMenu ? 'bg-primary text-white' : 'bg-raised text-ink-soft'}`}>
                 <Layers size={20} />
             </button>
             {showLayerMenu && (
-                <div className="absolute top-0 left-14 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 w-48 animate-in fade-in slide-in-from-left-2 overflow-hidden">
+                <div className="absolute top-0 left-14 bg-raised rounded-2xl shadow-2xl border border-line-soft p-2 w-48 animate-in fade-in slide-in-from-left-2 overflow-hidden">
                     <div className="flex flex-col gap-1">
                         {layers.map(layer => (
-                            <button key={layer.id} onClick={() => { setMapStyle(layer.id as any); setShowLayerMenu(false); }} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${mapStyle === layer.id ? 'bg-gray-100 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}>
+                            <button key={layer.id} onClick={() => { setMapStyle(layer.id as any); setShowLayerMenu(false); }} className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-colors ${mapStyle === layer.id ? 'bg-sunken text-primary' : 'text-ink-soft hover:bg-sunken'}`}>
                                 <span>{layer.label}</span>
                                 {mapStyle === layer.id && <Check size={14} />}
                             </button>
@@ -392,7 +392,7 @@ const ClientMap: React.FC = () => {
             )}
         </div>
         {currentUser?.role === 'admin' && (
-            <button onClick={handleUpdateCoordinates} disabled={isUpdating || !isOnline} className={`w-11 h-11 bg-white rounded-2xl shadow-xl flex items-center justify-center text-blue-600 active:scale-90 transition-transform border border-gray-100 ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            <button onClick={handleUpdateCoordinates} disabled={isUpdating || !isOnline} className={`w-11 h-11 bg-raised rounded-2xl shadow-xl flex items-center justify-center text-blue-600 active:scale-90 transition-transform border border-line-soft ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}>
               {isUpdating ? <Loader2 size={20} className="animate-spin" /> : <RefreshCw size={20} />}
             </button>
         )}
@@ -400,11 +400,11 @@ const ClientMap: React.FC = () => {
 
       
       <div className="absolute bottom-[2rem] left-0 right-0 z-[1000] text-center">
-        <div className="inline-flex items-center gap-1 sm:gap-2 bg-white/95 backdrop-blur-md px-2 sm:px-3 py-2 sm:py-3 rounded-full shadow-2xl border border-white/50 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
+        <div className="inline-flex items-center gap-1 sm:gap-2 bg-raised/95 backdrop-blur-md px-2 sm:px-3 py-2 sm:py-3 rounded-full shadow-2xl border border-white/50 whitespace-nowrap animate-in fade-in slide-in-from-bottom-2">
             {userHasAdminRights && (<>
               <button 
                 onClick={() => setShowWithService(!showWithService)}
-                className={`flex items-center gap-1.5 active:scale-95 transition-all text-[9px] font-black uppercase ${showWithService ? 'text-gray-700 opacity-100' : 'text-gray-400 opacity-50 grayscale'}`}
+                className={`flex items-center gap-1.5 active:scale-95 transition-all text-[9px] font-black uppercase ${showWithService ? 'text-ink-soft opacity-100' : 'text-ink-faint opacity-50 grayscale'}`}
               >
                 <div className="w-2.5 h-2.5 bg-blue-600 rounded-full border border-white shadow-sm"></div>
                 <span>Con Servicio</span>
@@ -412,7 +412,7 @@ const ClientMap: React.FC = () => {
       
               <button 
                 onClick={() => setShowWithoutService(!showWithoutService)}
-                className={`flex items-center gap-1.5 border-l border-gray-200 pl-1 sm:pl-2 active:scale-95 transition-all text-[9px] font-black uppercase ${showWithoutService ? 'text-gray-700 opacity-100' : 'text-gray-400 opacity-50 grayscale'}`}
+                className={`flex items-center gap-1.5 border-l border-line pl-1 sm:pl-2 active:scale-95 transition-all text-[9px] font-black uppercase ${showWithoutService ? 'text-ink-soft opacity-100' : 'text-ink-faint opacity-50 grayscale'}`}
               >
                 <div className="w-2.5 h-2.5 bg-gray-400 rounded-full border border-white shadow-sm"></div>
                 <span>Sin Servicio</span>
@@ -422,7 +422,7 @@ const ClientMap: React.FC = () => {
             {(userHasAdminRights || currentUser.role === ROLES.SUPERVISOR) && (
               <button 
                 onClick={() => setShowUsers(!showUsers)}
-                className={`flex items-center gap-1.5 border-l border-gray-200 pl-1 sm:pl-2 active:scale-95 transition-all text-[9px] font-black uppercase ${showUsers ? 'text-gray-700 opacity-100' : 'text-gray-400 opacity-50 grayscale'}`}>
+                className={`flex items-center gap-1.5 border-l border-line pl-1 sm:pl-2 active:scale-95 transition-all text-[9px] font-black uppercase ${showUsers ? 'text-ink-soft opacity-100' : 'text-ink-faint opacity-50 grayscale'}`}>
                 <div className="w-2.5 h-2.5 bg-primary rounded-full border border-white shadow-sm"></div>
                 <span>Técnicos</span>
               </button>

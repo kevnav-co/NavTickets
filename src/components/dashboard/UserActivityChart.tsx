@@ -28,9 +28,9 @@ interface UserActivityChartProps {
 }
 
 const ChartSkeleton: React.FC = () => (
-  <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 animate-pulse">
-    <div className="h-6 w-3/4 bg-gray-200 rounded mb-6"></div>
-    <div className="h-64 w-full bg-gray-100 rounded-xl"></div>
+  <div className="bg-raised p-5 rounded-3xl shadow-sm border border-line-soft animate-pulse">
+    <div className="h-6 w-3/4 bg-line rounded mb-6"></div>
+    <div className="h-64 w-full bg-sunken rounded-xl"></div>
   </div>
 );
 
@@ -86,10 +86,10 @@ const UserActivityChart: React.FC<UserActivityChartProps> = ({ orders, users }) 
   const yAxisDomain = [0, maxVal < 5 ? 5 : Math.ceil((maxVal + 1) / 5) * 5];
 
   return (
-    <div className="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
-      <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+    <div className="bg-raised p-5 rounded-3xl shadow-sm border border-line-soft">
+      <h3 className="text-lg font-bold text-ink mb-6 flex items-center gap-2">
         Ordenes por Usuario
-        <span className="text-xs font-medium text-gray-400 bg-gray-100 px-2 py-1 rounded-lg capitalize">{label}</span>
+        <span className="text-xs font-medium text-ink-faint bg-sunken px-2 py-1 rounded-lg capitalize">{label}</span>
       </h3>
       <div className="w-full relative">
         <ResponsiveContainer width="100%" height={260}>

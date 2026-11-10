@@ -18,7 +18,7 @@ const TYPE_META: Record<SeguimientoType, { label: string; icon: React.ReactNode;
   [SeguimientoType.ESTADO]: { label: 'Estado', icon: <PlayCircle size={16} />, color: 'bg-amber-50 text-amber-600' },
   [SeguimientoType.ASIGNACION]: { label: 'Asignación', icon: <UserCheck size={16} />, color: 'bg-purple-50 text-purple-600' },
   [SeguimientoType.CIERRE]: { label: 'Cierre', icon: <CheckCircle2 size={16} />, color: 'bg-green-50 text-green-600' },
-  [SeguimientoType.COMENTARIO]: { label: 'Comentario', icon: <MessageSquare size={16} />, color: 'bg-gray-100 text-gray-600' },
+  [SeguimientoType.COMENTARIO]: { label: 'Comentario', icon: <MessageSquare size={16} />, color: 'bg-sunken text-ink-soft' },
   [SeguimientoType.REABRIO_GARANTIA]: { label: 'Garantía', icon: <RefreshCcw size={16} />, color: 'bg-red-50 text-red-500' },
 };
 
@@ -30,7 +30,7 @@ const SeguimientoTimeline: React.FC<Props> = ({ seguimientos, users }) => {
 
   if (!sorted.length) {
     return (
-      <div className="text-center py-10 text-gray-400">
+      <div className="text-center py-10 text-ink-faint">
         <Clock size={28} className="mx-auto mb-2 opacity-50" />
         <p className="text-sm font-bold">Sin seguimientos todavía</p>
         <p className="text-xs mt-1">La actividad de este tiquete aparecerá aquí.</p>
@@ -43,7 +43,7 @@ const SeguimientoTimeline: React.FC<Props> = ({ seguimientos, users }) => {
 
   return (
     <div className="relative">
-      <div className="absolute left-[15px] top-2 bottom-2 w-px bg-gray-200" />
+      <div className="absolute left-[15px] top-2 bottom-2 w-px bg-line" />
       <ul className="space-y-4">
         {sorted.map(s => {
           const meta = TYPE_META[s.type] || TYPE_META[SeguimientoType.ESTADO];
@@ -55,16 +55,16 @@ const SeguimientoTimeline: React.FC<Props> = ({ seguimientos, users }) => {
               </span>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{meta.label}</span>
-                  <span className="text-[10px] text-gray-400">• {timeSince(new Date(s.createdAt))}</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-ink-faint">{meta.label}</span>
+                  <span className="text-[10px] text-ink-faint">• {timeSince(new Date(s.createdAt))}</span>
                 </div>
-                <p className="text-sm font-bold text-gray-800 leading-snug">{s.action}</p>
+                <p className="text-sm font-bold text-ink leading-snug">{s.action}</p>
                 {(s.previousStatus && s.newStatus) && (
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {s.previousStatus} <span className="text-gray-400">→</span> {s.newStatus}
+                  <p className="text-xs text-ink-soft mt-0.5">
+                    {s.previousStatus} <span className="text-ink-faint">→</span> {s.newStatus}
                   </p>
                 )}
-                {name && <p className="text-[11px] text-gray-400 mt-0.5">por {name}</p>}
+                {name && <p className="text-[11px] text-ink-faint mt-0.5">por {name}</p>}
               </div>
             </li>
           );

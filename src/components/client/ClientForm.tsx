@@ -327,10 +327,10 @@ const ClientForm: React.FC = () => {
 
   if (!isClientFound) {
     return (
-      <div className="bg-white min-h-screen flex items-center justify-center">
+      <div className="bg-raised min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="animate-spin text-gray-400 mx-auto" size={48} />
-          <p className="text-lg text-gray-600 mt-4">Cliente no encontrado. Redirigiendo...</p>
+          <Loader2 className="animate-spin text-ink-faint mx-auto" size={48} />
+          <p className="text-lg text-ink-soft mt-4">Cliente no encontrado. Redirigiendo...</p>
         </div>
       </div>
     );
@@ -338,69 +338,69 @@ const ClientForm: React.FC = () => {
 
   return (
     <>
-      <div className="bg-gray-50 min-h-screen">
-        <header className="px-5 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-40 shadow-sm">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors"><X size={20} /></button>
-          <h1 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em]">{isEditMode ? 'Editar Cliente' : 'Nuevo Cliente'}</h1>
+      <div className="bg-sunken min-h-screen">
+        <header className="px-5 py-4 flex items-center justify-between border-b border-line-soft sticky top-0 bg-raised/80 backdrop-blur-md z-40 shadow-sm">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-sunken text-ink-faint rounded-full hover:bg-line transition-colors"><X size={20} /></button>
+          <h1 className="text-sm font-black text-ink uppercase tracking-[0.2em]">{isEditMode ? 'Editar Cliente' : 'Nuevo Cliente'}</h1>
           <div className="w-10"></div>
         </header>
         <div className="max-w-3xl mx-auto px-4 pt-8 pb-32 md:pb-8">
           <form id="client-form" onSubmit={handleSubmit} className="space-y-8">
-            <div className="bg-white p-8 rounded-3xl shadow-sm">
+            <div className="bg-raised p-8 rounded-3xl shadow-sm">
               <div className="flex items-center mb-6">
                 <div className="w-1 h-6 bg-red-800 rounded-full mr-3"></div>
-                <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider">Información de Identidad</h2>
+                <h2 className="text-sm font-bold text-ink-soft uppercase tracking-wider">Información de Identidad</h2>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-2 block">IDENTIFICACIÓN FISCAL / NIT</label>
+                  <label className="text-xs font-semibold text-ink-soft mb-2 block">IDENTIFICACIÓN FISCAL / NIT</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                      <IdCard className="text-gray-400" size={20}/>
+                      <IdCard className="text-ink-faint" size={20}/>
                     </div>
-                    <input type="text" name="identification" value={formData.identification || ''} onChange={handleInputChange} placeholder="Solo números..." className={`w-full pl-12 pr-4 py-3 bg-gray-50 rounded-lg border ${validationErrors.identification ? 'border-red-500' : 'border-gray-200'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
+                    <input type="text" name="identification" value={formData.identification || ''} onChange={handleInputChange} placeholder="Solo números..." className={`w-full pl-12 pr-4 py-3 bg-sunken rounded-lg border ${validationErrors.identification ? 'border-red-500' : 'border-line'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
                   </div>
                   {validationErrors.identification && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.identification}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-2 block">NOMBRE COMERCIAL / PROPIETARIO</label>
+                  <label className="text-xs font-semibold text-ink-soft mb-2 block">NOMBRE COMERCIAL / PROPIETARIO</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                      <Building2 className="text-gray-400" size={20}/>
+                      <Building2 className="text-ink-faint" size={20}/>
                     </div>
-                    <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} placeholder="Se convertirá a mayúsculas..." className={`w-full pl-12 pr-4 py-3 bg-gray-50 rounded-lg border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
+                    <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} placeholder="Se convertirá a mayúsculas..." className={`w-full pl-12 pr-4 py-3 bg-sunken rounded-lg border ${validationErrors.name ? 'border-red-500' : 'border-line'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
                   </div>
                   {validationErrors.name && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.name}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-2 block">TELÉFONO</label>
+                  <label className="text-xs font-semibold text-ink-soft mb-2 block">TELÉFONO</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                      <Phone className="text-gray-400" size={20}/>
+                      <Phone className="text-ink-faint" size={20}/>
                     </div>
-                    <input type="tel" name="contact" value={formData.contact || ''} onChange={handleInputChange} placeholder="Solo números (7-10 dígitos)" className={`w-full pl-12 pr-4 py-3 bg-gray-50 rounded-lg border ${validationErrors.contact ? 'border-red-500' : 'border-gray-200'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
+                    <input type="tel" name="contact" value={formData.contact || ''} onChange={handleInputChange} placeholder="Solo números (7-10 dígitos)" className={`w-full pl-12 pr-4 py-3 bg-sunken rounded-lg border ${validationErrors.contact ? 'border-red-500' : 'border-line'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
                   </div>
                   {validationErrors.contact && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.contact}</p>}
                 </div>
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-2 block">E-MAIL</label>
+                  <label className="text-xs font-semibold text-ink-soft mb-2 block">E-MAIL</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                      <Mail className="text-gray-400" size={20}/>
+                      <Mail className="text-ink-faint" size={20}/>
                     </div>
-                    <input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} placeholder="correo@ejemplo.com" className={`w-full pl-12 pr-4 py-3 bg-gray-50 rounded-lg border ${validationErrors.email ? 'border-red-500' : 'border-gray-200'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
+                    <input type="email" name="email" value={formData.email || ''} onChange={handleInputChange} placeholder="correo@ejemplo.com" className={`w-full pl-12 pr-4 py-3 bg-sunken rounded-lg border ${validationErrors.email ? 'border-red-500' : 'border-line'} focus:ring-2 focus:ring-red-300 focus:border-red-400 outline-none transition`} />
                   </div>
                   {validationErrors.email && <p className="text-xs text-red-600 mt-1 ml-1">{validationErrors.email}</p>}
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-8 rounded-3xl shadow-sm">
+            <div className="bg-raised p-8 rounded-3xl shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
                   <div className="w-1 h-6 bg-blue-600 rounded-full mr-3"></div>
-                  <h2 className="text-sm font-bold text-gray-600 uppercase tracking-wider">DIRECCIÓN</h2>
+                  <h2 className="text-sm font-bold text-ink-soft uppercase tracking-wider">DIRECCIÓN</h2>
                 </div>
                 <button type="button" onClick={handleGetCurrentLocation} className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors bg-blue-100/50 hover:bg-blue-100 px-4 py-2 rounded-lg">
                   <Crosshair size={16}/> GPS
@@ -409,18 +409,18 @@ const ClientForm: React.FC = () => {
 
               <div className="relative mb-4">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                  <Search className="text-gray-400" size={20}/>
+                  <Search className="text-ink-faint" size={20}/>
                 </div>
-                <input type="text" ref={addressInputRef} onKeyDown={(e) => e.key === 'Enter' && handleAddressSearch()} placeholder="Escribe la dirección..." className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-lg border border-gray-200 focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none transition" />
+                <input type="text" ref={addressInputRef} onKeyDown={(e) => e.key === 'Enter' && handleAddressSearch()} placeholder="Escribe la dirección..." className="w-full pl-12 pr-4 py-3 bg-sunken rounded-lg border border-line focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none transition" />
               </div>
 
-              <div ref={mapDivRef} className="h-64 md:h-80 w-full rounded-2xl border border-gray-200 shadow-inner cursor-pointer z-0"></div>
-              <p className="text-center text-xs text-gray-500 mt-2">Ajusta el pin en el mapa</p>
+              <div ref={mapDivRef} className="h-64 md:h-80 w-full rounded-2xl border border-line shadow-inner cursor-pointer z-0"></div>
+              <p className="text-center text-xs text-ink-soft mt-2">Ajusta el pin en el mapa</p>
             </div>
           </form>
         </div>
       </div>
-      <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm p-4 z-40 border-t border-gray-100 shadow-[0_-5px_25px_rgba(0,0,0,0.07)]">
+      <footer className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-raised/95 backdrop-blur-sm p-4 z-40 border-t border-line-soft shadow-[0_-5px_25px_rgba(0,0,0,0.07)]">
         <div className="max-w-3xl mx-auto">
             <button form="client-form" type="submit" disabled={isProcessing} className="w-full bg-primary text-white py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] shadow-lg shadow-red-900/30 active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-3 group">
                 {isProcessing ? (

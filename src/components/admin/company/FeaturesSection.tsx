@@ -17,20 +17,20 @@ const FEATURE_OPTIONS: { key: keyof CompanyFeatures; label: string }[] = [
 ];
 
 const FeaturesSection: React.FC<FeaturesSectionProps> = ({ features, setFeatures }) => (
-  <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-    <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+  <section className="bg-raised rounded-2xl shadow-sm border border-line-soft p-5">
+    <h2 className="font-bold text-ink mb-4 flex items-center gap-2">
       <Layers size={18} className="text-primary" /> Funcionalidades
     </h2>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {FEATURE_OPTIONS.map(feat => (
-        <label key={feat.key} className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors">
+        <label key={feat.key} className="flex items-center gap-3 p-3 rounded-xl border border-line-soft cursor-pointer hover:bg-sunken transition-colors">
           <input
             type="checkbox"
             checked={features[feat.key]}
             onChange={e => setFeatures(prev => ({ ...prev, [feat.key]: e.target.checked }))}
             className="w-4 h-4 rounded accent-primary"
           />
-          <span className="text-sm font-medium text-gray-700">{feat.label}</span>
+          <span className="text-sm font-medium text-ink-soft">{feat.label}</span>
         </label>
       ))}
     </div>

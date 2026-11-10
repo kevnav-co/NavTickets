@@ -47,7 +47,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 hover:shadow-md transition-shadow">
+    <div className="bg-raised rounded-2xl shadow-sm border border-line-soft p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start gap-4">
         {/* Avatar */}
         <div
@@ -60,7 +60,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         {/* Info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-bold text-gray-900 truncate">{company.name}</h3>
+            <h3 className="font-bold text-ink truncate">{company.name}</h3>
             <span
               className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusClass}`}
             >
@@ -70,23 +70,23 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           </div>
 
           {/* Meta */}
-          <div className="grid grid-cols-3 gap-3 text-xs text-gray-500 mb-3">
+          <div className="grid grid-cols-3 gap-3 text-xs text-ink-soft mb-3">
             <div>
-              <span className="block text-gray-400 text-[10px] uppercase tracking-wider">Slug</span>
-              <span className="font-mono text-gray-700">{company.slug || '—'}</span>
+              <span className="block text-ink-faint text-[10px] uppercase tracking-wider">Slug</span>
+              <span className="font-mono text-ink-soft">{company.slug || '—'}</span>
             </div>
             <div>
-              <span className="block text-gray-400 text-[10px] uppercase tracking-wider">Usuarios</span>
-              <span className="font-semibold text-gray-700">{company.userCount ?? '—'}</span>
+              <span className="block text-ink-faint text-[10px] uppercase tracking-wider">Usuarios</span>
+              <span className="font-semibold text-ink-soft">{company.userCount ?? '—'}</span>
             </div>
             <div>
-              <span className="block text-gray-400 text-[10px] uppercase tracking-wider">Actividad</span>
-              <span className="text-gray-700">{getLastActivityText()}</span>
+              <span className="block text-ink-faint text-[10px] uppercase tracking-wider">Actividad</span>
+              <span className="text-ink-soft">{getLastActivityText()}</span>
             </div>
           </div>
 
           {/* Company ID */}
-          <span className="inline-block bg-gray-100 px-2 py-0.5 rounded-full font-mono text-[10px] text-gray-600">
+          <span className="inline-block bg-sunken px-2 py-0.5 rounded-full font-mono text-[10px] text-ink-soft">
             ID: {company.id?.substring(0, 8)}...
           </span>
         </div>
@@ -95,27 +95,27 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
         <div className="flex items-center gap-1 flex-shrink-0">
           <button
             onClick={() => onPreview(company.id)}
-            className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+            className="p-2 text-ink-faint hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
             title="Previsualizar como admin"
           >
             <Eye size={18} />
           </button>
           <button
             onClick={() => onManageUsers(company.id)}
-            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            className="p-2 text-ink-faint hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             title="Gestionar usuarios"
           >
             <Users size={18} />
           </button>
           <button
             onClick={() => onEdit(company.id)}
-            className="p-2 text-gray-400 hover:text-primary hover:bg-red-50 rounded-lg transition-colors"
+            className="p-2 text-ink-faint hover:text-primary hover:bg-red-50 rounded-lg transition-colors"
             title="Editar empresa"
           >
             <Edit3 size={18} />
           </button>
           {deleteConfirm === company.id ? (
-            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-gray-200">
+            <div className="flex items-center gap-1 ml-2 pl-2 border-l border-line">
               <button
                 onClick={() => onDelete(company.id)}
                 className="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
@@ -124,7 +124,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
               </button>
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-2 py-1 text-xs text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-2 py-1 text-xs text-ink-soft bg-sunken rounded-lg hover:bg-line transition-colors"
               >
                 Cancelar
               </button>
@@ -132,7 +132,7 @@ const CompanyCard: React.FC<CompanyCardProps> = ({
           ) : (
             <button
               onClick={() => setDeleteConfirm(company.id)}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-ink-faint hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="Eliminar empresa"
             >
               <Trash2 size={18} />

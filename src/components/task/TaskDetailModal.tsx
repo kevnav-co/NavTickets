@@ -207,8 +207,8 @@ export const TaskDetailModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-start md:items-center justify-center px-4 pt-8 pb-20 md:p-6 animate-in fade-in">
-      <div ref={modalContentRef} className="bg-gray-50 rounded-3xl shadow-2xl w-full max-w-lg max-h-full flex flex-col border border-gray-200/80">
-        <div className="bg-white p-5 flex items-start gap-4 border-b border-gray-100 rounded-t-3xl">
+      <div ref={modalContentRef} className="bg-sunken rounded-3xl shadow-2xl w-full max-w-lg max-h-full flex flex-col border border-line/80">
+        <div className="bg-raised p-5 flex items-start gap-4 border-b border-line-soft rounded-t-3xl">
            <button 
               onClick={() => canCompleteTask && updateLocalTask({ completed: !localTask.completed })}
               disabled={!canCompleteTask}
@@ -222,11 +222,11 @@ export const TaskDetailModal = ({
                 onChange={(e) => updateLocalTask({ title: e.target.value })}
                 placeholder="Nombre de la tarea"
                 disabled={!canEditMainFields}
-                className={`w-full bg-transparent text-lg font-bold outline-none resize-none overflow-hidden ${localTask.completed ? 'line-through text-gray-400' : 'text-gray-900'} ${!canEditMainFields ? 'text-gray-500 cursor-not-allowed' : ''}`}
+                className={`w-full bg-transparent text-lg font-bold outline-none resize-none overflow-hidden ${localTask.completed ? 'line-through text-ink-faint' : 'text-ink'} ${!canEditMainFields ? 'text-ink-soft cursor-not-allowed' : ''}`}
                 maxRows={5}
               />
            </div>
-           <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full">
+           <button onClick={onClose} className="p-2 text-ink-faint hover:bg-sunken rounded-full">
               <X size={20} />
            </button>
         </div>
@@ -238,93 +238,93 @@ export const TaskDetailModal = ({
                 <span>Solo el creador o el asignado pueden editar esta tarea.</span>
              </div>
            )}
-           <div className={`bg-white rounded-xl border border-gray-200 shadow-sm relative ${!canEditMainFields ? 'opacity-70' : ''}`}>
+           <div className={`bg-raised rounded-xl border border-line shadow-sm relative ${!canEditMainFields ? 'opacity-70' : ''}`}>
               <div className="relative" ref={reminderMenuRef}>
-                <button onClick={() => canEditMainFields && setShowReminderMenu(!showReminderMenu)} disabled={!canEditMainFields} className={`w-full flex items-center gap-4 p-4 text-left text-gray-600 rounded-t-xl ${canEditMainFields ? 'hover:bg-gray-50' : 'cursor-not-allowed'}`}>
-                    <Bell size={20} className={localTask.reminder ? "text-primary" : "text-gray-400"} />
+                <button onClick={() => canEditMainFields && setShowReminderMenu(!showReminderMenu)} disabled={!canEditMainFields} className={`w-full flex items-center gap-4 p-4 text-left text-ink-soft rounded-t-xl ${canEditMainFields ? 'hover:bg-sunken' : 'cursor-not-allowed'}`}>
+                    <Bell size={20} className={localTask.reminder ? "text-primary" : "text-ink-faint"} />
                     <div className="flex flex-col items-start">
                         <span className="text-sm font-medium">Recordarme</span>
                         {localTask.reminder && <span className="text-[10px] text-primary font-bold">{new Date(localTask.reminder).toLocaleString()}</span>}
                     </div>
                 </button>
                 {showReminderMenu && (
-                    <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-lg shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-left">
-                       <div className="py-2.5 border-b border-gray-100 text-center text-xs font-bold text-gray-700 select-none">Aviso</div>
+                    <div className="absolute top-full left-0 mt-1 w-72 bg-raised rounded-lg shadow-2xl border border-line-soft z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-left">
+                       <div className="py-2.5 border-b border-line-soft text-center text-xs font-bold text-ink-soft select-none">Aviso</div>
                         <div className="py-1">
                             {localTask.reminder && <button onClick={() => handleSetReminder(null)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-sm text-red-600 group border-b border-gray-50"><BellOff size={16} /><span>Quitar</span></button>}
-                            <button onClick={() => handleSetReminder(getReminderDate('later'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><Clock size={16} className="text-gray-400 group-hover:text-primary" /><span>Más tarde</span></div><span className="text-gray-400 text-xs">21:00</span></button>
-                            <button onClick={() => handleSetReminder(getReminderDate('tomorrow'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><Clock size={16} className="text-gray-400 group-hover:text-primary" /><span>Mañana</span></div><span className="text-gray-400 text-xs">{getNextDayShort()}, 9:00</span></button>
-                            <button onClick={() => handleSetReminder(getReminderDate('next-week'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><Clock size={16} className="text-gray-400 group-hover:text-primary" /><span>Próx. Semana</span></div><span className="text-gray-400 text-xs">lun., 9:00</span></button>
-                            <div className="h-px bg-gray-100 my-1 mx-2"></div>
-                            <button onClick={() => customDateInputRef.current?.showPicker()} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><CalendarClock size={16} className="text-gray-400 group-hover:text-primary" /><span>Elegir fecha</span></div></button>
+                            <button onClick={() => handleSetReminder(getReminderDate('later'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><Clock size={16} className="text-ink-faint group-hover:text-primary" /><span>Más tarde</span></div><span className="text-ink-faint text-xs">21:00</span></button>
+                            <button onClick={() => handleSetReminder(getReminderDate('tomorrow'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><Clock size={16} className="text-ink-faint group-hover:text-primary" /><span>Mañana</span></div><span className="text-ink-faint text-xs">{getNextDayShort()}, 9:00</span></button>
+                            <button onClick={() => handleSetReminder(getReminderDate('next-week'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><Clock size={16} className="text-ink-faint group-hover:text-primary" /><span>Próx. Semana</span></div><span className="text-ink-faint text-xs">lun., 9:00</span></button>
+                            <div className="h-px bg-sunken my-1 mx-2"></div>
+                            <button onClick={() => customDateInputRef.current?.showPicker()} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><CalendarClock size={16} className="text-ink-faint group-hover:text-primary" /><span>Elegir fecha</span></div></button>
                             <input type="datetime-local" ref={customDateInputRef} onChange={handleCustomDateChange} className="invisible absolute h-0 w-0" />
                         </div>
                     </div>
                 )}
               </div>
-              <div className="h-px bg-gray-100 mx-4"></div>
+              <div className="h-px bg-sunken mx-4"></div>
               <div className="relative" ref={dueDateMenuRef}>
-                  <button onClick={() => canEditMainFields && setShowDueDateMenu(!showDueDateMenu)} disabled={!canEditMainFields} className={`w-full flex items-center gap-4 p-4 text-left text-gray-600 ${canEditMainFields ? 'hover:bg-gray-50' : 'cursor-not-allowed'}`}>
-                     <Calendar size={20} className={localTask.dueDate ? "text-primary" : "text-gray-400"} /><div className="flex flex-col items-start"><span className="text-sm font-medium">Vencimiento</span>{localTask.dueDate && <span className="text-[10px] text-primary font-bold">{new Date(localTask.dueDate).toLocaleDateString()}</span>}</div>
+                  <button onClick={() => canEditMainFields && setShowDueDateMenu(!showDueDateMenu)} disabled={!canEditMainFields} className={`w-full flex items-center gap-4 p-4 text-left text-ink-soft ${canEditMainFields ? 'hover:bg-sunken' : 'cursor-not-allowed'}`}>
+                     <Calendar size={20} className={localTask.dueDate ? "text-primary" : "text-ink-faint"} /><div className="flex flex-col items-start"><span className="text-sm font-medium">Vencimiento</span>{localTask.dueDate && <span className="text-[10px] text-primary font-bold">{new Date(localTask.dueDate).toLocaleDateString()}</span>}</div>
                   </button>
                   {showDueDateMenu && (
-                    <div className="absolute top-full left-0 mt-1 w-72 bg-white rounded-lg shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-left">
-                        <div className="py-2.5 border-b border-gray-100 text-center text-xs font-bold text-gray-700">Vencimiento</div>
+                    <div className="absolute top-full left-0 mt-1 w-72 bg-raised rounded-lg shadow-2xl border border-line-soft z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-left">
+                        <div className="py-2.5 border-b border-line-soft text-center text-xs font-bold text-ink-soft">Vencimiento</div>
                         <div className="py-1">
                             {localTask.dueDate && <button onClick={() => handleSetDueDate(null)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-sm text-red-600 group border-b border-gray-50"><CalendarOff size={16} /><span>Quitar</span></button>}
-                            <button onClick={() => handleSetDueDate(getDueDate('today'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><Calendar size={16} className="text-gray-400 group-hover:text-primary" /><span>Hoy</span></div><span className="text-gray-400 text-xs">{getDayName(getDueDate('today'))}</span></button>
-                            <button onClick={() => handleSetDueDate(getDueDate('tomorrow'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><Calendar size={16} className="text-gray-400 group-hover:text-primary" /><span>Mañana</span></div><span className="text-gray-400 text-xs">{getDayName(getDueDate('tomorrow'))}</span></button>
-                            <button onClick={() => handleSetDueDate(getDueDate('next-week'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><Calendar size={16} className="text-gray-400 group-hover:text-primary" /><span>Próx. Semana</span></div><span className="text-gray-400 text-xs">{getDayName(getDueDate('next-week'))}</span></button>
-                            <div className="h-px bg-gray-100 my-1 mx-2"></div>
-                            <button onClick={() => customDueDateInputRef.current?.showPicker()} className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><div className="flex items-center gap-3"><CalendarClock size={16} className="text-gray-400 group-hover:text-primary" /><span>Elegir fecha</span></div></button>
+                            <button onClick={() => handleSetDueDate(getDueDate('today'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><Calendar size={16} className="text-ink-faint group-hover:text-primary" /><span>Hoy</span></div><span className="text-ink-faint text-xs">{getDayName(getDueDate('today'))}</span></button>
+                            <button onClick={() => handleSetDueDate(getDueDate('tomorrow'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><Calendar size={16} className="text-ink-faint group-hover:text-primary" /><span>Mañana</span></div><span className="text-ink-faint text-xs">{getDayName(getDueDate('tomorrow'))}</span></button>
+                            <button onClick={() => handleSetDueDate(getDueDate('next-week'))} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><Calendar size={16} className="text-ink-faint group-hover:text-primary" /><span>Próx. Semana</span></div><span className="text-ink-faint text-xs">{getDayName(getDueDate('next-week'))}</span></button>
+                            <div className="h-px bg-sunken my-1 mx-2"></div>
+                            <button onClick={() => customDueDateInputRef.current?.showPicker()} className="w-full flex items-center justify-between px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><div className="flex items-center gap-3"><CalendarClock size={16} className="text-ink-faint group-hover:text-primary" /><span>Elegir fecha</span></div></button>
                             <input type="date" ref={customDueDateInputRef} onChange={handleCustomDueDateChange} className="invisible absolute h-0 w-0" />
                         </div>
                     </div>
                   )}
               </div>
-              <div className="h-px bg-gray-100 mx-4"></div>
+              <div className="h-px bg-sunken mx-4"></div>
               <div className="relative" ref={repeatMenuRef}>
-                  <button onClick={() => canEditMainFields && setShowRepeatMenu(!showRepeatMenu)} disabled={!canEditMainFields} className={`w-full flex items-center gap-4 p-4 text-left text-gray-600 rounded-b-xl ${canEditMainFields ? 'hover:bg-gray-50' : 'cursor-not-allowed'}`}>
-                     <Repeat size={20} className={localTask.repeat ? "text-primary" : "text-gray-400"} /><div className="flex flex-col items-start"><span className="text-sm font-medium">Repetir</span>{localTask.repeat && <span className="text-[10px] text-primary font-bold">{localTask.repeat}</span>}</div>
+                  <button onClick={() => canEditMainFields && setShowRepeatMenu(!showRepeatMenu)} disabled={!canEditMainFields} className={`w-full flex items-center gap-4 p-4 text-left text-ink-soft rounded-b-xl ${canEditMainFields ? 'hover:bg-sunken' : 'cursor-not-allowed'}`}>
+                     <Repeat size={20} className={localTask.repeat ? "text-primary" : "text-ink-faint"} /><div className="flex flex-col items-start"><span className="text-sm font-medium">Repetir</span>{localTask.repeat && <span className="text-[10px] text-primary font-bold">{localTask.repeat}</span>}</div>
                   </button>
                   {showRepeatMenu && (
-                    <div className="absolute top-full left-0 mb-1 w-72 bg-white rounded-lg shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-bottom-left">
-                        <div className="py-2.5 border-b border-gray-100 text-center text-xs font-bold text-gray-700">Repetir</div>
+                    <div className="absolute top-full left-0 mb-1 w-72 bg-raised rounded-lg shadow-2xl border border-line-soft z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-bottom-left">
+                        <div className="py-2.5 border-b border-line-soft text-center text-xs font-bold text-ink-soft">Repetir</div>
                         <div className="py-1">
                             {localTask.repeat && <button onClick={() => handleSetRepeat(null)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-sm text-red-600 group border-b border-gray-50"><X size={16} /><span>No repetir</span></button>}
-                            {['Diariamente', 'Días laborables', 'Semanalmente', 'Mensualmente', 'Anualmente'].map(opt => <button key={opt} onClick={() => handleSetRepeat(opt)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-sm text-gray-700 group"><CalendarRange size={16} className="text-gray-400 group-hover:text-primary" /><span>{opt}</span></button>)}
+                            {['Diariamente', 'Días laborables', 'Semanalmente', 'Mensualmente', 'Anualmente'].map(opt => <button key={opt} onClick={() => handleSetRepeat(opt)} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-sunken text-sm text-ink-soft group"><CalendarRange size={16} className="text-ink-faint group-hover:text-primary" /><span>{opt}</span></button>)}
                         </div>
                     </div>
                   )}
               </div>
            </div>
 
-           <div className={`bg-white rounded-xl border border-gray-200 shadow-sm relative ${!canEditMainFields ? 'opacity-70' : ''}`}>
-              <div className={`w-full flex items-center gap-4 p-4 text-left text-gray-600 relative group rounded-xl ${!canEditMainFields ? 'cursor-not-allowed' : ''}`}>
-                 {localTask.assignedTo === 'ALL' ? <Users size={20} className="text-primary" /> : <UserPlus size={20} className="text-gray-400" />}
+           <div className={`bg-raised rounded-xl border border-line shadow-sm relative ${!canEditMainFields ? 'opacity-70' : ''}`}>
+              <div className={`w-full flex items-center gap-4 p-4 text-left text-ink-soft relative group rounded-xl ${!canEditMainFields ? 'cursor-not-allowed' : ''}`}>
+                 {localTask.assignedTo === 'ALL' ? <Users size={20} className="text-primary" /> : <UserPlus size={20} className="text-ink-faint" />}
                  <div className="flex-1">
-                    <select value={localTask.assignedTo || ''} onChange={(e) => handleAssignUser(e.target.value)} disabled={!canEditMainFields} className="w-full bg-transparent text-sm font-medium focus:outline-none appearance-none cursor-pointer text-gray-700 disabled:cursor-not-allowed">
+                    <select value={localTask.assignedTo || ''} onChange={(e) => handleAssignUser(e.target.value)} disabled={!canEditMainFields} className="w-full bg-transparent text-sm font-medium focus:outline-none appearance-none cursor-pointer text-ink-soft disabled:cursor-not-allowed">
                         <option value={currentUser?.id}>Asignarme a mí</option>
                         <option value="ALL">Todos los Técnicos</option>
                         {users.filter(u => u.id !== currentUser?.id).map(user => <option key={user.id} value={user.id}>Asignar a {user.name}</option>)}
                     </select>
                  </div>
-                 <ChevronDown size={16} className="text-gray-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                 <ChevronDown size={16} className="text-ink-faint absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
            </div>
-           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden h-40 flex flex-col">
+           <div className="bg-raised rounded-xl border border-line shadow-sm overflow-hidden h-40 flex flex-col">
               <TextareaAutosize 
                 value={localTask.note || ''} 
                 onChange={(e) => updateLocalTask({ note: e.target.value })} 
                 placeholder="Agregar nota..." 
                 disabled={!canEditNote}
-                className={`flex-1 p-4 w-full resize-none outline-none text-sm text-gray-700 placeholder:text-gray-400 disabled:bg-gray-50 disabled:cursor-not-allowed`}
+                className={`flex-1 p-4 w-full resize-none outline-none text-sm text-ink-soft placeholder:text-ink-faint disabled:bg-sunken disabled:cursor-not-allowed`}
                 minRows={4} 
               />
            </div>
         </div>
-        <div className="bg-white border-t border-gray-200 p-4 flex items-center justify-between rounded-b-3xl">
-           <span className="text-xs text-gray-400 font-medium">Creado {new Date(task.createdAt).toLocaleDateString()}</span>
+        <div className="bg-raised border-t border-line p-4 flex items-center justify-between rounded-b-3xl">
+           <span className="text-xs text-ink-faint font-medium">Creado {new Date(task.createdAt).toLocaleDateString()}</span>
            
            <div className="flex items-center gap-2">
                 {hasChanges && (
@@ -338,7 +338,7 @@ export const TaskDetailModal = ({
                    </button>
                 )}
                {canEditMainFields && (
-                 <button onClick={confirmDelete} className="p-2.5 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg">
+                 <button onClick={confirmDelete} className="p-2.5 hover:bg-red-50 text-ink-faint hover:text-red-500 rounded-lg">
                      <Trash2 size={20} />
                  </button>
                )}

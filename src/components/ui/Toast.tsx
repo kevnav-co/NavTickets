@@ -47,7 +47,7 @@ const Toast: React.FC<ToastProps> = ({
         <span className="leading-snug">{message}</span>
         <button
           onClick={onDismiss}
-          className="ml-1 p-1 rounded-lg hover:bg-white/10 text-white/70 hover:text-white transition-colors flex-shrink-0"
+          className="ml-1 p-1 rounded-lg hover:bg-raised/10 text-white/70 hover:text-white transition-colors flex-shrink-0"
           aria-label="Cerrar"
         >
           <X size={15} />

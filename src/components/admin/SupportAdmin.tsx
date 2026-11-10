@@ -98,7 +98,7 @@ const SupportAdmin: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="w-full h-96 flex items-center justify-center gap-3 text-gray-400"><Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando soportes...</span></div>;
+    return <div className="w-full h-96 flex items-center justify-center gap-3 text-ink-faint"><Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando soportes...</span></div>;
   }
   if (error) {
     return <div className="p-10 text-center font-bold text-red-500">Error al cargar soportes: {error}</div>;
@@ -107,16 +107,16 @@ const SupportAdmin: React.FC = () => {
   return (
     <div className="grid lg:grid-cols-[360px,1fr] gap-6">
       {/* ─── Lista de soportes ─────────────────────────────────────────────── */}
-      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-4 max-h-[80vh] overflow-y-auto ${viewingChat ? 'hidden lg:block' : ''}`}>
+      <div className={`bg-raised rounded-3xl shadow-sm border border-line-soft p-4 max-h-[80vh] overflow-y-auto ${viewingChat ? 'hidden lg:block' : ''}`}>
         <div className="flex items-center gap-2 mb-3">
           <LifeBuoy size={18} className="text-primary" />
-          <h2 className="text-base font-black text-gray-800">Soportes de las empresas</h2>
-          <span className="ml-auto text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{(tickets || []).length}</span>
+          <h2 className="text-base font-black text-ink">Soportes de las empresas</h2>
+          <span className="ml-auto text-xs font-bold text-ink-faint bg-sunken px-2 py-0.5 rounded-full">{(tickets || []).length}</span>
         </div>
 
         {/* Búsqueda + filtro */}
         <input
-          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 mb-2 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none"
+          className="w-full bg-sunken border border-line rounded-xl px-4 py-2 mb-2 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
           placeholder="Buscar por empresa o asunto..."
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -127,7 +127,7 @@ const SupportAdmin: React.FC = () => {
               key={s}
               onClick={() => setFilterStatus(s)}
               className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${
-                filterStatus === s ? 'bg-primary text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                filterStatus === s ? 'bg-primary text-white' : 'bg-sunken text-ink-soft hover:bg-line'
               }`}
             >
               {s === 'todos' ? 'Todos' : STATUS_META[s].label}
@@ -135,7 +135,7 @@ const SupportAdmin: React.FC = () => {
           ))}
         </div>
 
-        {filtered.length === 0 && <p className="text-center text-sm text-gray-400 py-10">Sin soportes que coincidan.</p>}
+        {filtered.length === 0 && <p className="text-center text-sm text-ink-faint py-10">Sin soportes que coincidan.</p>}
 
         <div className="space-y-2">
           {filtered.map(t => {
@@ -146,16 +146,16 @@ const SupportAdmin: React.FC = () => {
                 key={t.id}
                 onClick={() => { setSelectedId(t.id); setViewingChat(true); }}
                 className={`w-full text-left p-3 rounded-2xl border transition-colors ${
-                  active ? 'border-primary/40 bg-red-50/40' : 'border-gray-100 hover:bg-gray-50/60'
+                  active ? 'border-primary/40 bg-red-50/40' : 'border-line-soft hover:bg-sunken/60'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-bold text-gray-500 truncate">{companyName(t.companyId)}</span>
+                  <span className="text-[11px] font-bold text-ink-soft truncate">{companyName(t.companyId)}</span>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${meta.cls}`}>{meta.label}</span>
                 </div>
-                <p className="text-sm font-bold text-gray-800 truncate mt-0.5">{t.subject}</p>
-                <p className="text-xs text-gray-400 truncate">{t.message}</p>
-                <span className="text-[10px] text-gray-300 font-semibold">{formatDateTime(t.createdAt)}</span>
+                <p className="text-sm font-bold text-ink truncate mt-0.5">{t.subject}</p>
+                <p className="text-xs text-ink-faint truncate">{t.message}</p>
+                <span className="text-[10px] text-ink-faint font-semibold">{formatDateTime(t.createdAt)}</span>
               </button>
             );
           })}
@@ -163,27 +163,27 @@ const SupportAdmin: React.FC = () => {
       </div>
 
       {/* ─── Detalle / chat ────────────────────────────────────────────────── */}
-      <div className={`bg-white rounded-3xl shadow-sm border border-gray-100 p-5 flex flex-col h-[calc(100dvh-10rem)] lg:h-[calc(100dvh-8rem)] ${!viewingChat ? 'hidden lg:flex' : ''}`}>
+      <div className={`bg-raised rounded-3xl shadow-sm border border-line-soft p-5 flex flex-col h-[calc(100dvh-10rem)] lg:h-[calc(100dvh-8rem)] ${!viewingChat ? 'hidden lg:flex' : ''}`}>
         {!selected ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-ink-faint">
             <LifeBuoy size={44} className="mb-3 opacity-50" />
-            <p className="font-bold text-gray-500">Selecciona un soporte</p>
+            <p className="font-bold text-ink-soft">Selecciona un soporte</p>
             <p className="text-sm">Elige una consulta de la lista para ver el hilo y responder.</p>
           </div>
         ) : (
           <>
-            <div className="flex items-start justify-between gap-3 mb-4 border-b border-gray-100 pb-4">
+            <div className="flex items-start justify-between gap-3 mb-4 border-b border-line-soft pb-4">
               <div className="flex items-start gap-2 min-w-0">
                 <button
                   onClick={() => setViewingChat(false)}
                   aria-label="Volver a la lista de soportes"
-                  className="lg:hidden p-1 -ml-1 mt-0.5 text-gray-400 hover:text-gray-700 flex-shrink-0"
+                  className="lg:hidden p-1 -ml-1 mt-0.5 text-ink-faint hover:text-ink-soft flex-shrink-0"
                 >
                   <ArrowLeft size={20} />
                 </button>
                 <div className="min-w-0">
-                  <h3 className="font-black text-gray-800 truncate">{selected.subject}</h3>
-                  <p className="text-xs font-bold text-gray-400">{companyName(selected.companyId)} · {formatDateTime(selected.createdAt)}</p>
+                  <h3 className="font-black text-ink truncate">{selected.subject}</h3>
+                  <p className="text-xs font-bold text-ink-faint">{companyName(selected.companyId)} · {formatDateTime(selected.createdAt)}</p>
                 </div>
               </div>
               <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full flex-shrink-0 ${(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).cls}`}>
@@ -198,7 +198,7 @@ const SupportAdmin: React.FC = () => {
 
             {/* Controles de estado */}
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Estado:</span>
+              <span className="text-[11px] font-bold text-ink-faint uppercase tracking-wide">Estado:</span>
               {STATUS_ORDER.map(s => {
                 const active = selected.status === s;
                 return (
@@ -221,7 +221,7 @@ const SupportAdmin: React.FC = () => {
                 <textarea
                   ref={replyRef}
                   rows={1}
-                  className="flex-1 resize-none bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none min-h-[42px] max-h-44 overflow-y-auto"
+                  className="flex-1 resize-none bg-sunken border border-line rounded-xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none min-h-[42px] max-h-44 overflow-y-auto"
                   placeholder="Escribe tu respuesta como soporte..."
                   value={reply}
                   onChange={e => setReply(e.target.value)}

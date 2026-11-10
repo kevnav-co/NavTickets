@@ -270,9 +270,9 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
   if (!analysisData) {
       const isProcessing = processingStatus !== 'idle';
       return (
-          <div className="pt-8 border-t border-gray-100">
+          <div className="pt-8 border-t border-line-soft">
               <button 
-                className="w-full bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 py-4 px-4 rounded-2xl shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-wait"
+                className="w-full bg-raised border border-line text-ink-soft hover:bg-sunken py-4 px-4 rounded-2xl shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-wait"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessing}
               >
@@ -293,17 +293,17 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
   const clientsToUpdate = isProduct ? 0 : items.filter((i: AnalyzedClient) => i.needsUpdate).length;
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col animate-in fade-in duration-300">
-        <div className="bg-white px-6 py-4 shadow-sm z-20 flex items-center justify-between">
+    <div className="fixed inset-0 z-[100] bg-sunken flex flex-col animate-in fade-in duration-300">
+        <div className="bg-raised px-6 py-4 shadow-sm z-20 flex items-center justify-between">
             <div>
-                <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2"><Sparkles className="text-primary fill-primary" /> Inteligencia App</h2>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Reporte de {isProduct ? 'Inventario' : 'Base de Clientes'}</p>
+                <h2 className="text-2xl font-black text-ink tracking-tight flex items-center gap-2"><Sparkles className="text-primary fill-primary" /> Inteligencia App</h2>
+                <p className="text-xs font-bold text-ink-faint uppercase tracking-widest mt-1">Reporte de {isProduct ? 'Inventario' : 'Base de Clientes'}</p>
             </div>
-            <button onClick={closeAnalysis} className="bg-gray-100 text-gray-600 px-4 py-2 rounded-xl text-xs font-bold uppercase hover:bg-gray-200 transition-colors flex items-center gap-2"><XCircle size={16} /> Cerrar</button>
+            <button onClick={closeAnalysis} className="bg-sunken text-ink-soft px-4 py-2 rounded-xl text-xs font-bold uppercase hover:bg-line transition-colors flex items-center gap-2"><XCircle size={16} /> Cerrar</button>
         </div>
         <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-28 relative">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 max-w-7xl mx-auto">
-                <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Registros</p><p className="text-3xl font-black text-gray-900 mt-1">{totalItems}</p></div>
+                <div className="bg-raised p-4 rounded-2xl shadow-sm border border-line-soft"><p className="text-[10px] font-black text-ink-faint uppercase tracking-widest">Total Registros</p><p className="text-3xl font-black text-ink mt-1">{totalItems}</p></div>
                 
                 <div 
                   onClick={() => { if (!isProduct) { setFilterVIPOnly(!filterVIPOnly); setFilterNotAddedOnly(false); setFilterNeedsUpdateOnly(false); } }} 
@@ -356,14 +356,14 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                   </>
                 )}
             </div>
-            <div className="bg-white rounded-[2.5rem] shadow-sm border border-gray-100 overflow-hidden max-w-7xl mx-auto mb-20">
-                <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md"><div className="flex items-center gap-2"><h3 className="font-bold text-gray-800 text-sm uppercase tracking-wide">{isProduct ? 'Detalle de Productos' : 'Detalle de Clientes'}</h3><span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg">{selectedIds.size} seleccionados</span></div></div>
+            <div className="bg-raised rounded-[2.5rem] shadow-sm border border-line-soft overflow-hidden max-w-7xl mx-auto mb-20">
+                <div className="p-5 border-b border-line-soft bg-sunken/50 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md"><div className="flex items-center gap-2"><h3 className="font-bold text-ink text-sm uppercase tracking-wide">{isProduct ? 'Detalle de Productos' : 'Detalle de Clientes'}</h3><span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg">{selectedIds.size} seleccionados</span></div></div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse min-w-[1000px]">
                         <thead>
-                            <tr className="text-[10px] font-black text-gray-400 uppercase tracking-wider border-b border-gray-100 bg-white">
+                            <tr className="text-[10px] font-black text-ink-faint uppercase tracking-wider border-b border-line-soft bg-raised">
                                 <th className="p-4 w-12 text-center">
-                                    <button onClick={toggleSelectAll} className="text-gray-300 hover:text-primary transition-colors">{allSelected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}</button>
+                                    <button onClick={toggleSelectAll} className="text-ink-faint hover:text-primary transition-colors">{allSelected ? <CheckSquare size={18} className="text-primary" /> : <Square size={18} />}</button>
                                 </th>
                                 <th className="p-4">{isProduct ? 'Referencia' : 'Identificación'}</th>
                                 <th className="p-4">{isProduct ? 'Descripción' : 'Nombre'}</th>
@@ -377,7 +377,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                                 <th className="p-4 text-right">{isProduct ? 'Inventario' : 'Ciudad'}</th>
                             </tr>
                         </thead>
-                        <tbody className="text-[11px] font-medium text-gray-700">
+                        <tbody className="text-[11px] font-medium text-ink-soft">
                            {displayedItems.map((item) => { 
                                 const isSelected = selectedIds.has(item.id); 
                                 const clientItem = item as AnalyzedClient;
@@ -394,11 +394,11 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                                 };
 
                                 return (
-                                    <tr key={item.id} onClick={() => toggleSelection(item.id)} className={`border-b border-gray-50 transition-colors cursor-pointer group ${isSelected ? 'bg-red-50/30' : 'hover:bg-gray-50'}`}>
+                                    <tr key={item.id} onClick={() => toggleSelection(item.id)} className={`border-b border-gray-50 transition-colors cursor-pointer group ${isSelected ? 'bg-red-50/30' : 'hover:bg-sunken'}`}>
                                         <td className="p-4 text-center">
-                                            <div className={`${isSelected ? 'text-primary' : 'text-gray-200 group-hover:text-gray-300'}`}>{isSelected ? <CheckSquare size={18} /> : <Square size={18} />}</div>
+                                            <div className={`${isSelected ? 'text-primary' : 'text-gray-200 group-hover:text-ink-faint'}`}>{isSelected ? <CheckSquare size={18} /> : <Square size={18} />}</div>
                                         </td>
-                                        <td className="p-4 font-bold text-gray-900">
+                                        <td className="p-4 font-bold text-ink">
                                             <div className="flex items-center gap-2">
                                                 {clientItem.needsUpdate && <span className="w-2 h-2 rounded-full bg-orange-500" title="Este cliente tiene datos para actualizar"></span>}
                                                 {!clientItem.existsInDB && !clientItem.needsUpdate && <span className="w-2 h-2 rounded-full bg-blue-500" title="Este cliente no está en la base de datos"></span>}

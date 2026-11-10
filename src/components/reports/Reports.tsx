@@ -123,14 +123,14 @@ const Reports: React.FC = () => {
   // ─── Render helpers ─────────────────────────────────────────────────
   const SectionHeader: React.FC<{ title: string; count: string }> = ({ title, count }) => (
     <div className="flex items-center justify-between mb-3">
-      <h2 className="text-sm font-black text-gray-800 uppercase tracking-wider">
+      <h2 className="text-sm font-black text-ink uppercase tracking-wider">
         {title} <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary ml-1">{count}</span>
       </h2>
       <div className="flex gap-2 shrink-0">
         <button
           onClick={() => handleExport('csv')}
           disabled={!!busy}
-          className="h-9 px-3 bg-white border border-gray-200 rounded-lg text-xs font-bold text-gray-600 shadow-sm hover:bg-gray-50 active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5"
+          className="h-9 px-3 bg-raised border border-line rounded-lg text-xs font-bold text-ink-soft shadow-sm hover:bg-sunken active:scale-95 transition-all disabled:opacity-50 flex items-center gap-1.5"
         >
           <Download size={14} /> CSV
         </button>
@@ -148,12 +148,12 @@ const Reports: React.FC = () => {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="px-4 md:px-6 pt-4 pb-2">
-        <div className="grid grid-cols-3 bg-gray-200/80 p-1 rounded-2xl text-center">
+        <div className="grid grid-cols-3 bg-line/80 p-1 rounded-2xl text-center">
           {Views.map(v => (
             <button
               key={v.id}
               onClick={() => setView(v.id)}
-              className={`flex flex-col items-center gap-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all ${view === v.id ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}
+              className={`flex flex-col items-center gap-1 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wide transition-all ${view === v.id ? 'bg-raised text-primary shadow-sm' : 'text-ink-soft'}`}
             >
               <v.icon size={16} />
               {v.label}
@@ -164,19 +164,19 @@ const Reports: React.FC = () => {
 
       <div className="p-4 md:p-6 pt-2 pb-24">
         {view === 'orders' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-5">
+          <div className="bg-raised rounded-2xl shadow-sm border border-line-soft p-4 md:p-5">
             <SectionHeader title="Órdenes por Técnico" count={`${ordersByTech.length}`} />
             <div className="space-y-2">
               {ordersByTech.map((r, i) => (
-                <div key={i} className="flex items-center gap-3 border-b border-gray-100 last:border-0 py-2.5">
+                <div key={i} className="flex items-center gap-3 border-b border-line-soft last:border-0 py-2.5">
                   <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                     <ClipboardList className="text-primary" size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-gray-800 truncate">{r.technician}</p>
-                    <p className="text-[10px] font-bold text-gray-400">{r.pending} pendientes · {r.inProgress} en curso · {r.closed} cerradas</p>
+                    <p className="font-bold text-sm text-ink truncate">{r.technician}</p>
+                    <p className="text-[10px] font-bold text-ink-faint">{r.pending} pendientes · {r.inProgress} en curso · {r.closed} cerradas</p>
                   </div>
-                  <span className="text-lg font-black text-gray-800 shrink-0">{r.total}</span>
+                  <span className="text-lg font-black text-ink shrink-0">{r.total}</span>
                 </div>
               ))}
               {ordersByTech.length === 0 && <Empty msg="No hay órdenes registradas." />}
@@ -185,19 +185,19 @@ const Reports: React.FC = () => {
         )}
 
         {view === 'warranties' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-5">
+          <div className="bg-raised rounded-2xl shadow-sm border border-line-soft p-4 md:p-5">
             <SectionHeader title="Garantías Activas" count={`${activeWarranties.length}`} />
             <div className="space-y-2">
               {activeWarranties.map(({ order, info }) => (
-                <div key={order.id} className="flex items-center gap-3 border-b border-gray-100 last:border-0 py-2.5">
+                <div key={order.id} className="flex items-center gap-3 border-b border-line-soft last:border-0 py-2.5">
                   <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
                     <ShieldCheck className="text-emerald-600" size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-gray-800 truncate">
+                    <p className="font-bold text-sm text-ink truncate">
                       {order.orderType === 'Preventivo' ? 'MP' : 'MC'}-{order.orderNumber} · {order.clientName || '—'}
                     </p>
-                    <p className="text-[10px] font-bold text-gray-400">
+                    <p className="text-[10px] font-bold text-ink-faint">
                       Vence {order.warrantyExpiration ? fmtDate(order.warrantyExpiration) : '—'} · {techName(order.technicianId)}
                     </p>
                   </div>
@@ -210,20 +210,20 @@ const Reports: React.FC = () => {
         )}
 
         {view === 'maintenance' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-5">
+          <div className="bg-raised rounded-2xl shadow-sm border border-line-soft p-4 md:p-5">
             <SectionHeader title="Alertas de Mantenimiento" count={`${maintenanceAlerts.length}`} />
             <div className="space-y-2">
               {maintenanceAlerts.map(a => (
-                <div key={a.id} className="flex items-center gap-3 border-b border-gray-100 last:border-0 py-2.5">
+                <div key={a.id} className="flex items-center gap-3 border-b border-line-soft last:border-0 py-2.5">
                   <div className={`w-9 h-9 rounded-lg ${a.days < 0 ? 'bg-red-50' : 'bg-amber-50'} flex items-center justify-center flex-shrink-0`}>
                     <Wrench className={a.days < 0 ? 'text-red-600' : 'text-amber-600'} size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-gray-800 truncate">{a.name}</p>
-                    <p className="text-[10px] font-bold text-gray-400">{a.clientName} · {a.serialNumber}</p>
+                    <p className="font-bold text-sm text-ink truncate">{a.name}</p>
+                    <p className="text-[10px] font-bold text-ink-faint">{a.clientName} · {a.serialNumber}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-black text-gray-800">{fmtDate(a.nextDate.toISOString().slice(0, 10))}</p>
+                    <p className="text-sm font-black text-ink">{fmtDate(a.nextDate.toISOString().slice(0, 10))}</p>
                     <span className={`text-[10px] font-black ${a.days < 0 ? 'text-red-600' : 'text-amber-600'}`}>
                       {a.days < 0 ? `Vencido hace ${-a.days}d` : `en ${a.days}d`}
                     </span>
@@ -240,7 +240,7 @@ const Reports: React.FC = () => {
 };
 
 const Empty: React.FC<{ msg: string }> = ({ msg }) => (
-  <div className="text-center py-8 text-gray-400">
+  <div className="text-center py-8 text-ink-faint">
     <BarChart3 size={28} className="mx-auto mb-2 opacity-40" />
     <p className="text-sm font-medium">{msg}</p>
   </div>

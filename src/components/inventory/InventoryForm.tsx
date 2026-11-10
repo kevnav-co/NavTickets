@@ -113,50 +113,50 @@ const InventoryForm: React.FC = () => {
   };
 
   if (!loaded || !inventoryItems) {
-    return <div className="w-full h-screen flex items-center justify-center"><Loader2 className="animate-spin text-gray-300" size={40} /></div>;
+    return <div className="w-full h-screen flex items-center justify-center"><Loader2 className="animate-spin text-ink-faint" size={40} /></div>;
   }
 
   if (!permissionOk) {
     return (
-      <div className="min-h-screen bg-gray-50/50 flex flex-col items-center justify-center px-6 text-center">
+      <div className="min-h-screen bg-sunken/50 flex flex-col items-center justify-center px-6 text-center">
         <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4"><AlertTriangle className="text-primary" size={26} /></div>
-        <h1 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em] mb-1">Sin permisos</h1>
-        <p className="text-sm text-gray-500 max-w-xs">No tienes permisos para {isEditMode ? 'editar' : 'crear'} repuestos.</p>
+        <h1 className="text-sm font-black text-ink uppercase tracking-[0.2em] mb-1">Sin permisos</h1>
+        <p className="text-sm text-ink-soft max-w-xs">No tienes permisos para {isEditMode ? 'editar' : 'crear'} repuestos.</p>
         <button onClick={() => navigate('/inventory')} className="mt-5 bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-transform">Volver al inventario</button>
       </div>
     );
   }
 
   const Label = ({ children }: { children: React.ReactNode }) => (
-    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">{children}</label>
+    <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">{children}</label>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50/50">
-      <header className="px-5 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-40 shadow-sm">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors"><X size={20} /></button>
-        <h1 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em]">{isEditMode ? 'Editar Repuesto' : 'Nuevo Repuesto'}</h1>
+    <div className="min-h-screen bg-sunken/50">
+      <header className="px-5 py-4 flex items-center justify-between border-b border-line-soft sticky top-0 bg-raised/80 backdrop-blur-md z-40 shadow-sm">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-sunken text-ink-faint rounded-full hover:bg-line transition-colors"><X size={20} /></button>
+        <h1 className="text-sm font-black text-ink uppercase tracking-[0.2em]">{isEditMode ? 'Editar Repuesto' : 'Nuevo Repuesto'}</h1>
         <div className="w-10" />
       </header>
 
       <div className="w-full max-w-2xl mx-auto p-4 pb-24">
         <form onSubmit={handleSubmit} className="w-full space-y-6">
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+          <div className="bg-raised p-6 rounded-[2rem] shadow-sm border border-line-soft">
             <div className="flex items-center mb-5">
               <div className="w-1 h-5 bg-red-500 rounded-full mr-3" />
-              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Identificación</h2>
+              <h2 className="text-xs font-bold text-ink-soft uppercase tracking-wider">Identificación</h2>
             </div>
             <div className="space-y-4">
               <div>
                 <Label>Nombre del Repuesto *</Label>
                 <div className="relative mt-1">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Package className="text-gray-400" size={16} /></div>
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Package className="text-ink-faint" size={16} /></div>
                   <input
                     type="text"
                     value={formData.name ?? ''}
                     onChange={(e) => handleChange('name', e.target.value.toUpperCase())}
                     placeholder="Ej: FILTRO HIDRÁULICO 20μ"
-                    className={`w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase`}
+                    className={`w-full pl-12 pr-4 py-4 bg-sunken rounded-2xl border ${validationErrors.name ? 'border-red-500' : 'border-line'} outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase`}
                   />
                 </div>
                 {validationErrors.name && <p className="text-xs text-red-500 ml-4 mt-1">{validationErrors.name}</p>}
@@ -165,23 +165,23 @@ const InventoryForm: React.FC = () => {
               <div>
                 <Label>Referencia (SKU)</Label>
                 <div className="relative mt-1">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Hash className="text-gray-400" size={16} /></div>
+                  <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Hash className="text-ink-faint" size={16} /></div>
                   <input
                     type="text"
                     value={formData.sku ?? ''}
                     onChange={(e) => handleChange('sku', e.target.value.toUpperCase())}
                     placeholder="Ej: REF-0001"
-                    className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase font-mono"
+                    className="w-full pl-12 pr-4 py-4 bg-sunken rounded-2xl border border-line outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase font-mono"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+          <div className="bg-raised p-6 rounded-[2rem] shadow-sm border border-line-soft">
             <div className="flex items-center mb-5">
               <div className="w-1 h-5 bg-blue-500 rounded-full mr-3" />
-              <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Stock</h2>
+              <h2 className="text-xs font-bold text-ink-soft uppercase tracking-wider">Stock</h2>
             </div>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -194,18 +194,18 @@ const InventoryForm: React.FC = () => {
                       step="any"
                       value={formData.quantity ?? 0}
                       onChange={(e) => handleChange('quantity', parseFloat(e.target.value) || 0)}
-                      className={`w-full pl-4 pr-4 py-4 bg-gray-50 rounded-2xl border ${lowStock ? 'border-red-400' : 'border-gray-200'} outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20`}
+                      className={`w-full pl-4 pr-4 py-4 bg-sunken rounded-2xl border ${lowStock ? 'border-red-400' : 'border-line'} outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20`}
                     />
                   </div>
                 </div>
                 <div>
                   <Label>Unidad de Medida</Label>
                   <div className="relative mt-1">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Ruler className="text-gray-400" size={16} /></div>
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Ruler className="text-ink-faint" size={16} /></div>
                     <select
                       value={formData.unit ?? 'unidad'}
                       onChange={(e) => handleChange('unit', e.target.value)}
-                      className="w-full pl-12 pr-8 py-4 bg-gray-50 rounded-2xl border border-gray-200 appearance-none outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20"
+                      className="w-full pl-12 pr-8 py-4 bg-sunken rounded-2xl border border-line appearance-none outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20"
                     >
                       {UNITS.map(u => <option key={u} value={u}>{u}</option>)}
                     </select>
@@ -217,14 +217,14 @@ const InventoryForm: React.FC = () => {
                 <div>
                   <Label>Costo Unitario</Label>
                   <div className="relative mt-1">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Coins className="text-gray-400" size={16} /></div>
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Coins className="text-ink-faint" size={16} /></div>
                     <input
                       type="number"
                       min="0"
                       step="any"
                       value={formData.unitCost ?? 0}
                       onChange={(e) => handleChange('unitCost', parseFloat(e.target.value) || 0)}
-                      className="w-full pl-10 pr-4 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20"
+                      className="w-full pl-10 pr-4 py-4 bg-sunken rounded-2xl border border-line outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20"
                     />
                   </div>
                 </div>
@@ -237,7 +237,7 @@ const InventoryForm: React.FC = () => {
                       step="any"
                       value={formData.lowStockThreshold ?? 0}
                       onChange={(e) => handleChange('lowStockThreshold', parseFloat(e.target.value) || 0)}
-                      className="w-full pl-4 pr-4 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20"
+                      className="w-full pl-4 pr-4 py-4 bg-sunken rounded-2xl border border-line outline-none font-black text-sm focus:ring-2 focus:ring-blue-400/20"
                     />
                   </div>
                 </div>

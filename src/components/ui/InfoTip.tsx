@@ -16,7 +16,7 @@ const InfoTip: React.FC<InfoTipProps> = ({ text, side = 'top', className }) => (
   <span className={`relative inline-flex items-center group ${className ?? ''}`}>
     <Info
       size={14}
-      className="text-gray-400 hover:text-primary cursor-help transition-colors"
+      className="text-ink-faint hover:text-primary cursor-help transition-colors"
       aria-label="Más información"
     />
     <span

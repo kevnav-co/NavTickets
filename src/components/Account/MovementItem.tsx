@@ -52,15 +52,15 @@ export const MovementItem: React.FC<MovementItemProps> = ({ mov, viewerId, isAnn
 
   return (
     <div
-      className={`flex items-center justify-between p-2 bg-white rounded-lg w-full text-left cursor-pointer transition-shadow duration-200 ${isSelected ? 'shadow-lg' : 'hover:shadow-md'} ${struck ? 'opacity-60 grayscale-[0.5]' : ''}`}
+      className={`flex items-center justify-between p-2 bg-raised rounded-lg w-full text-left cursor-pointer transition-shadow duration-200 ${isSelected ? 'shadow-lg' : 'hover:shadow-md'} ${struck ? 'opacity-60 grayscale-[0.5]' : ''}`}
       onClick={onItemClick}
     >
       <div className="flex items-center gap-2 flex-grow min-w-0">
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>{icon}</div>
         <div className="flex-grow min-w-0">
-          <p className="text-xs text-gray-800">
+          <p className="text-xs text-ink">
             <span className={`font-semibold ${struck ? 'line-through' : ''}`}>{abbreviateConcept(mov.concept)}</span>
-            <span className="text-gray-500"> ・ {subtitle}</span>
+            <span className="text-ink-soft"> ・ {subtitle}</span>
             {isAnnulled && <span className="ml-1 text-[10px] font-bold text-red-500">ANULADO</span>}
           </p>
         </div>
@@ -73,7 +73,7 @@ export const MovementItem: React.FC<MovementItemProps> = ({ mov, viewerId, isAnn
         {isSelected && canAnnul && (
           <button
             onClick={(e) => { e.stopPropagation(); onAnnul(mov); }}
-            className="ml-2 text-gray-400 hover:text-red-500 p-2 rounded-full hover:bg-gray-100 animate-fade-in-fast"
+            className="ml-2 text-ink-faint hover:text-red-500 p-2 rounded-full hover:bg-sunken animate-fade-in-fast"
             title="Anular movimiento"
           >
             <RotateCcw size={14} />

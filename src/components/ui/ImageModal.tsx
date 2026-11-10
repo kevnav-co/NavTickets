@@ -33,7 +33,7 @@ const ImageModal = ({ imageUrl, onClose }: ImageModalProps) => {
         {/* El botón de cerrar es independiente y siempre visible sobre la imagen */}
         <button 
           onClick={onClose}
-          className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm text-white rounded-full p-3 hover:scale-110 hover:bg-white/30 transition-all shadow-lg"
+          className="absolute top-2 right-2 bg-raised/20 backdrop-blur-sm text-white rounded-full p-3 hover:scale-110 hover:bg-raised/30 transition-all shadow-lg"
           aria-label="Cerrar imagen"
         >
           <X size={24} />

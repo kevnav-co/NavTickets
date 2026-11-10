@@ -239,22 +239,22 @@ const GlobalCalendar: React.FC = () => {
   }, [dragAction, draftSlot, rowHeight]);
 
   if (loadingPending || loadingOpen && combinedOrders.length === 0) {
-    return <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-[80vh]"></div>;
+    return <div className="bg-raised rounded-3xl shadow-sm border border-line-soft overflow-hidden flex flex-col h-[80vh]"></div>;
   }
 
   const eventColumnMaxWidth = 288;
   const gridMaxWidth = weeklyLayout.totalFr * eventColumnMaxWidth + 60;
 
   return (
-    <div className="relative z-10 bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+    <div className="relative z-10 bg-raised rounded-3xl shadow-sm border border-line-soft overflow-hidden flex flex-col">
       <header className="p-5 flex items-center justify-between border-b border-gray-50 flex-wrap gap-y-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gray-50 rounded-xl flex items-center justify-center text-primary"><CalendarDays size={22} /></div>
+          <div className="w-10 h-10 bg-sunken rounded-xl flex items-center justify-center text-primary"><CalendarDays size={22} /></div>
           <div>
-            <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">Agenda Semanal</h3>
+            <h3 className="text-sm font-black text-ink uppercase tracking-tight">Agenda Semanal</h3>
             {canViewAll && (
               <div className="relative mt-1">
-                <select value={filterUserId} onChange={e => setFilterUserId(e.target.value)} className="bg-gray-50 text-[9px] font-black text-gray-500 uppercase rounded-lg px-2 py-1 focus:outline-none cursor-pointer border border-gray-100">
+                <select value={filterUserId} onChange={e => setFilterUserId(e.target.value)} className="bg-sunken text-[9px] font-black text-ink-soft uppercase rounded-lg px-2 py-1 focus:outline-none cursor-pointer border border-line-soft">
                   <option value="all">Todos</option>
                   {filteredUsersForSelect.map(u => (<option key={u.id} value={u.id}>{(u.name || 'Sin Nombre').split(' ')[0]}</option>))}
                 </select>
@@ -263,18 +263,18 @@ const GlobalCalendar: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() - 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-gray-50 rounded-full"><ChevronLeft size={20} /></button>
-          <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() + 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-gray-50 rounded-full"><ChevronRight size={20} /></button>
+          <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() - 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-sunken rounded-full"><ChevronLeft size={20} /></button>
+          <button onClick={() => { const d = new Date(currentWeekStart); d.setDate(d.getDate() + 7); setCurrentWeekStart(d); }} className="p-2 hover:bg-sunken rounded-full"><ChevronRight size={20} /></button>
         </div>
       </header>
       <div ref={scrollContainerRef} className="overflow-x-auto relative">
         <div className="min-w-[140vw] lg:min-w-[1200px]" style={{ maxWidth: `${gridMaxWidth}px` }}>
-          <div className="grid sticky top-0 bg-white z-30 border-b border-gray-300" style={{ gridTemplateColumns: weeklyLayout.gridTemplateColumns }}>
-            <div className="h-12 bg-white sticky left-0 z-40 border-r border-gray-300"></div>
+          <div className="grid sticky top-0 bg-raised z-30 border-b border-line" style={{ gridTemplateColumns: weeklyLayout.gridTemplateColumns }}>
+            <div className="h-12 bg-raised sticky left-0 z-40 border-r border-line"></div>
             {weekDays.map((d, i) => (
-              <div key={i} className="flex flex-col items-center justify-center py-2 border-r border-gray-200">
-                <span className="text-[8px] font-black uppercase text-gray-400">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
-                <span className="text-sm font-black text-gray-800">{d.getDate()}</span>
+              <div key={i} className="flex flex-col items-center justify-center py-2 border-r border-line">
+                <span className="text-[8px] font-black uppercase text-ink-faint">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
+                <span className="text-sm font-black text-ink">{d.getDate()}</span>
               </div>
             ))}
           </div>
@@ -296,8 +296,8 @@ const GlobalCalendar: React.FC = () => {
               );
             })()}
             {hours.map(h => (
-              <div key={h} className="grid h-[60px] border-b border-gray-300 group" style={{ gridTemplateColumns: weeklyLayout.gridTemplateColumns }}>
-                <div className="text-[11px] text-gray-900 font-bold flex items-start justify-center pt-1 border-r border-gray-300 sticky left-0 bg-white z-30 shadow-[2px_0_4px_rgba(0,0,0,0.02)]">{h.toString().padStart(2, '0')}:00</div>
+              <div key={h} className="grid h-[60px] border-b border-line group" style={{ gridTemplateColumns: weeklyLayout.gridTemplateColumns }}>
+                <div className="text-[11px] text-ink font-bold flex items-start justify-center pt-1 border-r border-line sticky left-0 bg-raised z-30 shadow-[2px_0_4px_rgba(0,0,0,0.02)]">{h.toString().padStart(2, '0')}:00</div>
                 {weeklyLayout.weekData.map((_day, dayIndex) => {
                   const slotDate = new Date(weekDays[dayIndex]);
                   slotDate.setHours(h, 0, 0, 0);
@@ -308,11 +308,11 @@ const GlobalCalendar: React.FC = () => {
                   const isSaturdayAfternoon = dayIndex === 5 && h >= 14;
                   const isGraySlot = isPastSlot || isLunch || isEarly || isNight || isSaturdayAfternoon;
                   return (
-                    <div key={dayIndex} className={`border-r border-gray-200 last:border-0 relative h-full flex flex-col ${isGraySlot ? 'bg-gray-200/40' : 'bg-white'}`}>
+                    <div key={dayIndex} className={`border-r border-line last:border-0 relative h-full flex flex-col ${isGraySlot ? 'bg-line/40' : 'bg-raised'}`}>
                       {[0, 15, 30, 45].map(m => {
                         const canClick = (currentUser?.role === 'admin' || currentUser?.role === 'developer' || currentUser?.role === 'supervisor') && !isPastSlot;
                         return (
-                          <div key={m} className={`flex-1 border-b border-dashed border-gray-100 last:border-b-0 ${canClick ? 'hover:bg-red-500/10 cursor-pointer' : ''}`} onClick={() => canClick && setDraftSlot({ date: weekDays[dayIndex], hour: h, minute: m, dayIndex, durationMinutes: 60 })} />
+                          <div key={m} className={`flex-1 border-b border-dashed border-line-soft last:border-b-0 ${canClick ? 'hover:bg-red-500/10 cursor-pointer' : ''}`} onClick={() => canClick && setDraftSlot({ date: weekDays[dayIndex], hour: h, minute: m, dayIndex, durationMinutes: 60 })} />
                         );
                       })}
                     </div>
@@ -326,7 +326,7 @@ const GlobalCalendar: React.FC = () => {
                 onMouseDown={e => handleDragStart(e, 'move')} onTouchStart={e => handleDragStart(e, 'move')}>
                 <div className="flex flex-col items-center justify-center pointer-events-none text-center">
                   <span className="text-[7px] font-black text-primary uppercase leading-none opacity-70">Nueva Orden</span>
-                  <span className="text-[9px] font-black text-gray-800 mt-1">{formatMinutes(draftSlot.hour * 60 + draftSlot.minute)} - {formatMinutes(draftSlot.hour * 60 + draftSlot.minute + draftSlot.durationMinutes)}</span>
+                  <span className="text-[9px] font-black text-ink mt-1">{formatMinutes(draftSlot.hour * 60 + draftSlot.minute)} - {formatMinutes(draftSlot.hour * 60 + draftSlot.minute + draftSlot.durationMinutes)}</span>
                   <span className="text-[8px] font-black text-primary mt-0.5 bg-primary/10 px-1.5 py-0.5 rounded">{getDurationLabel(draftSlot.durationMinutes)}</span>
                 </div>
                 <div className="absolute right-1 top-1/2 -translate-y-1/2">

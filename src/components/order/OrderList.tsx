@@ -11,7 +11,7 @@ import { QueryFilter } from '../../hooks/useSupabaseQuery';
 
 const LoadingSpinner: React.FC = () => (
   <div className="flex justify-center items-center">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+    <div className="animate-spin rounded-full h-7 w-7 border-[3px] border-line-soft border-t-primary"></div>
   </div>
 );
 
@@ -137,18 +137,18 @@ const OrderList: React.FC = () => {
 
   return (
     <div className="w-full h-full max-w-7xl mx-auto">
-      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm pt-4 pb-3 px-4 md:px-6">
+      <div className="sticky top-0 z-10 bg-surface/95 backdrop-blur-sm pt-4 pb-3 px-4 md:px-6 border-b border-line-soft">
         <div className="flex gap-2 mb-3">
-          <div className="relative flex-1 h-full">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-              <Search className="text-gray-400" size={18} />
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
+              <Search className="text-ink-faint" size={17} />
             </div>
-            <input type="text" placeholder="Buscar..." value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            <input type="text" placeholder="Buscar órdenes…" value={query} onChange={(e) => setQuery(e.target.value)} className="w-full h-11 bg-raised border border-line rounded-lg pl-10 pr-4 text-sm focus:outline-none" />
           </div>
 
           {hasPermission(currentUser?.role, PERMISSIONS.VIEW_ALL_ORDERS) && (
-             <div className={`relative h-12 w-12 flex-shrink-0 border rounded-xl shadow-sm flex items-center justify-center ${filterTechId !== 'all' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-500 border-gray-200'}`}>
-               <HardHat size={20} />
+             <div className={`relative h-11 w-11 flex-shrink-0 border rounded-lg flex items-center justify-center transition-colors ${filterTechId !== 'all' ? 'bg-primary text-white border-primary' : 'bg-raised text-ink-faint border-line hover:text-ink-soft'}`} title="Filtrar por técnico">
+               <HardHat size={18} />
                <select value={filterTechId} onChange={(e) => setFilterTechId(e.target.value)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                  <option value="all">Todos</option>
                  {users.filter(u => u.role !== ROLES.DEVELOPER).map(u => (<option key={u.id} value={u.id}>{u.name.split(' ')[0]}</option>))}
@@ -156,38 +156,42 @@ const OrderList: React.FC = () => {
              </div>
           )}
 
-          <div className={`relative h-12 w-12 flex-shrink-0 border rounded-xl shadow-sm flex items-center justify-center ${dateFilter !== 'all' ? 'bg-primary text-white border-primary' : 'bg-white text-green-500 border-gray-200'}`}>
-            <Calendar size={20} />
+          <div className={`relative h-11 w-11 flex-shrink-0 border rounded-lg flex items-center justify-center transition-colors ${dateFilter !== 'all' ? 'bg-primary text-white border-primary' : 'bg-raised text-ink-faint border-line hover:text-ink-soft'}`} title="Filtrar por fecha">
+            <Calendar size={18} />
             <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value as DateFilterType)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
               <option value="all">Todas</option><option value="today">Hoy</option><option value="week">Semana</option><option value="month">Mes</option>
             </select>
           </div>
-          <button onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')} className="h-12 w-12 flex-shrink-0 bg-white border-gray-200 rounded-xl text-gray-500 shadow-sm flex items-center justify-center hover:bg-gray-100">
-            {viewMode === 'list' ? <LayoutGrid size={20} /> : <LayoutList size={20} />}
+          <button onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')} title="Cambiar vista" className="h-11 w-11 flex-shrink-0 bg-raised border border-line rounded-lg text-ink-faint flex items-center justify-center hover:text-ink-soft hover:bg-sunken transition-colors">
+            {viewMode === 'list' ? <LayoutGrid size={18} /> : <LayoutList size={18} />}
           </button>
+
+          {hasPermission(currentUser?.role, PERMISSIONS.CREATE_ORDER) && (
+            <button onClick={() => navigate('/orders/new')} className="h-11 px-4 bg-primary text-white rounded-lg flex items-center justify-center gap-2 font-semibold text-sm hover:bg-primary-dark transition-colors flex-shrink-0">
+              <Plus size={17} /> <span className="hidden sm:inline">Nueva orden</span>
+            </button>
+          )}
         </div>
 
-        {hasPermission(currentUser?.role, PERMISSIONS.CREATE_ORDER) && (
-          <button onClick={() => navigate('/orders/new')} className="w-full h-12 mb-4 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20">
-            <Plus size={18} /> Crear Nueva Orden
-          </button>
-        )}
-
-        <div className="flex bg-gray-200/80 p-1 rounded-lg text-center">
+        <div className="flex gap-1 bg-sunken p-1 rounded-lg text-center border border-line-soft">
           {['All', OrderStatus.PENDING, OrderStatus.OPEN, OrderStatus.CLOSED, 'Warranty'].map((tab) => (
-            <button key={tab} onClick={() => handleTabChange(tab as any)} className={`flex-1 py-2 px-2 text-[10px] font-bold uppercase rounded-md transition-all ${activeTab === tab ? 'bg-white text-primary shadow-sm' : 'text-gray-500'}`}>
+            <button key={tab} onClick={() => handleTabChange(tab as any)} className={`flex-1 py-1.5 px-2 text-[11px] font-semibold rounded-md transition-colors ${activeTab === tab ? 'bg-raised text-primary shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>
               {tab === 'All' ? 'Todos' : tab === 'Warranty' ? 'Garantía' : tab === OrderStatus.OPEN ? 'En Progreso' : tab}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="px-4 md:px-6 pt-3 pb-24">
+      <div className="px-4 md:px-6 pt-4 pb-24">
         {loading && finalOrders.length === 0 ? (
           <div className="pt-16"><LoadingSpinner /></div>
         ) : finalOrders.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
-            <Filter size={32} className="mx-auto mb-2 opacity-50"/><p className="font-medium">No se encontraron órdenes</p><p className="text-sm text-gray-400">Intenta cambiar los filtros.</p>
+          <div className="text-center py-20">
+            <div className="w-12 h-12 rounded-xl bg-sunken border border-line-soft flex items-center justify-center mx-auto mb-3">
+              <Filter size={20} className="text-ink-faint"/>
+            </div>
+            <p className="font-semibold text-ink-soft text-sm">No se encontraron órdenes</p>
+            <p className="text-[13px] text-ink-faint mt-0.5">Intenta cambiar los filtros.</p>
           </div>
         ) : (
           <div className={`${viewMode === 'grid' ? 'masonry-grid' : 'grid grid-cols-1 gap-3'}`}>
@@ -200,9 +204,9 @@ const OrderList: React.FC = () => {
           <div className="py-6"><LoadingSpinner /></div>
         )}
         {!hasMore && orders.length > 5 && (
-           <p className="text-center text-sm text-gray-400 py-6">Has llegado al final</p>
+           <p className="text-center text-[13px] text-ink-faint py-6">Has llegado al final</p>
         )}
-        {error && <p className="text-center text-red-500 py-6">Error al cargar los datos.</p>}
+        {error && <p className="text-center text-sm text-red-600 py-6">Error al cargar los datos.</p>}
       </div>
     </div>
   );
@@ -226,59 +230,59 @@ const OrderCard: React.FC<OrderCardProps> = React.memo(({ order, viewMode, getCl
 
   const isTechnician = userRole === ROLES.TECHNICIAN;
 
-  const priorityStyles = { Urgente: { icon: 'text-red-500', text: 'text-red-700' }, Alta: { icon: 'text-orange-500', text: 'text-orange-700' }, Media: { icon: 'text-yellow-500', text: 'text-yellow-700' }, Baja: { icon: 'text-green-500', text: 'text-green-700' } };
-  const currentPriorityStyle = priorityStyles[priority as keyof typeof priorityStyles] || { icon: 'text-gray-400', text: 'text-gray-700' };
+  const priorityStyles = { Urgente: { icon: 'text-red-500', text: 'text-red-600' }, Alta: { icon: 'text-orange-500', text: 'text-orange-600' }, Media: { icon: 'text-amber-500', text: 'text-amber-600' }, Baja: { icon: 'text-emerald-500', text: 'text-emerald-600' } };
+  const currentPriorityStyle = priorityStyles[priority as keyof typeof priorityStyles] || { icon: 'text-ink-faint', text: 'text-ink-soft' };
 
-  let indicatorColorClass = 'bg-gray-300';
+  let indicatorColorClass = 'bg-line';
   if (warrantyInfo && !warrantyInfo.expired) indicatorColorClass = 'bg-violet-500';
   else if (status === OrderStatus.PENDING) indicatorColorClass = 'bg-orange-500';
   else if (status === OrderStatus.OPEN) indicatorColorClass = 'bg-blue-500';
-  else if (status === OrderStatus.CLOSED) indicatorColorClass = 'bg-green-500';
+  else if (status === OrderStatus.CLOSED) indicatorColorClass = 'bg-emerald-500';
 
   const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: false });
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
   const formatScheduledDate = (dateStr: string) => new Date(dateStr + 'T00:00:00').toLocaleDateString('es-CO', { day: '2-digit', month: 'short' });
 
   return (
-    <div onClick={() => navigate(`/orders/${order.id}`)} className={`bg-white rounded-2xl border border-gray-100 shadow-sm active:scale-[0.98] transition-all cursor-pointer flex flex-col hover:shadow-md hover:border-red-100 relative overflow-hidden ${viewMode === 'grid' ? 'masonry-item' : ''}`}>
-      <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${indicatorColorClass}`}></div>
-      <div className="p-4 pl-6 flex flex-col">
-        <div className="flex justify-between items-start mb-2">
-          <h4 className={`font-bold text-gray-800 leading-snug whitespace-normal ${viewMode === 'list' ? 'text-base' : 'text-sm'}`}>{order.serviceName}</h4>
-          <span className="text-xs text-gray-400 font-bold pl-2 flex-shrink-0">#{order.orderNumber}</span>
+    <div onClick={() => navigate(`/orders/${order.id}`)} className={`card card-hover active:scale-[0.99] cursor-pointer flex flex-col relative overflow-hidden ${viewMode === 'grid' ? 'masonry-item' : ''}`}>
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${indicatorColorClass}`}></div>
+      <div className="p-4 pl-5 flex flex-col">
+        <div className="flex justify-between items-start gap-2 mb-2.5">
+          <h4 className={`font-semibold text-ink leading-snug whitespace-normal ${viewMode === 'list' ? 'text-[15px]' : 'text-sm'}`}>{order.serviceName}</h4>
+          <span className="text-[11px] text-ink-faint font-semibold tabular-nums flex-shrink-0 mt-0.5">#{order.orderNumber}</span>
         </div>
-        <div className={`space-y-1.5 mb-3 ${viewMode === 'list' ? 'text-sm' : 'text-xs'}`}>
-          <div className="flex items-start gap-2.5"><Building2 size={14} className="text-blue-500 flex-shrink-0 mt-0.5" /><span className="font-semibold text-gray-700 whitespace-normal">{getClientName(order.clientId)}</span></div>
-          <div className="flex items-start gap-2.5"><Cog size={14} className="text-gray-400 flex-shrink-0 mt-0.5" /><span className="font-semibold text-gray-700 whitespace-normal">{getEquipmentNames(order.equipmentIds)}</span></div>
+        <div className={`space-y-1.5 mb-3 ${viewMode === 'list' ? 'text-[13px]' : 'text-xs'}`}>
+          <div className="flex items-start gap-2"><Building2 size={14} className="text-ink-faint flex-shrink-0 mt-0.5" /><span className="font-medium text-ink-soft whitespace-normal">{getClientName(order.clientId)}</span></div>
+          <div className="flex items-start gap-2"><Cog size={14} className="text-ink-faint flex-shrink-0 mt-0.5" /><span className="font-medium text-ink-soft whitespace-normal">{getEquipmentNames(order.equipmentIds)}</span></div>
         </div>
 
-        <div className={`py-3 grid grid-cols-3 gap-2 ${viewMode === 'list' ? 'text-sm' : 'text-xs'} ${!isTechnician ? 'border-y border-gray-100' : ''}`}>
+        <div className={`py-2.5 grid grid-cols-3 gap-2 ${viewMode === 'list' ? 'text-[13px]' : 'text-xs'} ${!isTechnician ? 'border-y border-line-soft' : 'border-t border-line-soft'}`}>
           {isClosed && startTime ? (
             <>
-              <div className="flex items-center gap-1.5"><Calendar size={14} className="text-green-500" /><span className="font-semibold text-gray-600">{formatDate(startTime)}</span></div>
-              <div className="flex items-center gap-1.5"><Clock size={14} className="text-red-500" /><span className="font-semibold text-gray-600 truncate">{formatTime(startTime)} - {endTime ? formatTime(endTime) : ''}</span></div>
-              {warrantyInfo && <div className="flex items-center gap-1.5 justify-self-end"><ShieldCheck size={14} className={warrantyInfo.expired ? "text-gray-400" : "text-blue-500"} /><span className={`font-semibold truncate ${warrantyInfo.expired ? "text-gray-500" : "text-blue-600"}`}>{warrantyInfo.text}</span></div>}
+              <div className="flex items-center gap-1.5"><Calendar size={13} className="text-ink-faint shrink-0" /><span className="font-medium text-ink-soft">{formatDate(startTime)}</span></div>
+              <div className="flex items-center gap-1.5"><Clock size={13} className="text-ink-faint shrink-0" /><span className="font-medium text-ink-soft truncate">{formatTime(startTime)} - {endTime ? formatTime(endTime) : ''}</span></div>
+              {warrantyInfo && <div className="flex items-center gap-1.5 justify-self-end"><ShieldCheck size={13} className={`shrink-0 ${warrantyInfo.expired ? "text-ink-faint" : "text-violet-500"}`} /><span className={`font-medium truncate ${warrantyInfo.expired ? "text-ink-faint" : "text-violet-600"}`}>{warrantyInfo.text}</span></div>}
             </>
           ) : (
             <>
-              <div className="flex items-center gap-1.5"><Calendar size={14} className="text-green-500" /><span className="font-semibold text-gray-600">{isInProgress && startTime ? formatDate(startTime) : scheduledDate ? formatScheduledDate(scheduledDate) : 'N/A'}</span></div>
-              <div className="flex items-center gap-1.5"><Clock size={14} className="text-red-500" /><span className="font-semibold text-gray-600 truncate">{isInProgress && startTime ? formatTime(startTime) : timeSlot || 'N/A'}</span></div>
-              <div className="flex items-center gap-1.5 justify-self-end"><TriangleAlert size={14} className={currentPriorityStyle.icon} /><span className={`font-semibold capitalize ${currentPriorityStyle.text}`}>{priority}</span></div>
+              <div className="flex items-center gap-1.5"><Calendar size={13} className="text-ink-faint shrink-0" /><span className="font-medium text-ink-soft">{isInProgress && startTime ? formatDate(startTime) : scheduledDate ? formatScheduledDate(scheduledDate) : 'N/A'}</span></div>
+              <div className="flex items-center gap-1.5"><Clock size={13} className="text-ink-faint shrink-0" /><span className="font-medium text-ink-soft truncate">{isInProgress && startTime ? formatTime(startTime) : timeSlot || 'N/A'}</span></div>
+              <div className="flex items-center gap-1.5 justify-self-end"><TriangleAlert size={13} className={`shrink-0 ${currentPriorityStyle.icon}`} /><span className={`font-medium capitalize ${currentPriorityStyle.text}`}>{priority}</span></div>
             </>
           )}
         </div>
 
         {!isTechnician && (
-          <div className="flex items-center pt-3 mt-auto">
+          <div className="flex items-center pt-2.5 mt-auto">
             <div className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${getTechName(order.technicianId) === 'N/A' ? 'bg-gray-100 text-gray-400' : 'bg-red-50 text-red-800'} ${viewMode === 'list' ? 'text-sm' : 'text-xs'}`}>{getTechName(order.technicianId).substring(0,2)}</div>
-              <div>
-                <p className={`font-bold text-gray-800 ${viewMode === 'list' ? 'text-sm' : 'text-xs'}`}>{getTechName(order.technicianId)}</p>
-                <p className={`text-gray-500 ${viewMode === 'list' ? 'text-xs' : 'text-[10px]'}`}>Técnico</p>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center font-semibold uppercase ${getTechName(order.technicianId) === 'N/A' ? 'bg-sunken text-ink-faint' : 'bg-primary/10 text-primary'} ${viewMode === 'list' ? 'text-[11px]' : 'text-[10px]'}`}>{getTechName(order.technicianId).substring(0,2)}</div>
+              <div className="min-w-0">
+                <p className={`font-medium text-ink truncate ${viewMode === 'list' ? 'text-[13px]' : 'text-xs'}`}>{getTechName(order.technicianId)}</p>
+                <p className="text-ink-faint text-[10px]">Técnico</p>
               </div>
             </div>
             <div className="flex-grow"></div>
-            <ChevronRight size={18} className="text-gray-300" />
+            <ChevronRight size={16} className="text-ink-faint shrink-0" />
           </div>
         )}
       </div>

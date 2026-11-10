@@ -249,14 +249,14 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
       {/* ─── Basic Info (solo super_admin) ─── */}
       {isSuperAdmin && (
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <section className="bg-raised rounded-2xl shadow-sm border border-line-soft p-5">
+        <h2 className="font-bold text-ink mb-4 flex items-center gap-2">
           <Building2 size={18} className="text-primary" /> Información General
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <label className="text-xs font-bold text-gray-500">Nombre de la Empresa</label>
+              <label className="text-xs font-bold text-ink-soft">Nombre de la Empresa</label>
               <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
               <InfoTip text="Nombre comercial de la empresa, tal como lo verán los usuarios al iniciar sesión y en la barra de navegación." />
             </div>
@@ -267,7 +267,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
               onChange={e => { handleNameChange(e.target.value); if (fieldErrors.name) setFieldErrors(prev => ({ ...prev, name: undefined })); }}
               placeholder="Ej: NavTickets"
               className={`w-full h-11 px-4 border rounded-xl focus:outline-none focus:ring-2 ${
-                fieldErrors.name ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200 focus:ring-primary/20'
+                fieldErrors.name ? 'border-red-300 ring-2 ring-red-100' : 'border-line focus:ring-primary/20'
               }`}
             />
             {fieldErrors.name && (
@@ -278,7 +278,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
           </div>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <label className="text-xs font-bold text-gray-500">Slug (URL)</label>
+              <label className="text-xs font-bold text-ink-soft">Slug (URL)</label>
               <span className="text-[10px] font-bold text-sky-500 px-1.5 py-0.5 rounded-full bg-sky-50">Auto</span>
               <InfoTip text="Identificador único de la empresa para la URL. Opcional: si lo dejas vacío se genera solo a partir del nombre. Solo minúsculas, números y guiones." side="top" />
             </div>
@@ -289,7 +289,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
               onChange={e => { setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')); if (fieldErrors.slug) setFieldErrors(prev => ({ ...prev, slug: undefined })); }}
               placeholder="Ej: navtickets"
               className={`w-full h-11 px-4 border rounded-xl focus:outline-none focus:ring-2 ${
-                fieldErrors.slug ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-200 focus:ring-primary/20'
+                fieldErrors.slug ? 'border-red-300 ring-2 ring-red-100' : 'border-line focus:ring-primary/20'
               }`}
             />
             {fieldErrors.slug && (
@@ -297,7 +297,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                 <AlertTriangle size={12} /> {fieldErrors.slug}
               </p>
             )}
-            <p className="text-[10px] text-gray-400 mt-1">Identificador único para la URL. Sin espacios.</p>
+            <p className="text-[10px] text-ink-faint mt-1">Identificador único para la URL. Sin espacios.</p>
           </div>
         </div>
       </section>
@@ -305,18 +305,18 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
       {/* ─── Initial Admin (solo en modo crear) ─── */}
       {!isEditMode && (
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-          <h2 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+        <section className="bg-raised rounded-2xl shadow-sm border border-line-soft p-5">
+          <h2 className="font-bold text-ink mb-1 flex items-center gap-2">
             <Shield size={18} className="text-primary" /> Administrador Inicial
           </h2>
-          <p className="text-xs text-gray-400 mb-4">
+          <p className="text-xs text-ink-faint mb-4">
             Se crean la empresa y la cuenta del primer admin. El login usará usuario{'{dominio}'}
             (ej. {adminUsername || 'admin'}@navas.com).
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label className="text-xs font-bold text-gray-500">Usuario</label>
+                <label className="text-xs font-bold text-ink-soft">Usuario</label>
                 <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
                 <InfoTip text="Nombre de usuario con el que el administrador iniciará sesión. Sin espacios; ejemplo: admin. El login se hará como usuario@dominio." side="bottom" />
               </div>
@@ -325,12 +325,12 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                 value={adminUsername}
                 onChange={e => setAdminUsername(e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, ''))}
                 placeholder="Ej: admin"
-                className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-11 px-4 border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label className="text-xs font-bold text-gray-500">Nombre</label>
+                <label className="text-xs font-bold text-ink-soft">Nombre</label>
                 <InfoTip text="Nombre visible del administrador en la app. Si lo dejas vacío se usará 'Administrador'." side="bottom" />
               </div>
               <input
@@ -338,12 +338,12 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                 value={adminDisplayName}
                 onChange={e => setAdminDisplayName(e.target.value)}
                 placeholder="Ej: Administrador"
-                className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-11 px-4 border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label className="text-xs font-bold text-gray-500">Contraseña (mín. 6)</label>
+                <label className="text-xs font-bold text-ink-soft">Contraseña (mín. 6)</label>
                 <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.5 rounded-full bg-red-50">Obligatorio</span>
                 <InfoTip text="La contraseña inicial del administrador. Mínimo 6 caracteres. Se usa junto con el usuario para el primer ingreso." side="bottom" />
               </div>
@@ -352,7 +352,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
                 value={adminPassword}
                 onChange={e => setAdminPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-11 px-4 border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
           </div>
@@ -379,27 +379,27 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
 
       {/* ─── Auth (solo super_admin) ─── */}
       {isSuperAdmin && (
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <section className="bg-raised rounded-2xl shadow-sm border border-line-soft p-5">
+        <h2 className="font-bold text-ink mb-4 flex items-center gap-2">
           <Shield size={18} className="text-primary" /> Autenticación
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Dominio de Email</label>
+            <label className="text-xs font-bold text-ink-soft mb-1 block">Dominio de Email</label>
             <input
               type="text"
               value={auth.emailDomain}
               onChange={e => setAuth(prev => ({ ...prev, emailDomain: e.target.value }))}
               placeholder="@miempresa.com"
-              className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full h-11 px-4 border border-line rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <p className="text-[10px] text-gray-400 mt-1">Ej: @navas.com — el login usará username{'{dominio}'}</p>
+            <p className="text-[10px] text-ink-faint mt-1">Ej: @navas.com — el login usará username{'{dominio}'}</p>
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-500 mb-1 block">Roles Permitidos</label>
+            <label className="text-xs font-bold text-ink-soft mb-1 block">Roles Permitidos</label>
             <div className="flex flex-wrap gap-2 mt-1">
               {ALL_ROLES.map(role => (
-                <label key={role} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50 text-xs font-medium">
+                <label key={role} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-line cursor-pointer hover:bg-sunken text-xs font-medium">
                   <input
                     type="checkbox"
                     checked={auth.allowedRoles.includes(role)}
@@ -432,13 +432,13 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
       />
 
       {/* ─── Action Buttons ─── */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-[60]">
+      <div className="fixed bottom-0 left-0 right-0 bg-raised/90 backdrop-blur-md border-t border-line p-4 z-[60]">
         <div className="max-w-4xl mx-auto flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
             disabled={saving}
-            className="h-12 px-6 bg-gray-100 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="h-12 px-6 bg-sunken rounded-xl font-bold text-ink-soft hover:bg-line transition-colors disabled:opacity-50"
           >
             Cancelar
           </button>

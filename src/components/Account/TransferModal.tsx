@@ -108,25 +108,25 @@ export const TransferModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-gray-900/75 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md m-auto shadow-2xl relative">
-        <button onClick={close} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"><X size={24} /></button>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Registrar Transferencia</h2>
+      <div className="bg-raised rounded-2xl p-6 w-full max-w-md m-auto shadow-2xl relative">
+        <button onClick={close} className="absolute top-3 right-3 text-ink-faint hover:text-ink-soft"><X size={24} /></button>
+        <h2 className="text-2xl font-bold text-ink mb-6">Registrar Transferencia</h2>
 
         {success ? (
           <div className="text-center py-8"><CheckCircle className="mx-auto text-green-500 w-16 h-16" /><p className="text-lg font-semibold mt-4">{success}</p></div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="transfer-datetime" className="block text-sm font-bold text-gray-600 mb-2">Fecha y Hora</label>
-              <input id="transfer-datetime" type="datetime-local" value={transferDateTime} onChange={(e) => setTransferDateTime(e.target.value)} className="w-full p-3 bg-gray-50 rounded-lg" required />
+              <label htmlFor="transfer-datetime" className="block text-sm font-bold text-ink-soft mb-2">Fecha y Hora</label>
+              <input id="transfer-datetime" type="datetime-local" value={transferDateTime} onChange={(e) => setTransferDateTime(e.target.value)} className="w-full p-3 bg-sunken rounded-lg" required />
             </div>
 
             <div>
-              <label htmlFor="recipient" className="block text-sm font-bold text-gray-600 mb-2">Enviar a</label>
+              <label htmlFor="recipient" className="block text-sm font-bold text-ink-soft mb-2">Enviar a</label>
               {loadingUsers ? (
-                <div className="w-full p-3 bg-gray-50 rounded-lg flex items-center gap-2"><Loader size={16} className="animate-spin"/> Cargando usuarios...</div>
+                <div className="w-full p-3 bg-sunken rounded-lg flex items-center gap-2"><Loader size={16} className="animate-spin"/> Cargando usuarios...</div>
               ) : (
-                <select id="recipient" value={recipientId} onChange={(e) => setRecipientId(e.target.value)} className="w-full p-3 bg-gray-50 rounded-lg" required>
+                <select id="recipient" value={recipientId} onChange={(e) => setRecipientId(e.target.value)} className="w-full p-3 bg-sunken rounded-lg" required>
                   <option value="" disabled>Selecciona un destinatario...</option>
                   <option value={SELF_TRANSFER_ID}>A mí mismo (Mover entre cuentas)</option>
                   {recipients.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}
@@ -135,18 +135,18 @@ export const TransferModal: React.FC = () => {
             </div>
 
             {isSelfTransfer ? (
-              <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <div className="bg-sunken p-4 rounded-lg border border-line">
                 <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-2 text-center">
                   <div>
-                    <label className="block text-sm font-bold text-gray-600 mb-2">Origen</label>
-                    <select value={fromAccount} onChange={e => setFromAccount(e.target.value as AccountType)} className="w-full p-2 text-center bg-white rounded-md">
+                    <label className="block text-sm font-bold text-ink-soft mb-2">Origen</label>
+                    <select value={fromAccount} onChange={e => setFromAccount(e.target.value as AccountType)} className="w-full p-2 text-center bg-raised rounded-md">
                       {ACCOUNTS.map(a => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
-                  <ArrowRight className="hidden md:block mx-auto text-gray-400 mt-6" />
+                  <ArrowRight className="hidden md:block mx-auto text-ink-faint mt-6" />
                   <div>
-                    <label className="block text-sm font-bold text-gray-600 mb-2">Destino</label>
-                    <select value={toAccount} onChange={e => setToAccount(e.target.value as AccountType)} className="w-full p-2 text-center bg-white rounded-md">
+                    <label className="block text-sm font-bold text-ink-soft mb-2">Destino</label>
+                    <select value={toAccount} onChange={e => setToAccount(e.target.value as AccountType)} className="w-full p-2 text-center bg-raised rounded-md">
                       {ACCOUNTS.map(a => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
@@ -154,18 +154,18 @@ export const TransferModal: React.FC = () => {
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-bold text-gray-600 mb-2">Método</label>
+                <label className="block text-sm font-bold text-ink-soft mb-2">Método</label>
                 <div className="flex gap-2">
                   {ACCOUNTS.map(m => (
-                    <button type="button" key={m} onClick={() => setMethod(m)} className={`flex-1 py-3 rounded-lg font-bold ${method === m ? 'bg-primary text-white' : 'bg-gray-100'}`}>{m}</button>
+                    <button type="button" key={m} onClick={() => setMethod(m)} className={`flex-1 py-3 rounded-lg font-bold ${method === m ? 'bg-primary text-white' : 'bg-sunken'}`}>{m}</button>
                   ))}
                 </div>
               </div>
             )}
 
             <div>
-              <label htmlFor="amount" className="block text-sm font-bold text-gray-600 mb-2">Valor</label>
-              <CurrencyInput id="amount" name="amount" placeholder="$ 0" value={amount} decimalsLimit={0} onValueChange={(v) => setAmount(v ? parseFloat(v) : undefined)} className="w-full p-3 bg-gray-50 rounded-lg text-xl font-bold" intlConfig={{ locale: 'es-CO', currency: 'COP' }} required />
+              <label htmlFor="amount" className="block text-sm font-bold text-ink-soft mb-2">Valor</label>
+              <CurrencyInput id="amount" name="amount" placeholder="$ 0" value={amount} decimalsLimit={0} onValueChange={(v) => setAmount(v ? parseFloat(v) : undefined)} className="w-full p-3 bg-sunken rounded-lg text-xl font-bold" intlConfig={{ locale: 'es-CO', currency: 'COP' }} required />
             </div>
 
             {(balanceError || sameAccountError) && (

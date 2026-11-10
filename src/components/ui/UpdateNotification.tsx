@@ -19,14 +19,14 @@ function UpdateNotification() {
 
   if (needRefresh) {
     return (
-      <div className="fixed bottom-4 right-4 z-[200] bg-white rounded-lg shadow-2xl p-4 w-80 animate-fade-in-up">
+      <div className="fixed bottom-4 right-4 z-[200] bg-raised rounded-lg shadow-2xl p-4 w-80 animate-fade-in-up">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
             <Download className="text-red-600" size={20} />
           </div>
           <div className="flex-1">
-            <h4 className="font-bold text-gray-800">Actualización Disponible</h4>
-            <p className="text-sm text-gray-600 mt-1">
+            <h4 className="font-bold text-ink">Actualización Disponible</h4>
+            <p className="text-sm text-ink-soft mt-1">
               Hay una nueva versión de la aplicación lista para ser instalada.
             </p>
           </div>
@@ -40,7 +40,7 @@ function UpdateNotification() {
           </button>
           <button
             onClick={close}
-            className="flex-1 h-10 bg-gray-100 text-gray-700 rounded-lg font-bold text-sm"
+            className="flex-1 h-10 bg-sunken text-ink-soft rounded-lg font-bold text-sm"
           >
             Más Tarde
           </button>
