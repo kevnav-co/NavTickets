@@ -3,19 +3,17 @@
 // Disparado por el trigger `trg_task_assigned_webhook` (PostgreSQL) vía pg_net.
 //
 // 1) Inserta una fila en la tabla `notifications` (bandeja interna de la app).
-// 2) Envía una notificación push en tiempo real vía Web Push API.
+// 2) Envía una notificación push en tiempo real vía send-push.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
+import { sendPush } from "../_shared/push.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
 if (!serviceRole) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
 }
-
-const supabase = createClient(SUPABASE_URL, serviceRole);
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -51,14 +49,12 @@ Deno.serve(async (req: Request) => {
 
     const results: string[] = [];
 
-
-    // ─── 1. Notificar al asignado (si es asignación nueva o reasignación) ───
+    // 1. Notificar al asignado (si es asignación nueva o reasignación)
     if (assignedTo && (eventType === "INSERT" || assignedTo !== previousAssignee)) {
       const notifTitle = eventType === "INSERT" ? "Nueva tarea asignada" : "Tarea reasignada";
       const assignmentMsg = `Te han asignado la tarea: ${taskTitle}`;
       const targetPath = `/tasks/${taskId}`;
 
-      // Insertar en bandeja interna
       const { error: notifError } = await supabase.from("notifications").insert({
         company_id: companyId,
         user_id: assignedTo,
@@ -75,35 +71,26 @@ Deno.serve(async (req: Request) => {
         console.error("[OnTaskAssigned] Error al insertar notificación interna:", notifError);
       }
 
-      // Enviar Push vía send-push al asignado
-      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${serviceRole}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: assignedTo,
-          title: `📌 ${notifTitle}`,
-          body: assignmentMsg,
-          data: { path: targetPath },
-        }),
+      const pushOk = await sendPush({
+        userId: assignedTo,
+        title: `📌 ${notifTitle}`,
+        body: assignmentMsg,
+        data: { path: targetPath },
       });
 
-      if (!pushResp.ok) {
-        console.error("[OnTaskAssigned] Error send-push asignado:", await pushResp.text());
+      if (!pushOk) {
+        console.error("[OnTaskAssigned] Error send-push asignado:", assignedTo);
       }
 
       results.push(`Notificado asignado: ${assignedTo}`);
     }
 
-    // ─── 2. Notificar al creador si la tarea fue completada ───
+    // 2. Notificar al creador si la tarea fue completada
     if (eventType === "UPDATE" && isCompleted && !wasCompleted && createdBy && createdBy !== assignedTo) {
       const completedTitle = "Tarea completada";
       const completedMsg = `La tarea "${taskTitle}" ha sido marcada como completada`;
       const targetPath = `/tasks/${taskId}`;
 
-      // Insertar en bandeja interna
       const { error: notifError } = await supabase.from("notifications").insert({
         company_id: companyId,
         user_id: createdBy,
@@ -120,34 +107,22 @@ Deno.serve(async (req: Request) => {
         console.error("[OnTaskAssigned] Error al insertar notificación creador:", notifError);
       }
 
-      // Enviar Push vía send-push al creador
-      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${serviceRole}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: createdBy,
-          title: `✅ ${completedTitle}`,
-          body: completedMsg,
-          data: { path: targetPath },
-        }),
+      const pushOk = await sendPush({
+        userId: createdBy,
+        title: `✅ ${completedTitle}`,
+        body: completedMsg,
+        data: { path: targetPath },
       });
 
-      if (!pushResp.ok) {
-        console.error("[OnTaskAssigned] Error send-push creador:", await pushResp.text());
+      if (!pushOk) {
+        console.error("[OnTaskAssigned] Error send-push creador:", createdBy);
       }
 
       results.push(`Notificado creador: ${createdBy}`);
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        taskId,
-        results,
-      }),
+      JSON.stringify({ success: true, taskId, results }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {

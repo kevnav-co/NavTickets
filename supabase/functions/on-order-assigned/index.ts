@@ -3,19 +3,17 @@
 // Disparado por el trigger `trg_order_assigned_webhook` (PostgreSQL) vía pg_net.
 //
 // 1) Inserta una fila en la tabla `notifications` (bandeja interna de la app).
-// 2) Envía una notificación push en tiempo real vía Web Push API al técnico asignado.
+// 2) Envía una notificación push en tiempo real vía send-push.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
+import { sendPush } from "../_shared/push.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
 if (!serviceRole) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
 }
-
-const supabase = createClient(SUPABASE_URL, serviceRole);
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -47,7 +45,6 @@ Deno.serve(async (req: Request) => {
     const orderName = record.name || (orderNumber ? `Orden #${orderNumber}` : "Orden de servicio");
     const previousTechnicianId = oldRecord?.technician_id;
 
-    // Si no hay técnico asignado, no notificar
     if (!technicianId) {
       return new Response(
         JSON.stringify({ message: "Sin técnico asignado, no se notifica" }),
@@ -68,7 +65,6 @@ Deno.serve(async (req: Request) => {
     const orderMsg = `Te han asignado la orden: ${orderName}`;
     const targetPath = `/orders/${orderId}`;
 
-    // 1) Crear notificación en la bandeja interna (tabla `notifications`)
     const { error: notifError } = await supabase.from("notifications").insert({
       company_id: companyId,
       user_id: technicianId,
@@ -85,36 +81,19 @@ Deno.serve(async (req: Request) => {
       console.error("[OnOrderAssigned] Error al insertar notificación interna:", notifError);
     }
 
-    // 2) Enviar Push vía send-push al técnico asignado
-    let pushSent = false;
-    const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${serviceRole}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        userId: technicianId,
-        title: `📋 ${notifTitle}`,
-        body: orderMsg,
-        data: { path: targetPath },
-      }),
+    const pushSent = await sendPush({
+      userId: technicianId,
+      title: `📋 ${notifTitle}`,
+      body: orderMsg,
+      data: { path: targetPath },
     });
 
-    if (pushResp.ok) {
-      pushSent = true;
-    } else {
-      const errText = await pushResp.text();
-      console.error("[OnOrderAssigned] Error send-push:", errText);
+    if (!pushSent) {
+      console.error("[OnOrderAssigned] Error send-push para", technicianId);
     }
 
     return new Response(
-      JSON.stringify({
-        success: true,
-        orderId,
-        technicianId,
-        pushSent,
-      }),
+      JSON.stringify({ success: true, orderId, technicianId, pushSent }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {

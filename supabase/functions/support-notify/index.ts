@@ -1,18 +1,17 @@
 // Supabase Edge Function — Support Notify (Web Push API).
-// Replaces OneSignal. A Postgres trigger on `support_tickets` INSERT (migration 011)
-// calls this function via pg_net. It reads the newly inserted ticket and sends a
-// Web Push notification to all super_admins via send-push.
+// A Postgres trigger on `support_tickets` INSERT (migration 011) calls this
+// function via pg_net. It sends a Web Push notification to all super_admins
+// of the ticket's company via the shared send-push helper.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
+import { sendPushToMany } from "../_shared/push.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
 if (!serviceRole) {
   throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
 }
-const supabase = createClient(SUPABASE_URL, serviceRole);
+const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") {
@@ -23,13 +22,10 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    // Compatible con el envelope de pg_net/HTTP webhook ({ record: {...} })
-    // y con la invocación directa ({ id, company_id, subject, message, ... }).
     const record = body.record ?? body;
 
     const companyId = record.company_id;
     const subject = record.subject;
-    const message = record.message;
     if (!companyId || !subject) {
       return new Response(JSON.stringify({ error: "company_id y subject requeridos" }), {
         status: 400,
@@ -37,7 +33,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // 1. Obtener super_admins de esta empresa
     const { data: superAdmins, error: queryError } = await supabase
       .from("users")
       .select("id")
@@ -52,38 +47,20 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 2. Enviar push a cada super_admin vía send-push
-    const superAdminIds = (superAdmins || []).map((sa) => sa.id);
-    let sent = 0;
-    let failed = 0;
+    const superAdminIds = (superAdmins || []).map((sa: { id: string }) => sa.id);
 
-    for (const userId of superAdminIds) {
-      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${serviceRole}`,
-          "Content-Type": "application/json",
-          "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") || "",
-        },
-        body: JSON.stringify({
-          userId,
-          title: "🛟 Nueva consulta de soporte",
-          body: subject,
-          data: { path: "/admin/support" },
-        }),
-      });
+    const result = await sendPushToMany(
+      superAdminIds,
+      {
+        title: "🛟 Nueva consulta de soporte",
+        body: subject,
+        data: { path: "/admin/support" },
+      },
+      "Support Notify",
+    );
 
-      if (pushResp.ok) {
-        sent++;
-      } else {
-        console.error(`[Support Notify] Failed to send push to ${userId}:`, await pushResp.text());
-        failed++;
-      }
-    }
-
-    const pushResult = { sent, failed, total: superAdminIds.length };
     return new Response(
-      JSON.stringify({ success: true, ...pushResult }),
+      JSON.stringify({ success: true, ...result }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
   } catch (error: any) {
