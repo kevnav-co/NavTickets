@@ -22,7 +22,7 @@ Skill `handoff` (`.claude/skills/handoff/`, upstream dariohansson/claude-handoff
 
 ## Architecture Overview
 
-This is a **Field Service Management** (FSM) PWA for industrial equipment maintenance, built with React 18 + TypeScript + Vite + Supabase (Postgres) + OneSignal. It is **offline-first** using IndexedDB via Dexie and Workbox service worker.
+This is a **Field Service Management** (FSM) PWA for industrial equipment maintenance, built with React 18 + TypeScript + Vite + Supabase (Postgres) + Web Push (VAPID). It is **offline-first** using IndexedDB via Dexie and Workbox service worker.
 
 ### Frontend Structure
 
@@ -44,11 +44,11 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 |---------|-----------|--------------------|-----------|
 | `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`). Solo acepta `Bearer <service_role>` o `x-cron-secret: <CRON_SECRET>` (`_shared/cron-auth.ts`) |
 | `dailyExpirationCheck` | Supabase Edge | Diaria `0 8 * * *` (mismo guard de cron) | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
-| `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Push OneSignal a super_admin de consulta nueva (`supabase/functions/support-notify/`) |
-| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Supabase Edge | En INSERT/UPDATE de orders/tasks (migración 029) | Notificación interna + OneSignal push (`supabase/functions/on-order-assigned/`, `supabase/functions/on-task-assigned/`) |
+| `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Web Push a super_admin de consulta nueva (`supabase/functions/support-notify/`, usa `_shared/push.ts`) |
+| `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Supabase Edge | En INSERT/UPDATE de orders/tasks (migración 029) | Notificación interna + Web Push (`supabase/functions/on-order-assigned/`, `supabase/functions/on-task-assigned/`, usan `_shared/push.ts`) |
 | `supportReplyNotify` / `supportChatNotify` | pg_net trigger → Supabase Edge | Respuestas y chat de soporte (migraciones 025–028) | Push al autor / al staff (`supabase/functions/support-*-notify/`) |
 | `cuentiProxy` | Vercel edge | GET `/api/cuenti/clients` (sesión: admin/supervisor/aux_admin/developer/super_admin) | Proxy al puente de clientes Cuenti (`api/edge/cuenti-proxy.ts`); `CUENTI_COMPANY_ID` restringe a la empresa dueña |
-| `sendTestNotification` | Vercel edge | POST `/api/admin/send-test-notification` (sesión admin/dev/super_admin, misma empresa) | Push OneSignal de prueba (`api/edge/send-test-notification.ts`) |
+| `sendTestNotification` | Vercel edge | POST `/api/admin/send-test-notification` (sesión admin/dev/super_admin, misma empresa) | Push de prueba (`api/edge/send-test-notification.ts`) |
 | `updateUserPassword` | Supabase Edge | POST | Reset/self-service de clave vía Supabase Auth (`supabase/functions/update-user-password/`) |
 | `requestPasswordReset` | Supabase Edge | POST (público) | "¿Olvidaste tu clave?": genera token de un solo uso (30 min), lo guarda hasheado en `password_reset_tokens` y manda el link al `users.email` del username (`supabase/functions/request-password-reset/`) |
 | `resetPasswordWithToken` | Supabase Edge | POST (público) | Valida el token y aplica la nueva clave vía `auth.admin.updateUserById` (service_role, nunca anon key) (`supabase/functions/reset-password-with-token/`) |
@@ -59,7 +59,7 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 
 - **WhatsApp**: Twilio (stubs out gracefully if no credentials configured)
 - **Email**: Nodemailer via Gmail SMTP with branded HTML templates
-- **Internal Notification**: Supabase `notifications` table + OneSignal push
+- **Internal Notification**: Supabase `notifications` table + Web Push (VAPID) via `send-push` Edge Function
 
 ### Data Model (Supabase Tables)
 
@@ -105,7 +105,7 @@ Technician location updates every 10 minutes (`GPS_UPDATE_INTERVAL` in `App.tsx`
 | `useOfflineStatus` | `src/hooks/useOfflineStatus.ts` | Connectivity detection + sync state |
 | `useOrderActions` | `src/hooks/useOrderActions.ts` | Complex order operations (close, reopen warranty) |
 | `useFileHandler` | `src/hooks/useFileHandler.ts` | Manages evidence files (photos) with online/offline support |
-| `useOneSignal` | `src/hooks/useOneSignal.ts` | Push notifications via OneSignal |
+| `useWebPush` | `src/hooks/useWebPush.ts` | Web Push notifications (VAPID) |
 
 ### Key Services
 
@@ -139,15 +139,14 @@ EMAIL_DOMAIN=navas.com                 # Dominio de login (username@dominio). Fa
 VITE_EMAIL_DOMAIN=navas.com            # Mismo dominio, expose al cliente
 APP_URL=https://navtickets.vercel.app  # URL pública para deep-links de push
 WEBHOOK_SECRET=                        # Mismo valor en .env y Supabase settings → app.webhook_secret
-VITE_ONESIGNAL_APP_ID=                 # App ID de push (frontend). Sin esta, oneSignal.ts no suscribe
 VITE_GOOGLE_MAPS_API_KEY=              # For Maps JavaScript API (currently unused — using Leaflet)
 ```
 
-Push **OneSignal**: `VITE_ONESIGNAL_APP_ID` (cliente) se hornea al buildar (Vercel).
-Los secrets `ONESIGNAL_APP_ID` / `ONESIGNAL_API_KEY` (REST API key `os_v2_app_…`,
-server-side, para los edges) están seteados a nivel de **proyecto Supabase**
-(`npx supabase secrets set …`) — los leen `support-notify`, `on-order-assigned`,
-`on-task-assigned`, `support-reply-notify`, `support-chat-notify`. `WEBHOOK_SECRET`
+Push **Web Push (VAPID)**: los secrets `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` y
+`VAPID_SUBJECT` están seteados a nivel de **proyecto Supabase**
+(`npx supabase secrets set …`) — los lee `send-push`; las demás funciones
+(`support-notify`, `on-order-assigned`, `on-task-assigned`, `support-reply-notify`,
+`support-chat-notify`) delegan a `send-push` vía `_shared/push.ts`. `WEBHOOK_SECRET`
 también es secreto de Supabase (Session settings) y se usa como `app.webhook_secret`
 en las migrations 024/027/028/029 para autenticar los webhooks de pg_net.
 `SUPABASE_SERVICE_ROLE_KEY` se configura como secreto de Supabase
@@ -191,7 +190,7 @@ Test files live next to their source files (`*.test.ts`). Uses Vitest with `vi.u
 ### Known Technical Notes
 
 - The service worker (`src/sw.ts`) handles push notifications via the native `push` event — this works reliably on iOS PWA.
-- Push notifications use **OneSignal**; Firebase Cloud Messaging is no longer used. **Flujo completo cableado (Fase 3):** el cliente suscribe con `VITE_ONESIGNAL_APP_ID` y guarda `onesignal_player_id` en `users` (`useOneSignal`→`Header`); el edge `support-notify` (disparado por trigger BD, migración 011) manda el push con `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` seteados como secrets de proyecto Supabase. El push solo alcanza a super_admins **suscritos** por PWA instalada.
+- Push notifications use **Web Push API (VAPID)**; ni Firebase ni OneSignal se usan ya. **Flujo:** el cliente solicita permiso y registra la suscripción push en `push_subscriptions` (`useWebPush`→`Header`); las Edge Functions de notificación (`support-notify`, `support-reply-notify`, `support-chat-notify`, `on-order-assigned`, `on-task-assigned`) usan el helper compartido `_shared/push.ts` que delega a la Edge Function `send-push` (VAPID, `web-push` npm). Los secrets `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` están en el proyecto Supabase. La columna `onesignal_player_id` en `users` guarda el endpoint push (nombre legado; renombrar requiere migración).
 - Supabase keeps data offline-friendly via the client cache (IndexedDB/Dexie) driving `useSupabaseQuery`. Sin `limit`, `useSupabaseQuery` pagina con `range()` en bloques de 1000 (el `max_rows` de PostgREST) hasta agotar.
 - Images are compressed client-side before upload to Supabase Storage.
 - **Sync offline idempotente (Fase 3):** los creates offline ya no usan PK `offline_<timestamp>` sino un **UUID estable generado por el cliente** (`crypto.randomUUID()`), que viaja dentro de `data` y se inserta con `upsert(onConflict:'id')`. Así los retries no duplican y los vínculos/evidencia que referencian ese id sobreviven al sync (`useSupabaseActions.ts` + `useSyncManager.ts`).

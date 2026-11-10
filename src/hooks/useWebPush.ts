@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { requestNotificationPermission } from '../utils/webPush';
 import { useConnectivityStatus } from './useConnectivityStatus';
 
-export interface OneSignalState {
+export interface WebPushState {
   permission: NotificationPermission | 'unsupported' | boolean;
   pushToken: string | null;
   isSupported: boolean;
@@ -12,11 +12,11 @@ export interface OneSignalState {
 }
 
 /**
- * Hook para Web Push API (reemplaza OneSignal)
- * Interfaz compatible con Header.tsx
+ * Hook para Web Push API (VAPID).
+ * Gestiona permisos, suscripción y refresco silencioso del token.
  */
-export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; onesignalPlayerId?: string } | null, updatePushToken?: (userId: string, token: string) => Promise<void>) => {
-  const [state, setState] = useState<OneSignalState>({
+export const useWebPush = (currentUser?: { id: string; fcmToken?: string; onesignalPlayerId?: string } | null, updatePushToken?: (userId: string, token: string) => Promise<void>) => {
+  const [state, setState] = useState<WebPushState>({
     permission: 'default',
     pushToken: null,
     isSupported: false,
