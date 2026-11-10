@@ -15,8 +15,8 @@ const MonthlyProductivityChart = React.lazy(() => import('./MonthlyProductivityC
 const IntelligenceEngine = React.lazy(() => import('./IntelligenceEngine'));
 
 const LoadingFallback: React.FC<{ height?: string }> = ({ height = 'h-96' }) => (
-  <div className={`w-full bg-gray-50 rounded-3xl flex items-center justify-center ${height}`}>
-    <Loader2 className="animate-spin text-gray-300" size={48} />
+  <div className={`w-full bg-sunken border border-line-soft rounded-xl flex items-center justify-center ${height}`}>
+    <Loader2 className="animate-spin text-ink-faint" size={32} />
   </div>
 );
 
@@ -26,8 +26,8 @@ const Dashboard: React.FC = () => {
   const { company } = useCompany();
 
   return (
-    <div className="p-4 md:p-6 space-y-6 pb-20 mx-auto max-w-7xl">
-      
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6 pb-24 mx-auto max-w-7xl animate-fade-in-up">
+
       <DashboardKPIs />
 
       <Suspense fallback={<LoadingFallback height="h-[500px]" />}>

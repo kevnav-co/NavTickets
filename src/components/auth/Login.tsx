@@ -63,13 +63,19 @@ const Login: React.FC = () => {
   return (
     <div className="h-[100dvh] w-full flex bg-white overflow-hidden font-sans">
       <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-primary">
-        <div className="absolute inset-0 z-0">
-          <img 
-            src="https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&q=80"
-            alt="Fondo Industrial" 
-            className="w-full h-full object-cover opacity-40 mix-blend-luminosity"
+        {/* Fondo decorativo en CSS puro: sin descarga externa, no se rompe sin red. */}
+        <div className="absolute inset-0 z-0" aria-hidden="true">
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/90 to-primary/40 mix-blend-multiply"></div>
+          <div className="absolute -top-32 -right-24 w-[26rem] h-[26rem] rounded-full bg-white/[0.06] blur-3xl" />
+          <div className="absolute -bottom-40 -left-20 w-[30rem] h-[30rem] rounded-full bg-black/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/[0.04]" />
         </div>
 
         <div className="relative z-10">
@@ -106,74 +112,72 @@ const Login: React.FC = () => {
       </div>
 
        <div className="flex-1 overflow-y-auto bg-white relative">
-        <div className="min-h-full flex flex-col justify-center px-8 py-10 sm:px-12 md:px-20 lg:px-24 xl:px-32 w-full max-w-3xl mx-auto">
+        <div className="min-h-full flex flex-col justify-center px-8 py-12 sm:px-12 w-full max-w-md mx-auto">
           
           <div className="lg:hidden mb-12 flex justify-center w-full">
             <NavasLogo variant="default" size="large" center />
           </div>
 
           <div className="w-full">
-            <div className="mb-10 text-center lg:text-left">
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight mb-3">Bienvenido</h2>
-              <p className="text-gray-500">Ingresa tus credenciales para acceder al sistema.</p>
+            <div className="mb-8 text-center lg:text-left">
+              <h2 className="text-2xl font-bold text-ink tracking-tight mb-2">Bienvenido</h2>
+              <p className="text-sm text-ink-soft">Ingresa tus credenciales para acceder al sistema.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Usuario</label>
-                <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
-                  <UserIcon size={20} className="ml-2 text-gray-400" />
-                  <input 
-                    type="text" 
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-ink-soft uppercase tracking-wider">Usuario</label>
+                <div className="flex items-center gap-2 px-3 bg-sunken border border-line rounded-lg focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/10 transition-all">
+                  <UserIcon size={18} className="text-ink-faint shrink-0" />
+                  <input
+                    type="text"
                     placeholder="Ej: usuario"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-transparent py-3 pl-3 pr-4 text-base text-gray-900 placeholder:text-gray-300 focus:outline-none rounded-none"
+                    className="w-full bg-transparent py-3 text-[15px] text-ink placeholder:text-ink-faint focus:outline-none border-0 focus:ring-0 focus:shadow-none"
                     autoCapitalize="none"
                     autoCorrect="off"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                   <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Contraseña</label>
-                </div>
-                <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
-                  <Lock size={20} className="ml-2 text-gray-400" />
-                  <input 
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-ink-soft uppercase tracking-wider">Contraseña</label>
+                <div className="flex items-center gap-2 pl-3 pr-1 bg-sunken border border-line rounded-lg focus-within:border-primary focus-within:ring-[3px] focus-within:ring-primary/10 transition-all">
+                  <Lock size={18} className="text-ink-faint shrink-0" />
+                  <input
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent py-3 pl-3 text-base text-gray-900 placeholder:text-gray-300 focus:outline-none rounded-none"
+                    className="w-full bg-transparent py-3 text-[15px] text-ink placeholder:text-ink-faint focus:outline-none border-0 focus:ring-0 focus:shadow-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    className="text-ink-faint hover:text-ink-soft transition-colors p-2 shrink-0"
                   >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-4">
-                <div></div>
-                <button type="button" onClick={() => navigate('/forgot-password')} className="text-xs font-bold text-primary hover:underline">¿Olvidaste tu clave?</button>
+              <div className="flex justify-end">
+                <button type="button" onClick={() => navigate('/forgot-password')} className="text-xs font-semibold text-primary hover:underline">¿Olvidaste tu clave?</button>
               </div>
 
               {error && (
-                <div className="flex items-center gap-3 text-red-600 bg-red-50 p-4 rounded-xl text-sm font-medium animate-shake">
-                  <AlertCircle size={18} className="flex-shrink-0" />
+                <div className="flex items-center gap-2.5 text-red-700 bg-red-50 border border-red-100 p-3 rounded-lg text-[13px] font-medium animate-shake">
+                  <AlertCircle size={17} className="flex-shrink-0 text-red-500" />
                   {error}
                 </div>
               )}
 
-              <button 
+              <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-primary text-white py-4 rounded-xl font-bold text-sm uppercase tracking-widest hover:bg-black transition-colors flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed mt-8"
+                className="w-full bg-primary text-white py-3.5 rounded-lg font-semibold text-[13px] uppercase tracking-widest hover:bg-primary-dark transition-colors flex items-center justify-center gap-2.5 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">

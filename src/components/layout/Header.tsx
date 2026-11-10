@@ -16,9 +16,18 @@ interface HeaderProps {
 }
 
 const colorClasses = {
-  green: 'bg-green-100 text-green-700',
-  blue: 'bg-blue-100 text-blue-700',
-  orange: 'bg-orange-100 text-orange-700',
+  green: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  blue: 'bg-blue-50 text-blue-700 border-blue-100',
+  orange: 'bg-orange-50 text-orange-700 border-orange-100',
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin',
+  developer: 'Desarrollador',
+  admin: 'Administrador',
+  supervisor: 'Supervisor',
+  aux_admin: 'Auxiliar Admin',
+  technician: 'Técnico',
 };
 
 export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
@@ -153,7 +162,7 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   }, [currentUser?.role, navigate]);
 
   return (
-    <header className="bg-white flex flex-col sticky top-0 z-50 border-b border-gray-100 shadow-sm">
+    <header className="bg-raised flex flex-col sticky top-0 z-50 border-b border-line-soft">
       {/* SIN `backdrop-blur-md`: `backdrop-filter` crea un containing block que rompe
           el `position:fixed` de SupportModal/NotificationsModal (quedan recortados a
           la caja del header). Fondo blanco sólido. */}
@@ -171,75 +180,80 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
           </button>
         </div>
       )}
-      <div className="px-5 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <h1 className="text-md font-bold text-gray-800">{title}</h1>
+      <div className="px-4 md:px-6 py-3 flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <h1 className="text-base font-bold text-ink truncate">{title}</h1>
         <button
           onClick={() => forceRefresh()}
           disabled={isRefreshing}
-          className={`px-3 py-1.5 rounded-xl flex items-center gap-2 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-wait ${colorClasses[statusColor]}`}
+          title="Actualizar datos"
+          className={`shrink-0 pl-2 pr-2.5 py-1.5 rounded-lg border flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-wait ${colorClasses[statusColor]}`}
         >
-          <RefreshCcw size={13} className={isRefreshing ? "animate-spin" : ""} />
-          <div className="flex flex-col items-start leading-none">
-              <span className="text-[10px] font-black uppercase">{statusText}</span>
-              {timeAgo && <span className="text-[7px] font-bold lowercase opacity-70">{timeAgo}</span>}
+          <RefreshCcw size={12} className={isRefreshing ? "animate-spin" : ""} />
+          <div className="flex flex-col items-start leading-none gap-0.5">
+              <span className="text-[9px] font-bold uppercase tracking-wider">{statusText}</span>
+              {timeAgo && <span className="text-[8px] font-medium lowercase opacity-60">{timeAgo}</span>}
           </div>
         </button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1 md:gap-1.5">
         {/* Soporte interno (consulta al super_admin) */}
         <button
           onClick={handleOpenSupport}
           title={currentUser?.role === 'super_admin' ? 'Gestionar soporte' : 'Soporte de la app'}
-          className="p-2 text-gray-500 hover:bg-gray-100 hover:text-primary rounded-full transition-colors"
+          className="p-2 text-ink-faint hover:bg-sunken hover:text-primary rounded-lg transition-colors"
         >
-          <LifeBuoy size={22} />
+          <LifeBuoy size={19} />
         </button>
         {/* Notification bell or enable-notifications button */}
         {notifPermission === 'granted' ? (
-          <button onClick={handleOpenNotifications} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
-            <Bell size={22} />
+          <button onClick={handleOpenNotifications} title="Notificaciones" className="p-2 text-ink-faint hover:bg-sunken hover:text-ink rounded-lg relative transition-colors">
+            <Bell size={19} />
             {unreadCount > 0 &&
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-white animate-pulse"></div>
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
             }
           </button>
         ) : notifPermission !== 'unsupported' && notifPermission !== 'denied' ? (
           <button
             onClick={handleEnableNotifications}
             title="Activar notificaciones"
-            className="p-2 text-orange-500 hover:bg-orange-50 rounded-full relative transition-colors"
+            className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg relative transition-colors"
           >
-            <BellOff size={22} />
-            <div className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-orange-500 border-2 border-white"></div>
+            <BellOff size={19} />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500 ring-2 ring-white"></span>
           </button>
         ) : (
-          <button onClick={handleOpenNotifications} className="p-2 text-gray-500 hover:bg-gray-100 rounded-full relative">
-            <Bell size={22} />
+          <button onClick={handleOpenNotifications} title="Notificaciones" className="p-2 text-ink-faint hover:bg-sunken hover:text-ink rounded-lg relative transition-colors">
+            <Bell size={19} />
             {unreadCount > 0 &&
-              <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary border-2 border-white animate-pulse"></div>
+              <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
             }
           </button>
         )}
          {currentUser && (
-            <div className="relative md:hidden" ref={userMenuRef}>
-               <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary text-white font-bold text-sm shadow-md border-2 border-white active:scale-95 transition-transform">{currentUser.name?.charAt(0) || 'U'}</button>
+            <div className="relative md:hidden ml-1" ref={userMenuRef}>
+               <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white font-semibold text-xs active:scale-95 transition-transform">{currentUser.name?.charAt(0) || 'U'}</button>
                {showUserMenu && (
-                 <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
-                    <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                       <p className="text-sm font-bold text-gray-900 truncate">{currentUser.name}</p>
-                       <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">{currentUser.role === 'admin' ? 'Administrador' : 'Técnico'}</p>
+                 <div className="absolute right-0 top-full mt-2 w-56 bg-raised rounded-xl shadow-lg border border-line overflow-hidden animate-fade-in-up z-50">
+                    <div className="px-4 py-3 border-b border-line-soft bg-sunken">
+                       <p className="text-sm font-semibold text-ink truncate">{currentUser.name}</p>
+                       <p className="text-[10px] text-ink-faint font-medium uppercase tracking-wider mt-0.5">{ROLE_LABELS[currentUser.role] || currentUser.role}</p>
                     </div>
-                    <div className="p-2 space-y-1">
-                       <button onClick={() => { /* Lógica para instalar app */ setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl text-left transition-colors text-xs font-bold text-gray-700">
-                          <Download size={14} className="text-gray-400" /> Instalar Aplicación
+                    <div className="p-1.5">
+                       <button onClick={() => { /* Lógica para instalar app */ setShowUserMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-sunken rounded-lg text-left transition-colors text-xs font-medium text-ink-soft">
+                          <Download size={15} className="text-ink-faint" /> Instalar Aplicación
                        </button>
-                       <button onClick={() => { openModal('password'); setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl text-left transition-colors text-xs font-bold text-gray-700"><Key size={14} className="text-gray-400" /> Cambiar Contraseña</button>
-                       <button onClick={() => { openModal('signature'); setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-gray-50 rounded-xl text-left transition-colors text-xs font-bold text-gray-700">
-                          <PenLine size={14} className="text-gray-400" /> Actualizar Firma
+                       <button onClick={() => { openModal('password'); setShowUserMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-sunken rounded-lg text-left transition-colors text-xs font-medium text-ink-soft"><Key size={15} className="text-ink-faint" /> Cambiar Contraseña</button>
+                       <button onClick={() => { openModal('signature'); setShowUserMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-sunken rounded-lg text-left transition-colors text-xs font-medium text-ink-soft">
+                          <PenLine size={15} className="text-ink-faint" /> Actualizar Firma
                        </button>
-                       <div className="h-px bg-gray-50 mx-2"></div>
-                       <button onClick={() => { logout(); setShowUserMenu(false); }} className="w-full flex items-center gap-3 px-3 py-3 hover:bg-red-50 rounded-xl text-left transition-colors text-xs font-bold text-red-600"><LogOut size={14} className="text-red-400" /> Cerrar Sesión</button>
+                       <div className="h-px bg-line-soft my-1 mx-2"></div>
+                       <button onClick={() => { logout(); setShowUserMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-red-50 rounded-lg text-left transition-colors text-xs font-medium text-red-600"><LogOut size={15} className="text-red-400" /> Cerrar Sesión</button>
                     </div>
                  </div>
                )}

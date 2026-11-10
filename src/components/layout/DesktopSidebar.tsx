@@ -22,6 +22,15 @@ interface NavItem {
   requiresOnline?: boolean;
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin',
+  developer: 'Desarrollador',
+  admin: 'Administrador',
+  supervisor: 'Supervisor',
+  aux_admin: 'Auxiliar Admin',
+  technician: 'Técnico',
+};
+
 export const DesktopSidebar: React.FC = React.memo(() => {
   const { currentUser, logout } = useAuth();
   const { company } = useCompany();
@@ -67,88 +76,92 @@ export const DesktopSidebar: React.FC = React.memo(() => {
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const canManageOwnCompany = hasPermission(currentUser?.role, PERMISSIONS.MANAGE_COMPANIES);
 
-  return (
-    <aside className="hidden md:flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0 z-50 shadow-xl">
-      <div className="px-4 py-3 flex justify-center items-center border-b border-gray-100 bg-white">
-        <CompanyLogo className="max-h-[48px] max-w-[140px] object-contain hover:scale-105 transition-transform duration-300" />
-      </div>
-      <div className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
-          const isDisabled = item.requiresOnline && isOffline;
+  const isAdminRootActive = location.pathname.startsWith('/admin')
+    && !location.pathname.startsWith('/admin/stats')
+    && !location.pathname.startsWith('/admin/support');
 
-          return (
-            <button
-              key={item.label}
-              disabled={isDisabled}
-              onClick={() => navigate(item.path)}
-              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all group ${
-                isDisabled ? 'opacity-30 grayscale cursor-not-allowed' :
-                isActive ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
-              }`}
-            >
-              <item.icon size={20} className={isActive && !isDisabled ? 'text-primary' : 'text-gray-400'} />
-              <span className="text-sm">{item.label}</span>
-              {isDisabled && <WifiOff size={12} className="ml-auto opacity-50" />}
-            </button>
-          );
-        })}
+  return (
+    <aside className="hidden md:flex flex-col w-60 bg-raised border-r border-line h-screen sticky top-0 z-50">
+      <div className="px-5 py-5 flex justify-center items-center border-b border-line-soft">
+        <CompanyLogo className="max-h-[42px] max-w-[132px] object-contain" />
       </div>
-      {(isSuperAdmin || canManageOwnCompany) && (
-        <div className="px-3 py-2 border-t border-gray-100 space-y-2">
-          <button
-            onClick={() => navigate('/admin')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-              location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') && !location.pathname.startsWith('/admin/support') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <Shield size={20} className={location.pathname.startsWith('/admin') && !location.pathname.startsWith('/admin/stats') && !location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-gray-400'} />
-            <span className="text-sm">{isSuperAdmin ? 'Panel Admin' : 'Configuración'}</span>
-          </button>
-          {isSuperAdmin && (
-            <>
-            <button
-            onClick={() => navigate('/admin/support')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-              location.pathname.startsWith('/admin/support') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <LifeBuoy size={20} className={location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-gray-400'} />
-            <span className="text-sm">Soporte</span>
-            {(!location.pathname.startsWith('/admin/support') && supportUnread > 0) && (
-              <span className="ml-auto min-w-[22px] h-[22px] px-1.5 rounded-full bg-red-500 text-white flex items-center justify-center text-[11px] font-bold shadow-sm">
-                {supportUnread > 99 ? '99+' : supportUnread}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => navigate('/admin/stats')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${
-              location.pathname.startsWith('/admin/stats') ? 'bg-red-50 text-primary shadow-sm font-bold' : 'text-gray-500 hover:bg-gray-50'
-            }`}
-          >
-            <BarChart3 size={20} className={location.pathname.startsWith('/admin/stats') ? 'text-primary' : 'text-gray-400'} />
-            <span className="text-sm">Estadísticas</span>
-          </button>
-            </>
-          )}
+
+      <nav className="flex-1 py-4 px-3 overflow-y-auto">
+        <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-ink-faint">Operación</p>
+        <div className="space-y-0.5">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
+            const isDisabled = item.requiresOnline && isOffline;
+
+            return (
+              <button
+                key={item.label}
+                disabled={isDisabled}
+                onClick={() => navigate(item.path)}
+                className={`sidebar-nav-item w-full ${isActive ? 'active' : ''} ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                <item.icon size={17} strokeWidth={isActive ? 2.2 : 1.8} className={isActive && !isDisabled ? 'text-primary' : 'text-ink-faint'} />
+                <span>{item.label}</span>
+                {isDisabled && <WifiOff size={12} className="ml-auto opacity-50" />}
+              </button>
+            );
+          })}
         </div>
-      )}
-      <div className="p-4 border-t border-gray-100 bg-gray-50/50 space-y-3">
-        <div className="flex items-center justify-between px-1">
-           <div className="flex items-center gap-2 overflow-hidden">
-              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-bold text-xs flex-shrink-0">{currentUser?.name?.charAt(0) || 'U'}</div>
-              <div className="min-w-0">
-                 <p className="text-xs font-bold text-gray-900 truncate">{currentUser?.name}</p>
-                 <p className="text-[9px] text-gray-500 font-medium truncate capitalize">{currentUser?.role}</p>
-              </div>
-           </div>
-           <div className="flex items-center gap-1">
-              <button onClick={() => openModal('password')} className="p-1.5 text-gray-400 hover:text-primary hover:bg-white rounded-lg transition-colors shadow-sm" title="Cambiar Contraseña"><Key size={16} /></button>
-              <button onClick={() => openModal('signature')} className="p-1.5 text-gray-400 hover:text-primary hover:bg-white rounded-lg transition-colors shadow-sm" title="Actualizar Firma"><PenLine size={16} /></button>
+
+        {(isSuperAdmin || canManageOwnCompany) && (
+          <>
+            <p className="px-3 pt-5 pb-2 text-[10px] font-semibold uppercase tracking-widest text-ink-faint">
+              {isSuperAdmin ? 'Administración' : 'Ajustes'}
+            </p>
+            <div className="space-y-0.5">
+              <button
+                onClick={() => navigate('/admin')}
+                className={`sidebar-nav-item w-full ${isAdminRootActive ? 'active' : ''}`}
+              >
+                <Shield size={17} strokeWidth={isAdminRootActive ? 2.2 : 1.8} className={isAdminRootActive ? 'text-primary' : 'text-ink-faint'} />
+                <span>{isSuperAdmin ? 'Panel Admin' : 'Configuración'}</span>
+              </button>
+              {isSuperAdmin && (
+                <>
+                  <button
+                    onClick={() => navigate('/admin/support')}
+                    className={`sidebar-nav-item w-full ${location.pathname.startsWith('/admin/support') ? 'active' : ''}`}
+                  >
+                    <LifeBuoy size={17} strokeWidth={location.pathname.startsWith('/admin/support') ? 2.2 : 1.8} className={location.pathname.startsWith('/admin/support') ? 'text-primary' : 'text-ink-faint'} />
+                    <span>Soporte</span>
+                    {(!location.pathname.startsWith('/admin/support') && supportUnread > 0) && (
+                      <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
+                        {supportUnread > 99 ? '99+' : supportUnread}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => navigate('/admin/stats')}
+                    className={`sidebar-nav-item w-full ${location.pathname.startsWith('/admin/stats') ? 'active' : ''}`}
+                  >
+                    <BarChart3 size={17} strokeWidth={location.pathname.startsWith('/admin/stats') ? 2.2 : 1.8} className={location.pathname.startsWith('/admin/stats') ? 'text-primary' : 'text-ink-faint'} />
+                    <span>Estadísticas</span>
+                  </button>
+                </>
+              )}
             </div>
+          </>
+        )}
+      </nav>
+
+      <div className="px-3 py-3 border-t border-line-soft">
+        <div className="flex items-center gap-2.5 px-2 py-2 rounded-lg">
+          <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">{currentUser?.name?.charAt(0) || 'U'}</div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-ink truncate">{currentUser?.name}</p>
+            <p className="text-[10px] text-ink-faint truncate">{ROLE_LABELS[currentUser?.role ?? ''] || currentUser?.role}</p>
+          </div>
         </div>
-        <button onClick={logout} className="w-full flex items-center justify-center gap-2 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50 shadow-sm"><LogOut size={14} /> Cerrar Sesión</button>
+        <div className="flex items-center gap-1 mt-1">
+          <button onClick={() => openModal('password')} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-ink-faint hover:text-primary hover:bg-sunken rounded-lg transition-colors text-[11px] font-medium" title="Cambiar Contraseña"><Key size={14} /> Clave</button>
+          <button onClick={() => openModal('signature')} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-ink-faint hover:text-primary hover:bg-sunken rounded-lg transition-colors text-[11px] font-medium" title="Actualizar Firma"><PenLine size={14} /> Firma</button>
+          <button onClick={logout} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors text-[11px] font-medium" title="Cerrar Sesión"><LogOut size={14} /> Salir</button>
+        </div>
       </div>
     </aside>
   );
