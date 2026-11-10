@@ -181,9 +181,6 @@ self.addEventListener('push', (event: PushEvent) => {
         url = data.data.url || url;
       }
 
-      if (data.fcmOptions?.link) {
-        url = data.fcmOptions.link;
-      }
     }
   } catch (e) {
     console.error('[SW] Error parsing push data:', e);

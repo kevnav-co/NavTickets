@@ -100,9 +100,6 @@ export default defineConfig(({ mode }) => {
             // React core - always loaded
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
 
-            // State management & data fetching
-            'vendor-tanstack': ['@tanstack/react-query', '@tanstack/react-query-devtools'],
-
             // Supabase - heavy, load on demand
             'vendor-supabase': ['@supabase/supabase-js'],
 
@@ -177,7 +174,6 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
         'react-router-dom',
-        '@tanstack/react-query',
         '@supabase/supabase-js',
         'lucide-react',
         'zod',

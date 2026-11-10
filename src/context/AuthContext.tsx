@@ -1,6 +1,5 @@
 // src/context/AuthContext.tsx
 //
-// Migrado a Supabase Auth — reemplaza Firebase Auth.
 // El login usa el formato {username}@navas.com (compatible con usuarios existentes).
 
 import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';

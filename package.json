@@ -14,8 +14,6 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.110.9",
-    "@tanstack/react-query-devtools": "^5.101.4",
-    "@tanstack/react-virtual": "^3.14.9",
     "browser-image-compression": "^2.0.2",
     "date-fns": "^4.1.0",
     "dexie": "^4.4.4",

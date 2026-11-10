@@ -15,7 +15,7 @@ export interface OneSignalState {
  * Hook para Web Push API (reemplaza OneSignal)
  * Interfaz compatible con Header.tsx
  */
-export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; onesignalPlayerId?: string } | null, updateUserFcmToken?: (userId: string, token: string) => Promise<void>) => {
+export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; onesignalPlayerId?: string } | null, updatePushToken?: (userId: string, token: string) => Promise<void>) => {
   const [state, setState] = useState<OneSignalState>({
     permission: 'default',
     pushToken: null,
@@ -44,18 +44,18 @@ export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; ones
     try {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
-      if (subscription && updateUserFcmToken) {
+      if (subscription && updatePushToken) {
         const endpoint = subscription.endpoint;
         const stored = currentUser.onesignalPlayerId ?? currentUser.fcmToken;
         if (endpoint !== stored) {
-          await updateUserFcmToken(currentUser.id, endpoint);
+          await updatePushToken(currentUser.id, endpoint);
           setState(prev => ({ ...prev, pushToken: endpoint }));
         }
       }
     } catch (error) {
       console.warn('[WebPush] Silent token refresh failed:', error);
     }
-  }, [currentUser?.id, currentUser?.onesignalPlayerId, currentUser?.fcmToken, isOnline, state.isSupported, updateUserFcmToken]);
+  }, [currentUser?.id, currentUser?.onesignalPlayerId, currentUser?.fcmToken, isOnline, state.isSupported, updatePushToken]);
 
   // Ejecutar refresh silencioso cuando el usuario o conectividad cambia
   useEffect(() => {
@@ -67,7 +67,7 @@ export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; ones
 
   // Solicitar permiso de notificaciones
   const enableNotifications = useCallback(async () => {
-    if (!state.isSupported || !currentUser?.id || !updateUserFcmToken || state.isLoading) return;
+    if (!state.isSupported || !currentUser?.id || !updatePushToken || state.isLoading) return;
 
     setState(prev => ({ ...prev, isLoading: true, actionError: null }));
 
@@ -92,7 +92,7 @@ export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; ones
 
       if (subscription) {
         const endpoint = subscription.endpoint;
-        await updateUserFcmToken(currentUser.id, endpoint);
+        await updatePushToken(currentUser.id, endpoint);
         setState(prev => ({
           ...prev,
           permission: Notification.permission,
@@ -108,7 +108,7 @@ export const useOneSignal = (currentUser?: { id: string; fcmToken?: string; ones
         actionError: error?.message || 'Error al habilitar notificaciones.',
       }));
     }
-  }, [currentUser?.id, state.isSupported, updateUserFcmToken, state.isLoading]);
+  }, [currentUser?.id, state.isSupported, updatePushToken, state.isLoading]);
 
   // Monitorear cambios de permiso vía Permissions API (sin polling)
   useEffect(() => {
