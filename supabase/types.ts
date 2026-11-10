@@ -546,6 +546,240 @@ export interface Database {
         };
         Relationships: [];
       };
+      inventory_items: {
+        Row: {
+          id: string;
+          company_id: string;
+          sku: string;
+          name: string;
+          unit: string;
+          quantity: number;
+          unit_cost: number;
+          low_stock_threshold: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          sku?: string;
+          name: string;
+          unit?: string;
+          quantity?: number;
+          unit_cost?: number;
+          low_stock_threshold?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          sku?: string;
+          name?: string;
+          unit?: string;
+          quantity?: number;
+          unit_cost?: number;
+          low_stock_threshold?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      order_inventory_lines: {
+        Row: {
+          id: string;
+          order_id: string;
+          inventory_item_id: string;
+          quantity_out: number;
+          unit_cost_snapshot: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          inventory_item_id: string;
+          quantity_out?: number;
+          unit_cost_snapshot?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          inventory_item_id?: string;
+          quantity_out?: number;
+          unit_cost_snapshot?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      password_reset_tokens: {
+        Row: {
+          id: string;
+          user_id: string;
+          token_hash: string;
+          used: boolean;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          token_hash: string;
+          used?: boolean;
+          created_at?: string;
+          expires_at: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          token_hash?: string;
+          used?: boolean;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Relationships: [];
+      };
+      transactions: {
+        Row: {
+          id: string;
+          company_id: string;
+          sender_id: string;
+          sender_name: string;
+          recipient_id: string;
+          recipient_name: string;
+          amount: number;
+          method: 'Efectivo' | 'Transferencia';
+          concept: string;
+          transaction_group_id: string | null;
+          self_entry: 'out' | 'in' | null;
+          is_annulment: boolean;
+          related_movement_id: string | null;
+          annulment_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          sender_id: string;
+          sender_name?: string;
+          recipient_id: string;
+          recipient_name?: string;
+          amount: number;
+          method: 'Efectivo' | 'Transferencia';
+          concept: string;
+          transaction_group_id?: string | null;
+          self_entry?: 'out' | 'in' | null;
+          is_annulment?: boolean;
+          related_movement_id?: string | null;
+          annulment_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          sender_id?: string;
+          sender_name?: string;
+          recipient_id?: string;
+          recipient_name?: string;
+          amount?: number;
+          method?: 'Efectivo' | 'Transferencia';
+          concept?: string;
+          transaction_group_id?: string | null;
+          self_entry?: 'out' | 'in' | null;
+          is_annulment?: boolean;
+          related_movement_id?: string | null;
+          annulment_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      expenses: {
+        Row: {
+          id: string;
+          company_id: string;
+          user_id: string;
+          user_name: string;
+          amount: number;
+          origin: 'Efectivo' | 'Transferencia';
+          concept: string;
+          order_id: string | null;
+          is_annulment: boolean;
+          related_movement_id: string | null;
+          annulment_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          user_id: string;
+          user_name?: string;
+          amount: number;
+          origin: 'Efectivo' | 'Transferencia';
+          concept: string;
+          order_id?: string | null;
+          is_annulment?: boolean;
+          related_movement_id?: string | null;
+          annulment_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          user_id?: string;
+          user_name?: string;
+          amount?: number;
+          origin?: 'Efectivo' | 'Transferencia';
+          concept?: string;
+          order_id?: string | null;
+          is_annulment?: boolean;
+          related_movement_id?: string | null;
+          annulment_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      incomes: {
+        Row: {
+          id: string;
+          company_id: string;
+          user_id: string;
+          user_name: string;
+          amount: number;
+          origin: 'Efectivo' | 'Transferencia';
+          concept: string;
+          is_annulment: boolean;
+          related_movement_id: string | null;
+          annulment_reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_id: string;
+          user_id: string;
+          user_name?: string;
+          amount: number;
+          origin: 'Efectivo' | 'Transferencia';
+          concept: string;
+          is_annulment?: boolean;
+          related_movement_id?: string | null;
+          annulment_reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_id?: string;
+          user_id?: string;
+          user_name?: string;
+          amount?: number;
+          origin?: 'Efectivo' | 'Transferencia';
+          concept?: string;
+          is_annulment?: boolean;
+          related_movement_id?: string | null;
+          annulment_reason?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     CompositeTypes: Record<string, never>;
