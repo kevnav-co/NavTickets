@@ -30,12 +30,16 @@
   --shadow-lg: 0 10px 15px -3px rgba(28, 25, 23, 0.07), 0 4px 6px -4px rgba(28, 25, 23, 0.04);
   --shadow-card: 0 1px 3px rgba(28, 25, 23, 0.05), 0 0 0 1px rgba(28, 25, 23, 0.03);
 
-  /* Radius scale */
-  --radius-sm: 0.375rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.25rem;
+  /* Escala de radios, deliberadamente más cerrada que la de Tailwind: las
+     pantallas mezclan rounded-lg, -xl, -2xl y -3xl, y redefinir la escala aquí
+     las ajusta todas a la vez sin tocar cada clase. Un radio contenido lee como
+     herramienta de trabajo; uno muy abierto, como aplicación de consumo. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1rem;
 }
 
 /* Fallback :root variables for dynamic runtime updates */
