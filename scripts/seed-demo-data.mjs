@@ -460,14 +460,29 @@ async function generate(company, entry, force) {
 
   const rng = seedRng(company.slug || company.name);
 
-  // ── catálogo nuevo (solo si no sembrado) ──
-  if (invCount === 0) {
+  // ── catálogo nuevo ──
+  // Cada colección mira su propio contador en lugar de regirse toda por el del
+  // inventario: si una falla y las demás no, una reejecución repara solo la que
+  // falta en vez de saltarse el bloque entero o duplicar lo ya sembrado.
+  const [cliCount, eqCount] = await Promise.all([
+    gCount(company.id, "clients"),
+    gCount(company.id, "equipment"),
+  ]);
+  if (cliCount === 0) {
     for (const c of entry.clients ?? []) {
-      const { error } = await svc.from("clients").insert({ ...c, company_id: company.id }); if (error) console.error("  client", c.name, error.message);
+      // El catálogo de arriba nombra las coordenadas lat/lng; la tabla las llama
+      // latitude/longitude, así que sin esta traducción el insert falla entero y
+      // la empresa queda sin clientes (y por tanto sin órdenes).
+      const { lat, lng, ...rest } = c;
+      const { error } = await svc.from("clients").insert({ ...rest, latitude: lat, longitude: lng, company_id: company.id }); if (error) console.error("  client", c.name, error.message);
     }
+  }
+  if (eqCount === 0) {
     for (const e of entry.equipment ?? []) {
       const { error } = await svc.from("equipment").insert({ ...e, company_id: company.id }); if (error) console.error("  equipment", e.name, error.message);
     }
+  }
+  if (invCount === 0) {
     for (const it of entry.inventory ?? []) {
       const { error } = await svc.from("inventory_items").insert({ ...it, company_id: company.id }); if (error) console.error("  inventory", it.sku, error.message);
     }
