@@ -560,35 +560,50 @@ async function generate(company, entry, force) {
   console.log(`  órdenes: ${created} (vinculos equipo ${eqLinks}, líneas repuesto ${invLines})`);
 
   // ── TASKS ──
+  // Estos tres bloques se insertaban en cada pasada, así que una reejecución
+  // acumulaba tareas, notificaciones y tickets repetidos pese a que el script se
+  // documenta como idempotente. El flag --force-data busca más órdenes, no más
+  // de esto, de modo que el guardia no depende de él.
+  const taskCount = await gCount(company.id, "tasks");
   let tasks = 0;
-  for (const t of entry.tasks ?? []) {
-    const { error } = await svc.from("tasks").insert({
-      company_id: company.id, title: t.title, important: !!t.important, due_date: t.due,
-      category: t.category, assigned_to: umap[t.assigned] ?? null, created_by: adminId,
-    });
-    if (!error) tasks++; else console.error("  task", t.title, error.message);
+  if (taskCount === 0) {
+    for (const t of entry.tasks ?? []) {
+      const { error } = await svc.from("tasks").insert({
+        company_id: company.id, title: t.title, important: !!t.important, due_date: t.due,
+        category: t.category, assigned_to: umap[t.assigned] ?? null, created_by: adminId,
+      });
+      if (!error) tasks++; else console.error("  task", t.title, error.message);
+    }
   }
-  console.log(`  tareas: ${tasks}`);
+  console.log(`  tareas: ${taskCount === 0 ? tasks : `${taskCount} (ya sembradas)`}`);
 
   // ── NOTIFICATIONS (muestra) ──
+  // umap guarda el identificador; roleByUser solo el rol, que la columna user_id
+  // rechazaba por no ser un UUID y dejaba el contador siempre en cero.
+  const notifCount = await gCount(company.id, "notifications");
   let notifs = 0;
-  for (const uid of Object.values(roleByUser)) {
-    if (!uid) continue;
-    const { error } = await svc.from("notifications").insert({ company_id: company.id, user_id: uid, title: "Seed demo", body: "Datos ficticios sembrados", text: "Seed", type: "info", read: true, path: "/dashboard" });
-    if (!error) notifs++;
+  if (notifCount === 0) {
+    for (const uid of Object.values(umap)) {
+      if (!uid) continue;
+      const { error } = await svc.from("notifications").insert({ company_id: company.id, user_id: uid, title: "Seed demo", body: "Datos ficticios sembrados", text: "Seed", type: "info", read: true, path: "/dashboard" });
+      if (!error) notifs++; else console.error("  notification", uid, error.message);
+    }
   }
-  console.log(`  notificaciones: ${notifs}`);
+  console.log(`  notificaciones: ${notifCount === 0 ? notifs : `${notifCount} (ya sembradas)`}`);
 
   // ── SUPPORT (tenants con soportes) ──
+  const supportCount = await gCount(company.id, "support_tickets");
   let support = 0;
-  for (const s of entry.support ?? []) {
-    const { data, error } = await svc.from("support_tickets").insert({ company_id: company.id, user_id: adminId, subject: s.subject, message: s.message, status: s.status }).select("id").single();
-    if (!error) {
-      support++;
-      if (adminId) await svc.from("support_messages").insert({ ticket_id: data.id, user_id: adminId, role: "empresa", message: s.message });
-    } else console.error("  support", s.subject, error.message);
+  if (supportCount === 0) {
+    for (const s of entry.support ?? []) {
+      const { data, error } = await svc.from("support_tickets").insert({ company_id: company.id, user_id: adminId, subject: s.subject, message: s.message, status: s.status }).select("id").single();
+      if (!error) {
+        support++;
+        if (adminId) await svc.from("support_messages").insert({ ticket_id: data.id, user_id: adminId, role: "empresa", message: s.message });
+      } else console.error("  support", s.subject, error.message);
+    }
   }
-  console.log(`  soportes: ${support}`);
+  console.log(`  soportes: ${supportCount === 0 ? support : `${supportCount} (ya sembrados)`}`);
 }
 
 console.log(`\n== Seed demo NavTicket — ${SEED.length} tenants; force-data=${FORCE_DATA} ==`);
