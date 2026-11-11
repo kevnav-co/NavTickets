@@ -34,6 +34,12 @@ export default defineConfig(({ mode }) => {
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'sw.ts',
+        // El glob de abajo ya recoge los png de public/, así que dejar que el
+        // plugin añada además los iconos del manifiesto metía icon-app.png dos
+        // veces en la precaché: una sin revisión desde el glob y otra con ella.
+        // Workbox rechaza esas dos claves para la misma URL y aborta la
+        // instalación entera del service worker.
+        includeManifestIcons: false,
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
           maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
