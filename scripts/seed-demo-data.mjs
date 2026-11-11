@@ -450,12 +450,22 @@ async function generate(company, entry, force) {
   let roleByUser = {};
   for (const u of entry.users ?? []) roleByUser[u.username] = u.role;
   if (!(entry.users?.length)) {
+    // Las empresas ya existentes no traen roster en el catálogo, así que sus
+    // identificadores salen de la base; sin poblar umap aquí, más abajo no habría
+    // con qué resolver al técnico ni al administrador.
     const { data } = await svc.from("users").select("id,username,role").eq("company_id", company.id);
-    for (const r of data || []) roleByUser[r.username] = r.role;
+    for (const r of data || []) { roleByUser[r.username] = r.role; umap[r.username] = r.id; }
   }
-  const techIds = Object.entries(roleByUser).filter(([, r]) => r === "technician").map(([, id]) => id);
-  const adminUser = (entry.users ?? []).find((u) => u.role === "admin");
-  const adminId = adminUser ? umap[adminUser.username] ?? null : null;
+  // roleByUser va de usuario a rol: el identificador se resuelve contra umap. Al
+  // tomarlo del propio par se colaba el rol en technician_id y el insert de la
+  // orden lo rechazaba por no ser un UUID.
+  const techIds = Object.keys(roleByUser)
+    .filter((name) => roleByUser[name] === "technician")
+    .map((name) => umap[name])
+    .filter(Boolean);
+  const adminName = (entry.users ?? []).find((u) => u.role === "admin")?.username
+    ?? Object.keys(roleByUser).find((name) => roleByUser[name] === "admin");
+  const adminId = adminName ? umap[adminName] ?? null : null;
   console.log(`  usuarios: ${Object.keys(roleByUser).length} (roles: ${Object.values(roleByUser).join(",")})`);
 
   const rng = seedRng(company.slug || company.name);
