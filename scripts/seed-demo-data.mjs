@@ -538,16 +538,18 @@ async function generate(company, entry, force) {
       ord.warranty_period = warranty_period; ord.warranty_expiration = warranty_expiration;
       ord.is_under_warranty_review = warranty_period > 0 && rng() < 0.25;
     }
-    const { data: ordRow, error } = await svc.from("orders").insert(ord).select("id").single();
-    if (error) { console.error("  order", ord.name, error.message); continue; }
-    created++;
-    const eqBatch = [];
+    // Las máquinas de una orden viven en la columna equipment_ids desde la
+    // migración 033; equipment_orders es la tabla legado que ya nadie lee, así
+    // que sembrando solo allí la aplicación mostraba "N/A" en cada orden.
     for (let m = 0; m < nEq; m++) {
       const e = equip[Math.floor(rng() * equip.length)];
       if (usedEq.has(e.id)) continue; usedEq.add(e.id);
-      eqBatch.push({ equipment_id: e.id, order_id: ordRow.id });
     }
-    if (eqBatch.length) { const r = await svc.from("equipment_orders").insert(eqBatch); if (!r.error) eqLinks += eqBatch.length; }
+    ord.equipment_ids = [...usedEq];
+    const { data: ordRow, error } = await svc.from("orders").insert(ord).select("id").single();
+    if (error) { console.error("  order", ord.name, error.message); continue; }
+    created++;
+    eqLinks += usedEq.size;
     if (inv?.length && rng() < 0.5) {
       const nn = 1 + Math.floor(rng() * 3), lines = [];
       for (let m = 0; m < nn; m++) {
