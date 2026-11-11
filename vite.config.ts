@@ -102,39 +102,22 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
+          // Solo se nombran aquí las dependencias que la aplicación necesita
+          // nada más arrancar. Nombrar un paquete lo ancla al grafo estático de
+          // la entrada, y Vite le añade entonces un <link rel="modulepreload">:
+          // así jspdf y browser-image-compression se descargaban enteros en la
+          // pantalla de inicio de sesión, antes de que existiera un PDF o una
+          // foto que procesar. Las que se usan bajo demanda (jspdf, xlsx,
+          // recharts, leaflet, la compresión de imágenes) se dejan fuera para
+          // que Rollup las separe a partir de sus importaciones dinámicas y
+          // viajen solo con la pantalla que de verdad las usa.
           manualChunks: {
-            // React core - always loaded
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-
-            // Supabase - heavy, load on demand
             'vendor-supabase': ['@supabase/supabase-js'],
-
-            // UI libraries - split by usage
             'vendor-lucide': ['lucide-react'],
             'vendor-zod': ['zod'],
-            'vendor-date-fns': ['date-fns'],
-
-            // Charts - only for accounting/admin
-            'vendor-recharts': ['recharts'],
-
-            // Maps - only for client map view
-            'vendor-leaflet': ['leaflet', 'react-leaflet'],
-
-            // PDF/Export - heavy, on demand
-            'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
-            'vendor-xlsx': ['xlsx'],
-
-            // Image/Video processing
-            'vendor-image-compression': ['browser-image-compression'],
-
-            // Offline DB
             'vendor-dexie': ['dexie'],
-
-            // Form/Input helpers
             'vendor-forms': ['react-currency-input-field', 'react-textarea-autosize'],
-
-            // Workbox - service worker
-            'workbox-runtime': ['workbox-core', 'workbox-routing', 'workbox-strategies', 'workbox-cacheable-response', 'workbox-expiration', 'workbox-precaching'],
           },
           // Optimize chunk naming for better caching
           chunkFileNames: 'assets/js/[name]-[hash].js',
