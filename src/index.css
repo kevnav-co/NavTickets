@@ -109,17 +109,21 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: var(--shadow-md);
 }
 
+/* El halo queda recortado por el overflow del tile, así que un círculo pequeño
+   se leía como un bloque en la esquina. Uno grande y muy tenue se percibe como
+   un degradado del propio fondo. */
 .kpi-tile::after {
   content: '';
   position: absolute;
   top: 0;
   right: 0;
-  width: 60px;
-  height: 60px;
+  width: 140px;
+  height: 140px;
   border-radius: 50%;
-  opacity: 0.08;
-  transform: translate(30%, -30%);
+  opacity: 0.05;
+  transform: translate(45%, -55%);
   background: currentColor;
+  pointer-events: none;
 }
 
 @media (min-width: 768px) {

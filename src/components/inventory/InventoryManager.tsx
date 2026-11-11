@@ -116,28 +116,27 @@ const InventoryManager: React.FC = () => {
               placeholder="Buscar repuestos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-12 bg-raised border border-line rounded-xl py-3 pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full h-11 bg-raised border border-line rounded-lg pl-10 pr-4 text-sm focus:outline-none"
             />
           </div>
           <button
             onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-            className="h-12 w-12 flex-shrink-0 bg-raised border border-line rounded-xl text-ink-soft shadow-sm flex items-center justify-center hover:bg-sunken transition-colors"
+            className="h-11 w-11 flex-shrink-0 bg-raised border border-line rounded-lg text-ink-faint flex items-center justify-center hover:text-ink-soft hover:bg-sunken transition-colors"
             title={viewMode === 'list' ? 'Cuadrícula' : 'Lista'}
           >
-            {viewMode === 'list' ? <Layers size={20} /> : <Package size={20} />}
+            {viewMode === 'list' ? <Layers size={18} /> : <Package size={18} />}
           </button>
+          {canCreate && (
+            <button onClick={() => navigate('/inventory/new')} className="h-11 px-4 flex-shrink-0 bg-primary text-white rounded-lg flex items-center justify-center gap-2 font-semibold text-sm hover:bg-primary-dark transition-colors">
+              <Plus size={17} /><span className="hidden sm:inline">Nuevo repuesto</span>
+            </button>
+          )}
         </div>
 
-        {canCreate && (
-          <button onClick={() => navigate('/inventory/new')} className="w-full h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 active:scale-95 transition-transform mb-3">
-            <Plus size={18} />Nuevo Repuesto
-          </button>
-        )}
-
-        <div className="flex bg-line/80 p-1 rounded-lg text-center">
-          <button onClick={() => setFilter('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'all' ? 'bg-raised text-primary shadow-sm' : 'text-ink-soft'}`}>Todos ({inventoryItems.length})</button>
-          <button onClick={() => setFilter('low')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'low' ? 'bg-raised text-red-600 shadow-sm' : 'text-ink-soft'}`}>Stock bajo ({lowCount})</button>
-          <button onClick={() => setFilter('ok')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md transition-all ${filter === 'ok' ? 'bg-raised text-emerald-600 shadow-sm' : 'text-ink-soft'}`}>OK</button>
+        <div className="flex gap-1 bg-sunken border border-line-soft p-1 rounded-lg text-center">
+          <button onClick={() => setFilter('all')} className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors ${filter === 'all' ? 'bg-raised text-primary shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>Todos ({inventoryItems.length})</button>
+          <button onClick={() => setFilter('low')} className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors ${filter === 'low' ? 'bg-raised text-red-600 shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>Stock bajo ({lowCount})</button>
+          <button onClick={() => setFilter('ok')} className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors ${filter === 'ok' ? 'bg-raised text-emerald-600 shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>OK</button>
         </div>
       </div>
 

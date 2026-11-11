@@ -15,7 +15,6 @@ interface CompanyLogoProps {
   forceCompany?: boolean;
 }
 
-const FALLBACK_LOGO = '/assets/logo-inicio.png';
 // Logo que identifica al super_admin (gestor de todas las empresas).
 const SUPER_ADMIN_LOGO = '/assets/logo-superadmin.png';
 
@@ -29,16 +28,35 @@ const CompanyLogo: React.FC<CompanyLogoProps> = ({ className, variant = 'default
   const isSuperAdmin = currentUser?.role === 'super_admin';
 
   const src = variant === 'white'
-    ? (company.theme.logoWhiteUrl || company.theme.logoUrl || FALLBACK_LOGO)
+    ? (company.theme.logoWhiteUrl || company.theme.logoUrl)
     : (isSuperAdmin && !forceCompany)
       ? SUPER_ADMIN_LOGO
-      : (company.theme.logoUrl || FALLBACK_LOGO);
+      : company.theme.logoUrl;
 
   const displayAlt = alt || company.name || 'Logo';
 
+  // Sin imagen propia no sirve recurrir al archivo por defecto: es la variante
+  // blanca del logo y sobre un fondo claro queda invisible, de modo que la
+  // cabecera parece vacía. El nombre de la empresa cumple el mismo papel y se
+  // lee en cualquier fondo.
+  // No hereda `className`: ahí viajan medidas pensadas para la imagen (alto
+  // máximo, ancho máximo, object-contain) que sobre un texto solo lo recortarían.
+  if (!src || imgError) {
+    return (
+      <span
+        className={`font-bold tracking-tight truncate leading-tight max-w-full text-[15px] ${
+          variant === 'white' ? 'text-white' : 'text-primary'
+        }`}
+        title={displayAlt}
+      >
+        {company.name || 'NavTickets'}
+      </span>
+    );
+  }
+
   return (
     <img
-      src={imgError ? FALLBACK_LOGO : src}
+      src={src}
       alt={displayAlt}
       className={className}
       onError={() => setImgError(true)}

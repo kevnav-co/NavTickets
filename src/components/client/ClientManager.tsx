@@ -123,46 +123,45 @@ const ClientManager: React.FC = () => {
                 placeholder="Buscar clientes..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 bg-raised border border-line rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-11 bg-raised border border-line rounded-lg pl-10 pr-4 text-sm focus:outline-none"
               />
             </div>
-            <button 
+            <button
               onClick={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
-              className="h-12 w-12 flex-shrink-0 bg-raised border border-line rounded-xl text-ink-soft shadow-sm flex items-center justify-center"
+              className="h-11 w-11 flex-shrink-0 bg-raised border border-line rounded-lg text-ink-faint hover:text-ink-soft hover:bg-sunken flex items-center justify-center transition-colors"
               title={viewMode === 'list' ? "Cuadrícula" : "Lista"}
             >
-              {viewMode === 'list' ? <LayoutGrid size={20} /> : <LayoutList size={20} />}
+              {viewMode === 'list' ? <LayoutGrid size={18} /> : <LayoutList size={18} />}
             </button>
-          </div>
-          <div className="flex w-full items-center gap-2 mb-3">
-            {canCreate && (
-              <button 
-                onClick={() => navigate('/clients/new')}
-                className="flex-grow h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20"
-              >
-                <UserPlus size={18} />
-                Añadir Cliente
-              </button>
-            )}
             {canImportFromCuenti && (
               <button
                 onClick={() => setIsCuentiModalOpen(true)}
-                className="flex-shrink-0 h-12 px-5 bg-yellow-400 text-yellow-900 rounded-xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-yellow-400/20 hover:bg-yellow-500 transition-colors"
+                className="flex-shrink-0 h-11 px-3.5 bg-raised border border-line text-ink-soft rounded-lg flex items-center justify-center gap-2 font-medium text-sm hover:bg-sunken transition-colors"
+                title="Importar desde Cuenti"
               >
                 <RefreshCw size={16} />
-                Cuenti
+                <span className="hidden sm:inline">Cuenti</span>
+              </button>
+            )}
+            {canCreate && (
+              <button
+                onClick={() => navigate('/clients/new')}
+                className="flex-shrink-0 h-11 px-4 bg-primary text-white rounded-lg flex items-center justify-center gap-2 font-semibold text-sm hover:bg-primary-dark transition-colors"
+              >
+                <UserPlus size={17} />
+                <span className="hidden sm:inline">Añadir cliente</span>
               </button>
             )}
           </div>
-          <div className="flex bg-line/80 p-1 rounded-lg">
-            <button onClick={() => setFilterType('all')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md ${filterType === 'all' ? 'bg-raised text-primary shadow-sm' : 'text-ink-soft'}`}>
+          <div className="flex gap-1 bg-sunken border border-line-soft p-1 rounded-lg">
+            <button onClick={() => setFilterType('all')} className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors ${filterType === 'all' ? 'bg-raised text-primary shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>
               Todos
             </button>
-            <button onClick={() => setFilterType('active')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md ${filterType === 'active' ? 'bg-raised text-green-600 shadow-sm' : 'text-ink-soft'}`}>
-              Con Servicio
+            <button onClick={() => setFilterType('active')} className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors ${filterType === 'active' ? 'bg-raised text-emerald-600 shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>
+              Con servicio
             </button>
-            <button onClick={() => setFilterType('inactive')} className={`flex-1 py-2 text-[10px] font-bold uppercase rounded-md ${filterType === 'inactive' ? 'bg-raised text-ink-soft shadow-sm' : 'text-ink-soft'}`}>
-              Sin Servicio
+            <button onClick={() => setFilterType('inactive')} className={`flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors ${filterType === 'inactive' ? 'bg-raised text-ink shadow-xs' : 'text-ink-faint hover:text-ink-soft'}`}>
+              Sin servicio
             </button>
           </div>
         </div>
