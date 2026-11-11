@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest';
 
 const saved: { name: string; pdf: string }[] = [];
 
@@ -13,6 +13,23 @@ vi.mock('jspdf', async (importOriginal) => {
   }
   return { ...mod, jsPDF: CapturingPDF, default: CapturingPDF };
 });
+
+// El acta incrusta el logo con fetch('/assets/logo-nit.png'). Sin servidor que
+// lo sirva, la petición sale de verdad contra localhost y falla, y el generador
+// cae en su imagen de reemplazo, que dibuja en un canvas. happy-dom no
+// implementa el contexto 2D: devuelve un data URI sin carga que jsPDF confunde
+// con una ruta de fichero. Sirviendo aquí un PNG mínimo, la prueba ejercita el
+// camino real —acta con logo— sin depender de la red.
+const PNG_1X1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+beforeAll(() => {
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(
+    Uint8Array.from(atob(PNG_1X1), (c) => c.charCodeAt(0)),
+    { status: 200, headers: { 'Content-Type': 'image/png' } },
+  )));
+});
+
+afterAll(() => { vi.unstubAllGlobals(); });
 
 import { exportReportPdf } from './reportPdf';
 import { generateServiceActa } from './pdfGenerator';
