@@ -1,5 +1,8 @@
 import { useCallback } from 'react';
-import { z } from 'zod';
+// Solo en posiciones de tipo: con `import type` zod no entra en el paquete que
+// genera el compilador, y este módulo deja de arrastrarlo a la pantalla de
+// inicio de sesión.
+import type { z } from 'zod';
 import { useData } from '../context/DataContext';
 
 /**

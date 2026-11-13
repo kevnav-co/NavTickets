@@ -49,24 +49,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isNotificationsLoaded, setIsNotificationsLoaded] = useState(false);
 
   // ─── Queries críticas: cargar inmediato (necesarias para render inicial) ───
+  // Sin sesión estas consultas caían a la caché local, de modo que la pantalla de
+  // inicio de sesión abría IndexedDB —y descargaba Dexie— para leer los datos de
+  // un usuario que todavía no se sabe quién es. Esperan ahora a que haya sesión;
+  // la autenticación se resuelve antes de que se pinte ninguna pantalla con
+  // datos, así que no se retrasa nada visible.
   const hasSession = !!currentUser;
   const clientsQuery = useSupabaseQuery<Client>('clients', {
     table: 'clients',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
-    forceOffline: !hasSession,
+    enabled: hasSession,
   });
   const ordersQuery = useSupabaseQuery<ServiceOrder>('orders', {
     table: 'orders',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
-    forceOffline: !hasSession,
+    enabled: hasSession,
   });
   const usersQuery = useSupabaseQuery<User>('users', {
     table: 'users',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
-    forceOffline: !hasSession,
+    enabled: hasSession,
   });
 
   // ─── Queries no críticas: lazy load (equipment, notifications) ─────────────
@@ -99,7 +104,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ─── CRUD con cola offline ─────────────────────────────────────────────
   const { addItem: addItemRaw, updateItem: updateItemRaw, deleteItem: deleteItemRaw } = useSupabaseActions();
   const { uploadFile: uploadFileRaw, isUploading } = useSupabaseStorage({ bucket: 'order-photos' });
-  const { pendingCount, isSyncing } = useSyncManager();
+  const { pendingCount, isSyncing } = useSyncManager(!!currentUser);
 
   // ─── Loading combinado: SOLO queries críticas ──────────────────────────
   const loading = hasSession && (
