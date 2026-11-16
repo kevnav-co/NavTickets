@@ -76,9 +76,19 @@ const ResetPassword: React.FC = () => {
   return (
     <div className="min-h-[100dvh] w-full flex bg-raised overflow-hidden font-sans">
       <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-primary">
-        <div className="absolute inset-0 z-0">
-          <img src="https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&q=80" alt="Fondo Industrial" className="w-full h-full object-cover opacity-40 mix-blend-luminosity" />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/90 to-primary/40 mix-blend-multiply"></div>
+        {/* Fondo decorativo en CSS puro: sin descarga externa, no se rompe sin red. */}
+        <div className="absolute inset-0 z-0" aria-hidden="true">
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+            }}
+          />
+          <div className="absolute -top-32 -right-24 w-[26rem] h-[26rem] rounded-full bg-raised/[0.06] blur-3xl" />
+          <div className="absolute -bottom-40 -left-20 w-[30rem] h-[30rem] rounded-full bg-black/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/[0.04]" />
         </div>
         <div className="relative z-10">
           <img src="/assets/logo-blanco.png?v=fondoblanco4" alt="Logo de la empresa" className="w-full h-auto object-contain" />
