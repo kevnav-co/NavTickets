@@ -4,6 +4,7 @@
 
 import React, { createContext, useContext, useEffect, useCallback, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { readCachedProfile, writeCachedProfile, clearCachedProfile } from '../services/profileCache';
 import { EMAIL_DOMAIN } from '../config';
 import type { User } from '../types';
 
@@ -69,6 +70,23 @@ function useUserProfile(authUserId: string | null, profileVersion: number): { pr
 
     let cancelled = false;
 
+    // Sin cobertura la petición del perfil falla y, sin perfil, la aplicación
+    // mostraba el formulario de entrada aunque la sesión siguiera viva. Se recurre
+    // entonces a la copia local del último perfil obtenido, pero solo si el fallo
+    // no es una respuesta definitiva del servidor: un "no existe" (PGRST116) con
+    // red significa que la cuenta ya no está, y ahí la copia no debe servir.
+    const fallbackToCache = (reason: Error) => {
+      const cached = readCachedProfile(authUserId);
+      if (cached) {
+        console.warn('[Auth] Perfil restaurado de la copia local:', reason.message);
+        setProfile(cached);
+        setError(null);
+      } else {
+        setError(reason);
+        setProfile(null);
+      }
+    };
+
     const fetch = async () => {
       try {
         const { data, error: dbError } = await supabase
@@ -78,19 +96,21 @@ function useUserProfile(authUserId: string | null, profileVersion: number): { pr
           .single();
 
         if (!cancelled) {
-          if (dbError || !data) {
-            setError(new Error(dbError?.message || 'Perfil no encontrado'));
+          if (dbError?.code === 'PGRST116' || (!dbError && !data)) {
+            clearCachedProfile();
+            setError(new Error('Perfil no encontrado'));
             setProfile(null);
+          } else if (dbError) {
+            fallbackToCache(new Error(dbError.message));
           } else {
-            setProfile(mapUserProfile(data));
+            const mapped = mapUserProfile(data);
+            if (mapped) writeCachedProfile(authUserId, mapped);
+            setProfile(mapped);
             setError(null);
           }
         }
       } catch (err: any) {
-        if (!cancelled) {
-          setError(err);
-          setProfile(null);
-        }
+        if (!cancelled) fallbackToCache(err instanceof Error ? err : new Error(String(err)));
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -168,6 +188,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!alive) return;
 
         if (event === 'SIGNED_OUT') {
+          clearCachedProfile();
           setCurrentUser(null);
           setAuthUserId(null);
           setImpersonation(null);
