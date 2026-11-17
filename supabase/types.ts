@@ -780,6 +780,32 @@ export interface Database {
         };
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          company_id: string;
+          endpoint: string;
+          auth: string;
+          p256dh: string;
+          user_agent: string | null;
+          created_at: string | null;
+          last_seen_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          company_id: string;
+          endpoint: string;
+          auth: string;
+          p256dh: string;
+          user_agent?: string | null;
+          created_at?: string | null;
+          last_seen_at?: string | null;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
       service_requests: {
         Row: {
           id: string;

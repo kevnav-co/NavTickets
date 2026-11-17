@@ -21,17 +21,38 @@ export interface PushResult {
   total: number;
 }
 
+export interface PushAttempt {
+  ok: boolean;
+  /** Estado HTTP de send-push (0 si la petición ni siquiera salió). */
+  status: number;
+  /** Extracto de la respuesta cuando falla, para diagnóstico. Nunca incluye secretos. */
+  detail?: string;
+}
+
+export async function sendPushDetailed(request: PushRequest): Promise<PushAttempt> {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${SERVICE_ROLE}`,
+        "Content-Type": "application/json",
+        "x-webhook-secret": WEBHOOK_SECRET,
+      },
+      body: JSON.stringify(request),
+    });
+    if (resp.ok) return { ok: true, status: resp.status };
+    const detail = (await resp.text()).slice(0, 200);
+    console.error(`[push] send-push respondió ${resp.status}: ${detail}`);
+    return { ok: false, status: resp.status, detail };
+  } catch (error) {
+    const detail = (error instanceof Error ? error.message : String(error)).slice(0, 200);
+    console.error(`[push] send-push no respondió: ${detail}`);
+    return { ok: false, status: 0, detail };
+  }
+}
+
 export async function sendPush(request: PushRequest): Promise<boolean> {
-  const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${SERVICE_ROLE}`,
-      "Content-Type": "application/json",
-      "x-webhook-secret": WEBHOOK_SECRET,
-    },
-    body: JSON.stringify(request),
-  });
-  return resp.ok;
+  return (await sendPushDetailed(request)).ok;
 }
 
 export async function sendPushToMany(

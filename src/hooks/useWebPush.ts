@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { requestNotificationPermission } from '../utils/webPush';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { getOrCreatePushSubscription, requestNotificationPermission, savePushSubscription } from '../utils/webPush';
 import { useConnectivityStatus } from './useConnectivityStatus';
 
 export interface WebPushState {
@@ -13,9 +13,15 @@ export interface WebPushState {
 
 /**
  * Hook para Web Push API (VAPID).
- * Gestiona permisos, suscripción y refresco silencioso del token.
+ * Gestiona permisos, crea la suscripción del navegador y la guarda en
+ * `push_subscriptions` (donde la busca la Edge Function send-push). El endpoint
+ * también se copia en `users.onesignal_player_id` (nombre heredado) para el panel
+ * de diagnóstico.
  */
-export const useWebPush = (currentUser?: { id: string; fcmToken?: string; onesignalPlayerId?: string } | null, updatePushToken?: (userId: string, token: string) => Promise<void>) => {
+export const useWebPush = (
+  currentUser?: { id: string; companyId?: string; fcmToken?: string; onesignalPlayerId?: string } | null,
+  updatePushToken?: (userId: string, token: string) => Promise<void>,
+) => {
   const [state, setState] = useState<WebPushState>({
     permission: 'default',
     pushToken: null,
@@ -25,6 +31,9 @@ export const useWebPush = (currentUser?: { id: string; fcmToken?: string; onesig
     actionError: null,
   });
   const { isOnline } = useConnectivityStatus();
+  // La suscripción se guarda una vez por sesión y usuario: el guardado es idempotente,
+  // pero no hace falta repetirlo en cada render.
+  const savedFor = useRef<string | null>(null);
 
   // Verificar soporte en mount
   useEffect(() => {
@@ -36,26 +45,25 @@ export const useWebPush = (currentUser?: { id: string; fcmToken?: string; onesig
     }
   }, []);
 
-  // Silent token refresh (cuando el permiso ya está otorgado)
+  // Refresco silencioso (cuando el permiso ya está otorgado): asegura que la
+  // suscripción de este navegador esté guardada para el usuario actual.
   const silentTokenRefresh = useCallback(async () => {
-    if (!state.isSupported || !isOnline || !currentUser?.id) return;
+    if (!state.isSupported || !isOnline || !currentUser?.id || !currentUser.companyId) return;
     if (Notification.permission !== 'granted') return;
+    if (savedFor.current === currentUser.id) return;
 
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription && updatePushToken) {
-        const endpoint = subscription.endpoint;
-        const stored = currentUser.onesignalPlayerId ?? currentUser.fcmToken;
-        if (endpoint !== stored) {
-          await updatePushToken(currentUser.id, endpoint);
-          setState(prev => ({ ...prev, pushToken: endpoint }));
-        }
-      }
+      const subscription = await getOrCreatePushSubscription();
+      await savePushSubscription(subscription, currentUser.id, currentUser.companyId);
+      savedFor.current = currentUser.id;
+      const endpoint = subscription.endpoint;
+      const stored = currentUser.onesignalPlayerId ?? currentUser.fcmToken;
+      if (updatePushToken && endpoint !== stored) await updatePushToken(currentUser.id, endpoint);
+      setState(prev => ({ ...prev, pushToken: endpoint }));
     } catch (error) {
       console.warn('[WebPush] Silent token refresh failed:', error);
     }
-  }, [currentUser?.id, currentUser?.onesignalPlayerId, currentUser?.fcmToken, isOnline, state.isSupported, updatePushToken]);
+  }, [currentUser?.id, currentUser?.companyId, currentUser?.onesignalPlayerId, currentUser?.fcmToken, isOnline, state.isSupported, updatePushToken]);
 
   // Ejecutar refresh silencioso cuando el usuario o conectividad cambia
   useEffect(() => {
@@ -86,20 +94,20 @@ export const useWebPush = (currentUser?: { id: string; fcmToken?: string; onesig
         return;
       }
 
-      // Obtener la suscripción y registrarla
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      if (!currentUser.companyId) throw new Error('El usuario no tiene empresa: no se puede guardar la suscripción.');
 
-      if (subscription) {
-        const endpoint = subscription.endpoint;
-        await updatePushToken(currentUser.id, endpoint);
-        setState(prev => ({
-          ...prev,
-          permission: Notification.permission,
-          pushToken: endpoint,
-          isLoading: false,
-        }));
-      }
+      // Obtener o crear la suscripción y guardarla donde la busca send-push
+      const subscription = await getOrCreatePushSubscription();
+      await savePushSubscription(subscription, currentUser.id, currentUser.companyId);
+      savedFor.current = currentUser.id;
+      const endpoint = subscription.endpoint;
+      await updatePushToken(currentUser.id, endpoint);
+      setState(prev => ({
+        ...prev,
+        permission: Notification.permission,
+        pushToken: endpoint,
+        isLoading: false,
+      }));
     } catch (error: any) {
       console.error('[WebPush] Enable notifications error:', error);
       setState(prev => ({
@@ -108,7 +116,7 @@ export const useWebPush = (currentUser?: { id: string; fcmToken?: string; onesig
         actionError: error?.message || 'Error al habilitar notificaciones.',
       }));
     }
-  }, [currentUser?.id, state.isSupported, updatePushToken, state.isLoading]);
+  }, [currentUser?.id, currentUser?.companyId, state.isSupported, updatePushToken, state.isLoading]);
 
   // Monitorear cambios de permiso vía Permissions API (sin polling)
   useEffect(() => {

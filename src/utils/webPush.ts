@@ -1,6 +1,6 @@
 /**
  * Web Push API utilities
- * Maneja registro de suscripciones y permisos de notificaciones
+ * Permisos, suscripción del navegador y registro en push_subscriptions.
  */
 
 export interface PushSubscriptionJSON {
@@ -33,133 +33,56 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 };
 
 /**
- * Registrar suscripción de push en Supabase
+ * Devuelve la suscripción push de este navegador y, si no existe, la crea con la
+ * clave pública VAPID (VITE_VAPID_PUBLIC_KEY, la misma que VAPID_PUBLIC_KEY de
+ * send-push). Exige permiso concedido y un service worker activo.
  */
-export const registerPushSubscription = async (
-  subscription: PushSubscriptionJSON,
+export const getOrCreatePushSubscription = async (): Promise<PushSubscription> => {
+  const registration = await navigator.serviceWorker.ready;
+  const existing = await registration.pushManager.getSubscription();
+  if (existing) return existing;
+
+  const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+  if (!vapidPublicKey) {
+    throw new Error("Falta VITE_VAPID_PUBLIC_KEY: no se puede suscribir este navegador a las notificaciones.");
+  }
+  return registration.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
+  });
+};
+
+/**
+ * Guarda la suscripción en `push_subscriptions` (migración 040), que es donde la
+ * busca la Edge Function send-push. Va por el cliente de Supabase, que envía la
+ * clave pública del proyecto en `apikey` y la sesión del usuario en
+ * `Authorization` (la RLS solo deja insertar suscripciones propias).
+ * Idempotente: si el endpoint ya está guardado, no hace nada.
+ */
+export const savePushSubscription = async (
+  subscription: PushSubscription,
   userId: string,
   companyId: string,
-  supabaseUrl: string,
-  sessionToken: string
-): Promise<boolean> => {
-  try {
-    const response = await fetch(`${supabaseUrl}/rest/v1/push_subscriptions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`,
-        "apikey": sessionToken,
-      },
-      body: JSON.stringify({
+): Promise<void> => {
+  const json = subscription.toJSON() as Partial<PushSubscriptionJSON>;
+  if (!json.endpoint || !json.keys?.auth || !json.keys?.p256dh) {
+    throw new Error("La suscripción del navegador no trae endpoint o claves.");
+  }
+  const { supabase } = await import("../services/supabase");
+  const { error } = await supabase
+    .from("push_subscriptions")
+    .upsert(
+      {
         user_id: userId,
         company_id: companyId,
-        endpoint: subscription.endpoint,
-        auth: subscription.keys.auth,
-        p256dh: subscription.keys.p256dh,
-        user_agent: navigator.userAgent,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Failed to register push subscription:", await response.text());
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error registering push subscription:", error);
-    return false;
-  }
-};
-
-/**
- * Unregister push subscription from Supabase
- */
-export const unregisterPushSubscription = async (
-  endpoint: string,
-  supabaseUrl: string,
-  supabaseKey: string
-): Promise<boolean> => {
-  try {
-    const response = await fetch(
-      `${supabaseUrl}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}`,
-      {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${supabaseKey}`,
-          "apikey": supabaseKey,
-        },
-      }
+        endpoint: json.endpoint,
+        auth: json.keys.auth,
+        p256dh: json.keys.p256dh,
+        user_agent: navigator.userAgent.slice(0, 500),
+      },
+      { onConflict: "endpoint", ignoreDuplicates: true },
     );
-
-    if (!response.ok) {
-      console.error("Failed to unregister push subscription:", await response.text());
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Error unregistering push subscription:", error);
-    return false;
-  }
-};
-
-/**
- * Solicitar y registrar push en un paso
- */
-export const enablePushNotifications = async (
-  userId: string,
-  companyId: string,
-  supabaseUrl: string,
-  sessionToken: string
-): Promise<boolean> => {
-  // 1. Solicitar permiso
-  const hasPermission = await requestNotificationPermission();
-  if (!hasPermission) {
-    console.warn("Notificaciones no permitidas por el usuario");
-    return false;
-  }
-
-  // 2. Verificar si el navegador soporta service workers
-  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-    console.warn("Push notifications no soportadas");
-    return false;
-  }
-
-  try {
-    // 3. Registrar service worker (si no está registrado)
-    const registration = await navigator.serviceWorker.ready;
-
-    // 4. Obtener suscripción existente o crear una nueva
-    let subscription = await registration.pushManager.getSubscription();
-
-    if (!subscription) {
-      // VAPID public key - debe coincidir con la privada en el servidor
-      const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-      if (!vapidPublicKey) {
-        console.error("VITE_VAPID_PUBLIC_KEY no configurada");
-        return false;
-      }
-
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as unknown as BufferSource,
-      });
-    }
-
-    // 5. Registrar en Supabase
-    const subscriptionJSON = subscription.toJSON() as PushSubscriptionJSON;
-    return await registerPushSubscription(
-      subscriptionJSON,
-      userId,
-      companyId,
-      supabaseUrl,
-      sessionToken
-    );
-  } catch (error) {
-    console.error("Error enabling push notifications:", error);
-    return false;
-  }
+  if (error) throw new Error(`No se pudo guardar la suscripción push: ${error.message}`);
 };
 
 /**
