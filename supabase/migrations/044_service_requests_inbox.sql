@@ -12,30 +12,29 @@
 --    se añade el push. Solo se envía el id: la Edge Function relee la solicitud
 --    con la service role y no confía en el contenido del webhook.
 --
--- Idempotente. Redefine default_built_in_tabs() (como la 035) añadiendo la
--- entrada nueva al final; no cambia ninguna otra función existente.
+-- Idempotente. Redefine default_built_in_tabs() solo para añadir la entrada
+-- nueva al final de la lista existente; no cambia ninguna otra función.
 -- =============================================================================
 
 -- ─── 1) Pestaña «Solicitudes» ────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.default_built_in_tabs()
-RETURNS jsonb
-LANGUAGE sql
-IMMUTABLE
-AS $fn$
-SELECT '[
-  {"id":"dashboard","label":"Inicio","icon":"LayoutDashboard","route":"/","type":"built-in","builtInComponent":"dashboard","enabled":true,"order":0,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"tasks","label":"Tareas","icon":"CheckSquare","route":"/tasks","type":"built-in","builtInComponent":"tasks","enabled":true,"order":1,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"orders","label":"Órdenes","icon":"ClipboardList","route":"/orders","type":"built-in","builtInComponent":"orders","enabled":true,"order":2,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"clients","label":"Clientes","icon":"Users","route":"/clients","type":"built-in","builtInComponent":"clients","enabled":true,"order":3,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"equipment","label":"Máquinas","icon":"Settings2","route":"/equipment","type":"built-in","builtInComponent":"equipment","enabled":true,"order":4,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"users","label":"Equipo","icon":"UserCog","route":"/users","type":"built-in","builtInComponent":"users","enabled":true,"order":5,"roles":["admin","developer"]},
-  {"id":"map","label":"Mapa","icon":"Map","route":"/map","type":"built-in","builtInComponent":"map","enabled":true,"order":6,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"inventory","label":"Inventario","icon":"Package","route":"/inventory","type":"built-in","builtInComponent":"inventory","enabled":true,"order":7,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"reports","label":"Informes","icon":"BarChart3","route":"/reports","type":"built-in","builtInComponent":"reports","enabled":true,"order":8,"roles":["admin","developer"]},
-  {"id":"accounting","label":"Contable","icon":"Wallet","route":"/accounting","type":"built-in","builtInComponent":"accounting","enabled":true,"order":9,"roles":["technician","supervisor","admin","aux_admin","developer"]},
-  {"id":"requests","label":"Solicitudes","icon":"Inbox","route":"/requests","type":"built-in","builtInComponent":"requests","enabled":true,"order":10,"roles":["supervisor","admin","aux_admin","developer"],"requiresOnline":true}
-]'::jsonb;
-$fn$;
+-- Se AÑADE la entrada a la lista canónica que ya tenga esta base, en vez de
+-- reescribirla entera: producción no tiene la entrada «accounting» de la 035 del
+-- repo, y copiar la lista del repo habría añadido «Contable» a todas las
+-- empresas como efecto secundario. Si la entrada ya existe, no hace nada.
+DO $do$
+DECLARE
+  canon jsonb := public.default_built_in_tabs();
+  tab   jsonb := '{"id":"requests","label":"Solicitudes","icon":"Inbox","route":"/requests","type":"built-in","builtInComponent":"requests","enabled":true,"order":10,"roles":["supervisor","admin","aux_admin","developer"],"requiresOnline":true}';
+BEGIN
+  IF NOT canon @> '[{"builtInComponent":"requests"}]'::jsonb THEN
+    canon := canon || jsonb_build_array(tab);
+    EXECUTE format(
+      'CREATE OR REPLACE FUNCTION public.default_built_in_tabs() RETURNS jsonb LANGUAGE sql IMMUTABLE AS %L',
+      'SELECT ' || quote_literal(canon::text) || '::jsonb'
+    );
+  END IF;
+END
+$do$;
 
 -- Tocar `tabs` dispara normalize_company_config, que anexa los built-ins faltantes.
 UPDATE public.companies SET tabs = tabs;
