@@ -35,6 +35,12 @@ const PERMISSIONS = {
   REOPEN_WARRANTY_ORDER: 'reopen_warranty_order',
   UPDATE_CLOSED_ORDER: 'update_closed_order',
 
+  // Solicitudes del asistente de ventas y servicio (migraciones 042/043): ver la
+  // bandeja, confirmar y rechazar. Espejo SQL: public.can_manage_service_requests()
+  // (admin, supervisor, aux_admin, developer, super_admin). Además exige
+  // companies.features.aiAssistant.
+  MANAGE_SERVICE_REQUESTS: 'manage_service_requests',
+
   // Permisos de Tareas Personales (NUEVO)
   VIEW_OWN_TASKS: 'view_own_tasks',
   CREATE_TASK: 'create_task',
@@ -103,6 +109,7 @@ const supervisorPermissions = [
   PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
   PERMISSIONS.RESTART_ORDER,
   PERMISSIONS.RESCHEDULE_ORDER,
+  PERMISSIONS.MANAGE_SERVICE_REQUESTS,
   PERMISSIONS.VIEW_TEAM_LOCATIONS_MAP,
   PERMISSIONS.VIEW_OWN_TASKS,
   PERMISSIONS.CREATE_TASK,

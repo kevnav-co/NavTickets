@@ -8,7 +8,7 @@ No contiene valores de secretos: solo sus nombres y dónde se configuran.
 | Componente | Dónde vive | Responsabilidad |
 |---|---|---|
 | Frontend (PWA React) | Vercel | Interfaz, cola offline (IndexedDB) y sincronización |
-| Endpoints `api/edge/*` | Vercel | Proxy Cuenti y push de prueba |
+| Endpoints `api/edge/*` | Vercel | Proxy Cuenti |
 | Base de datos Postgres | Supabase (`hvysnxvuyexacktlwsbm`) | Datos multiempresa protegidos con RLS |
 | Edge Functions | Supabase | Tareas programadas, avisos de asignación y soporte, alta de usuarios y empresas, claves |
 | Storage | Supabase | Fotos de evidencia, firmas, logos |
@@ -105,6 +105,10 @@ El CI (`.github/workflows/ci.yml`) bloquea un PR si falla cualquiera de estos co
   - `supabase/tests/users_rls.sql`: nadie cambia su propio rol ni salta de empresa.
   - `supabase/tests/tasks_rls.sql`: las tareas solo las modifican sus participantes.
   - `supabase/tests/accounting_rls.sql`: el libro de caja menor es inmutable y no permite fabricar saldo.
+  - `supabase/tests/notifications_rls.sql`: nadie fabrica avisos a nombre de otro usuario.
+  - `supabase/tests/service_requests_rls.sql`: el asistente nunca confirma; solo los gestores de la
+    empresa ven, confirman y rechazan solicitudes; la disponibilidad respeta horario, días bloqueados,
+    antelación y órdenes existentes.
 - GitGuardian: detección de secretos en cada commit.
 
 Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `supabase/tests/`.
@@ -121,3 +125,62 @@ Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `
 2. Acotar: revisar Supabase → Logs (API, Auth, Edge Functions) y los registros de Vercel.
 3. Corregir: preparar el arreglo en un PR con prueba de regresión; no aplicar cambios directos en producción.
 4. Documentar: fecha, alcance, causa, corrección y acciones preventivas.
+
+## 10. Asistente de ventas y servicio técnico
+
+Estado: fase 1 (datos y reglas) en la rama `feature/asistente-ventas-servicio`, **sin aplicar en
+producción**. Plan completo: documento «Asistente de ventas y servicio técnico» en Claude Docs.
+
+### 10.1 Qué agrega la fase 1
+
+| Objeto | Migración | Función |
+|---|---|---|
+| `service_requests` | 042 | Solicitud que deja el asistente o un gestor (llamada). Estados `borrador` → `pendiente` → `confirmada` / `rechazada` / `cancelada` |
+| `assistant_conversations`, `assistant_messages` | 042 | Transcripción de cada conversación; retención por empresa (180 días por defecto) |
+| `assistant_settings` | 042 | Horario laboral, servicios y duraciones, días bloqueados, antelación mínima, técnicos que atienden y zona horaria (`America/Bogota` por defecto) |
+| `available_slots(empresa, desde, hasta, duración[, técnico])` | 043 | Huecos libres por técnico; rango máximo 31 días |
+| `confirm_service_request(solicitud, fecha, hora, duración, técnico)` | 043 | Crea la orden en una sola transacción y marca la solicitud como confirmada |
+| `reject_service_request(solicitud, motivo)` | 043 | Rechaza con motivo obligatorio |
+| `purge_assistant_transcripts()` | 042 | Borra transcripciones vencidas (solo service role) |
+
+### 10.2 Controles de seguridad
+
+- **El asistente nunca crea órdenes.** La service role (Edge Function del asistente) no tiene permiso
+  de ejecución sobre `confirm_service_request` ni `reject_service_request`, y además esas funciones
+  exigen un usuario con sesión. El trigger `service_requests_guard` impide marcar una solicitud como
+  confirmada o rechazada fuera de ellas, incluso con la service role.
+- **Gestores** = admin, supervisor, aux_admin, developer y super_admin en vista previa
+  (`can_manage_service_requests()`), espejo del permiso `MANAGE_SERVICE_REQUESTS` de
+  `src/permissions.ts`. Los técnicos no ven solicitudes ni transcripciones.
+- **Sin UPDATE ni DELETE por la API** sobre solicitudes. Desde el navegador solo se crean solicitudes
+  manuales en `pendiente` y a nombre propio. Una solicitud cerrada no admite cambios.
+- **Disponibilidad sin fugas:** `available_slots` devuelve fecha, hora y técnicos libres, nunca datos
+  de las órdenes que ocupan un hueco. La Edge Function del asistente debe reenviar al modelo solo
+  fecha y hora.
+- **Doble reserva:** la confirmación toma un candado por técnico y vuelve a comprobar el hueco; si
+  otra orden lo ocupa, falla con «El técnico ya tiene una orden en ese horario».
+- **Configuración:** solo admin y developer de la empresa la cambian; horario, servicios y zona
+  horaria se validan en la base de datos.
+
+### 10.3 Aplicar en producción (cuando se apruebe)
+
+1. Respaldo (sección 3, paso 1) y comprobar que la última migración aplicada es la 041:
+   `select version from supabase_migrations.schema_migrations order by version desc limit 3;`
+2. Aplicar 042 y luego 043 (`npx supabase db push` con el proyecto enlazado y comprobado, o el SQL
+   Editor en ese orden). Ambas son idempotentes y aditivas: no modifican tablas ni funciones
+   existentes.
+3. Verificar:
+
+```sql
+-- Tablas con RLS activa
+select relname, relrowsecurity from pg_class
+where relname in ('service_requests','assistant_conversations','assistant_messages','assistant_settings');
+
+-- La service role y anon no pueden confirmar (ambas deben ser false)
+select has_function_privilege('service_role', 'public.confirm_service_request(uuid,date,time,integer,uuid)', 'execute'),
+       has_function_privilege('anon', 'public.available_slots(uuid,date,date,integer,uuid)', 'execute');
+```
+
+Reversión: las tablas nuevas están vacías hasta que se active la bandera `aiAssistant` de una
+empresa; para retirar la función basta con dejar la bandera apagada. Borrarlas no afecta a órdenes
+ya creadas (la orden no depende de la solicitud).
