@@ -1,9 +1,8 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute, NavigationRoute, Route } from 'workbox-routing';
+import { registerRoute } from 'workbox-routing';
 import { NetworkFirst, StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
-import { BackgroundSyncPlugin } from 'workbox-background-sync';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -20,63 +19,8 @@ self.addEventListener('activate', (event) => {
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// --- Background Sync for mutations ---
-// Queue failed POST/PUT/DELETE requests when offline
-const bgSyncPlugin = new BackgroundSyncPlugin('supabase-mutations-queue', {
-  maxRetentionTime: 24 * 60, // 24 hours
-  onSync: async (queue) => {
-    console.log('[SW] Background sync triggered');
-  },
-});
-
-// Register background sync for Supabase REST API mutations
-registerRoute(
-  ({ url, request }) => {
-    const isSupabaseRest = url.hostname.includes('supabase.co') &&
-      url.pathname.startsWith('/rest/v1/');
-    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
-  },
-  new NetworkOnly({
-    plugins: [bgSyncPlugin],
-  }),
-  'POST'
-);
-
-registerRoute(
-  ({ url, request }) => {
-    const isSupabaseRest = url.hostname.includes('supabase.co') &&
-      url.pathname.startsWith('/rest/v1/');
-    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
-  },
-  new NetworkOnly({
-    plugins: [bgSyncPlugin],
-  }),
-  'PATCH'
-);
-
-registerRoute(
-  ({ url, request }) => {
-    const isSupabaseRest = url.hostname.includes('supabase.co') &&
-      url.pathname.startsWith('/rest/v1/');
-    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
-  },
-  new NetworkOnly({
-    plugins: [bgSyncPlugin],
-  }),
-  'PUT'
-);
-
-registerRoute(
-  ({ url, request }) => {
-    const isSupabaseRest = url.hostname.includes('supabase.co') &&
-      url.pathname.startsWith('/rest/v1/');
-    return isSupabaseRest && ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method);
-  },
-  new NetworkOnly({
-    plugins: [bgSyncPlugin],
-  }),
-  'DELETE'
-);
+// Las mutaciones offline las encola la app (useSyncManager, upserts idempotentes), no el SW:
+// una segunda cola aquí podía duplicar escrituras.
 
 // --- Runtime Caching Strategies ---
 
@@ -237,9 +181,6 @@ self.addEventListener('push', (event: PushEvent) => {
         url = data.data.url || url;
       }
 
-      if (data.fcmOptions?.link) {
-        url = data.fcmOptions.link;
-      }
     }
   } catch (e) {
     console.error('[SW] Error parsing push data:', e);
@@ -260,7 +201,7 @@ self.addEventListener('push', (event: PushEvent) => {
     data: { url, path },
     tag: `navas-${Date.now()}`,
     renotify: true,
-  };
+  } as NotificationOptions;
 
   event.waitUntil(
     self.registration.showNotification(title, notificationOptions)
@@ -291,9 +232,11 @@ self.addEventListener('notificationclick', (event: NotificationEvent) => {
 });
 
 // --- Periodic background sync registration ---
-self.addEventListener('periodicsync', (event: ExtendableEvent) => {
-  if (event.tag === 'check-updates') {
-    event.waitUntil(
+// periodicsync aún no está en lib.dom: el evento trae `tag` además de ExtendableEvent.
+self.addEventListener('periodicsync' as keyof ServiceWorkerGlobalScopeEventMap, (event: Event) => {
+  const syncEvent = event as ExtendableEvent & { tag?: string };
+  if (syncEvent.tag === 'check-updates') {
+    syncEvent.waitUntil(
       self.registration.update().catch(console.error)
     );
   }

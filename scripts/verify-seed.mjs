@@ -5,12 +5,14 @@
 // Uso: node scripts/verify-seed.mjs
 // Depende de que `seed-demo` ya se haya ejecutado (usuarios + datos poblados).
 
-const URL = "https://hvysnxvuyexacktlwsbm.supabase.co";
+const URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+if (!URL) { console.error("Define SUPABASE_URL (https://<project-ref>.supabase.co) del proyecto a usar."); process.exit(1); }
 const ANON = process.env.VITE_SUPABASE_ANON_KEY
   ?? (await import("node:fs")).readFileSync("C:/Users/Nvas/Free Claude/NavTicket/.env", "utf8")
     .match(/VITE_SUPABASE_ANON_KEY=(\S+)/)?.[1]
   ?? "";
-const PASSWORD = "Demo#2026";
+const PASSWORD = process.env.DEMO_PASSWORD;
+if (!PASSWORD) throw new Error("Define DEMO_PASSWORD (clave de las cuentas demo; nunca se versiona)");
 const DOMAIN = "navas.com";
 
 const USERS = [

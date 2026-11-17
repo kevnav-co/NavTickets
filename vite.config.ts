@@ -34,6 +34,12 @@ export default defineConfig(({ mode }) => {
         strategies: 'injectManifest',
         srcDir: 'src',
         filename: 'sw.ts',
+        // El glob de abajo ya recoge los png de public/, así que dejar que el
+        // plugin añada además los iconos del manifiesto metía icon-app.png dos
+        // veces en la precaché: una sin revisión desde el glob y otra con ella.
+        // Workbox rechaza esas dos claves para la misma URL y aborta la
+        // instalación entera del service worker.
+        includeManifestIcons: false,
         injectManifest: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
           maximumFileSizeToCacheInBytes: 10 * 1024 * 1024, // 10MB
@@ -56,8 +62,8 @@ export default defineConfig(({ mode }) => {
             { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", purpose: "maskable" }
           ],
           shortcuts: [
-            { name: "Nueva Orden", short_name: "Orden", description: "Crear una nueva orden de servicio", url: "/orders/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] },
-            { name: "Nuevo Cliente", short_name: "Cliente", description: "Registrar un nuevo cliente", url: "/clients/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] }
+            { name: "Nueva Orden", short_name: "Orden", description: "Crear una nueva orden de servicio", url: "/#/orders/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] },
+            { name: "Nuevo Cliente", short_name: "Cliente", description: "Registrar un nuevo cliente", url: "/#/clients/new", icons: [{ src: "/assets/icon-app.png", sizes: "192x192" }] }
           ],
           screenshots: [
             { src: "/assets/icon-app.png", sizes: "512x512", type: "image/png", form_factor: "wide", label: "Pantalla de Inicio" },
@@ -82,9 +88,9 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1000,
       terserOptions: {
         compress: {
-          drop_console: true,
           drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+          // console.warn/error se conservan: son el único rastro de fallos en producción.
+          pure_funcs: ['console.log', 'console.info', 'console.debug'],
           passes: 2,
         },
         mangle: {
@@ -96,46 +102,22 @@ export default defineConfig(({ mode }) => {
       },
       rollupOptions: {
         output: {
+          // Solo se nombran aquí las dependencias que la aplicación necesita
+          // nada más arrancar. Nombrar un paquete lo ancla al grafo estático de
+          // la entrada, y Vite le añade entonces un <link rel="modulepreload">:
+          // así jspdf y browser-image-compression se descargaban enteros en la
+          // pantalla de inicio de sesión, antes de que existiera un PDF o una
+          // foto que procesar. Las que se usan bajo demanda (jspdf, xlsx,
+          // recharts, leaflet, la compresión de imágenes) se dejan fuera para
+          // que Rollup las separe a partir de sus importaciones dinámicas y
+          // viajen solo con la pantalla que de verdad las usa.
           manualChunks: {
-            // React core - always loaded
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-
-            // State management & data fetching
-            'vendor-tanstack': ['@tanstack/react-query', '@tanstack/react-query-devtools'],
-
-            // Supabase - heavy, load on demand
             'vendor-supabase': ['@supabase/supabase-js'],
-
-            // UI libraries - split by usage
             'vendor-lucide': ['lucide-react'],
             'vendor-zod': ['zod'],
-            'vendor-date-fns': ['date-fns'],
-
-            // Charts - only for accounting/admin
-            'vendor-recharts': ['recharts'],
-
-            // Maps - only for client map view
-            'vendor-leaflet': ['leaflet', 'react-leaflet'],
-            'vendor-google-maps': ['@vis.gl/react-google-maps'],
-
-            // PDF/Export - heavy, on demand
-            'vendor-jspdf': ['jspdf', 'jspdf-autotable'],
-            'vendor-xlsx': ['xlsx'],
-
-            // Image/Video processing
-            'vendor-image-compression': ['browser-image-compression'],
-
-            // Offline DB
             'vendor-dexie': ['dexie'],
-
-            // Notifications
-            'vendor-onesignal': ['react-onesignal'],
-
-            // Form/Input helpers
             'vendor-forms': ['react-currency-input-field', 'react-textarea-autosize'],
-
-            // OneSignal service worker (auto-loaded)
-            'workbox-runtime': ['workbox-core', 'workbox-routing', 'workbox-strategies', 'workbox-cacheable-response', 'workbox-expiration', 'workbox-precaching'],
           },
           // Optimize chunk naming for better caching
           chunkFileNames: 'assets/js/[name]-[hash].js',
@@ -181,7 +163,6 @@ export default defineConfig(({ mode }) => {
         'react',
         'react-dom',
         'react-router-dom',
-        '@tanstack/react-query',
         '@supabase/supabase-js',
         'lucide-react',
         'zod',

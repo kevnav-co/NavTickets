@@ -13,6 +13,7 @@ export const UserSchema = z.object({
   name: z.string().min(1, 'El nombre es obligatorio'),
   role: UserRoleEnum,
   username: z.string().min(1, 'El nombre de usuario es obligatorio'),
+  email: z.union([z.literal(''), z.string().trim().email('Correo electrónico inválido')]).optional().default(''),
   password: z.string().optional(),
   identification: z.string().optional().default(''),
   address: z.string().optional().default(''),
@@ -20,6 +21,7 @@ export const UserSchema = z.object({
   longitude: z.number().min(-180).max(180).optional(),
   locationUpdatedAt: z.string().optional(),
   fcmToken: z.string().optional(),
+  onesignalPlayerId: z.string().optional(),
   signature: z.string().optional(),
 });
 

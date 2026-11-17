@@ -1,4 +1,4 @@
-import Dexie, { type Table } from 'dexie';
+import type { Dexie as DexieType, Table } from 'dexie';
 
 // ─── Tipos para el caché offline ──────────────────────────────────────────────
 
@@ -24,28 +24,32 @@ export interface PendingWrite {
 
 // ─── Base de datos IndexedDB ──────────────────────────────────────────────────
 
-class NavTicketDB extends Dexie {
-  cache!: Table<CachedDocument, string>;
-  pendingWrites!: Table<PendingWrite, number>;
+type NavTicketDB = DexieType & {
+  cache: Table<CachedDocument, string>;
+  pendingWrites: Table<PendingWrite, number>;
+};
 
-  constructor() {
-    super('NavTicketOffline');
+// Dexie pesa unos noventa kilobytes y antes se cargaba con la aplicación, es
+// decir ya en la pantalla de inicio de sesión, donde todavía no hay nada que
+// cachear. Declarar la base extendiendo su clase obligaba a tenerlo presente al
+// evaluar el módulo; pidiéndolo aquí, la primera vez que alguien toca la caché,
+// viaja solo cuando hace falta. La promesa se guarda para que varias llamadas
+// simultáneas compartan una única instancia.
+let dbPromise: Promise<NavTicketDB> | null = null;
 
-    this.version(1).stores({
-      // Usamos [collection+id] como clave compuesta para queries eficientes
-      cache: 'id, collection, [collection+id], updatedAt, size',
-      pendingWrites: '++id, collection, createdAt, priority',
+function getDb(): Promise<NavTicketDB> {
+  if (!dbPromise) {
+    dbPromise = import('dexie').then(({ default: Dexie }) => {
+      const db = new Dexie('NavTicketOffline') as NavTicketDB;
+      db.version(1).stores({
+        // Usamos [collection+id] como clave compuesta para queries eficientes
+        cache: 'id, collection, [collection+id], updatedAt, size',
+        pendingWrites: '++id, collection, createdAt, priority',
+      });
+      return db;
     });
   }
-}
-
-let dbInstance: NavTicketDB | null = null;
-
-function getDb(): NavTicketDB {
-  if (!dbInstance) {
-    dbInstance = new NavTicketDB();
-  }
-  return dbInstance;
+  return dbPromise;
 }
 
 // ─── Configuración de eviction ────────────────────────────────────────────────
@@ -68,7 +72,7 @@ function estimateSize(obj: any): number {
 }
 
 async function evictIfNeeded(collection: string): Promise<void> {
-  const db = getDb();
+  const db = await getDb();
   const collectionCache = db.cache.where('collection').equals(collection);
 
   // Check total entries
@@ -76,11 +80,8 @@ async function evictIfNeeded(collection: string): Promise<void> {
   if (count > CACHE_CONFIG.maxEntries / 5) { // Max ~2000 per collection
     // Remove oldest 20%
     const toRemove = Math.floor(count * 0.2);
-    const oldest = await collectionCache
-      .orderBy('updatedAt')
-      .limit(toRemove)
-      .primaryKeys();
-    await db.cache.bulkDelete(oldest);
+    const byAge = await collectionCache.sortBy('updatedAt');
+    await db.cache.bulkDelete(byAge.slice(0, toRemove).map(d => d.id));
     console.log(`[OfflineCache] Evicted ${toRemove} old entries from ${collection}`);
     return;
   }
@@ -125,7 +126,7 @@ export const offlineCache = {
    */
   async getAll<T = any>(collection: string): Promise<T[]> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const docs = await db.cache
         .where('collection')
         .equals(collection)
@@ -142,7 +143,7 @@ export const offlineCache = {
    */
   async get<T = any>(collection: string, id: string): Promise<T | null> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const doc = await db.cache
         .where('[collection+id]')
         .equals([collection, id])
@@ -160,7 +161,7 @@ export const offlineCache = {
   async getMany<T = any>(collection: string, ids: string[]): Promise<T[]> {
     if (ids.length === 0) return [];
     try {
-      const db = getDb();
+      const db = await getDb();
       const docs = await Promise.all(
         ids.map(id => db.cache.where('[collection+id]').equals([collection, id]).first())
       );
@@ -178,7 +179,7 @@ export const offlineCache = {
    */
   async set(collection: string, id: string, data: any): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const size = estimateSize(data);
       await db.cache.put({
         id,
@@ -200,7 +201,7 @@ export const offlineCache = {
    */
   async setAll(collection: string, documents: Array<{ id: string } & any>): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const tx = db.transaction('rw', db.cache, async () => {
         // Limpiar caché existente de esta colección
         await db.cache.where('collection').equals(collection).delete();
@@ -228,7 +229,7 @@ export const offlineCache = {
    */
   async remove(collection: string, id: string): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       await db.cache.where('[collection+id]').equals([collection, id]).delete();
     } catch (err) {
       console.warn('[OfflineCache] Error removing from cache:', err);
@@ -241,7 +242,7 @@ export const offlineCache = {
   async removeMany(collection: string, ids: string[]): Promise<void> {
     if (ids.length === 0) return;
     try {
-      const db = getDb();
+      const db = await getDb();
       const keys = ids.map(id => [collection, id] as const);
       await db.cache.where('[collection+id]').anyOf(keys).delete();
     } catch (err) {
@@ -254,7 +255,7 @@ export const offlineCache = {
    */
   async clear(): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       await db.cache.clear();
     } catch (err) {
       console.warn('[OfflineCache] Error clearing cache:', err);
@@ -266,7 +267,7 @@ export const offlineCache = {
    */
   async clearCollection(collection: string): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       await db.cache.where('collection').equals(collection).delete();
     } catch (err) {
       console.warn('[OfflineCache] Error clearing collection:', err);
@@ -278,7 +279,7 @@ export const offlineCache = {
    */
   async hasData(collection: string): Promise<boolean> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const count = await db.cache
         .where('collection')
         .equals(collection)
@@ -298,7 +299,7 @@ export const offlineCache = {
     byCollection: Record<string, { count: number; size: number }>;
   }> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const all = await db.cache.toArray();
       const byCollection: Record<string, { count: number; size: number }> = {};
       let totalSize = 0;
@@ -334,7 +335,7 @@ export const offlineCache = {
     data: any,
     priority = 0
   ): Promise<number> {
-    const db = getDb();
+    const db = await getDb();
     return await db.pendingWrites.add({
       collection,
       action,
@@ -347,55 +348,15 @@ export const offlineCache = {
   },
 
   /**
-   * Encola múltiples operaciones en batch.
-   */
-  async enqueueWrites(
-    writes: Array<{
-      collection: string;
-      action: 'create' | 'update' | 'delete';
-      docId: string;
-      data: any;
-      priority?: number;
-    }>
-  ): Promise<number[]> {
-    if (writes.length === 0) return [];
-    const db = getDb();
-    const entries = writes.map(w => ({
-      ...w,
-      createdAt: Date.now(),
-      retries: 0,
-      priority: w.priority ?? 0,
-    }));
-    return await db.pendingWrites.bulkAdd(entries);
-  },
-
-  /**
    * Obtiene todas las operaciones pendientes de sincronización, ordenadas por prioridad y fecha.
    */
   async getPendingWrites(): Promise<PendingWrite[]> {
     try {
-      const db = getDb();
-      return await db.pendingWrites
-        .orderBy('priority')
-        .reverse() // Mayor prioridad primero
-        .toArray();
-    } catch {
-      return [];
-    }
-  },
-
-  /**
-   * Obtiene operaciones pendientes por colección.
-   */
-  async getPendingWritesByCollection(collection: string): Promise<PendingWrite[]> {
-    try {
-      const db = getDb();
-      return await db.pendingWrites
-        .where('collection')
-        .equals(collection)
-        .orderBy('priority')
-        .reverse()
-        .toArray();
+      const db = await getDb();
+      // Mayor prioridad primero y, a igual prioridad, orden de llegada (++id). orderBy().reverse()
+      // invertía también el orden de llegada: un create+update offline se enviaba como update→create.
+      const writes = await db.pendingWrites.toArray();
+      return writes.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0) || (a.id ?? 0) - (b.id ?? 0));
     } catch {
       return [];
     }
@@ -406,7 +367,7 @@ export const offlineCache = {
    */
   async removePendingWrite(id: number): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       await db.pendingWrites.delete(id);
     } catch (err) {
       console.warn('[OfflineCache] Error removing pending write:', err);
@@ -419,7 +380,7 @@ export const offlineCache = {
   async removePendingWrites(ids: number[]): Promise<void> {
     if (ids.length === 0) return;
     try {
-      const db = getDb();
+      const db = await getDb();
       await db.pendingWrites.bulkDelete(ids);
     } catch (err) {
       console.warn('[OfflineCache] Error batch removing pending writes:', err);
@@ -431,7 +392,7 @@ export const offlineCache = {
    */
   async incrementRetry(id: number, error: string): Promise<void> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const write = await db.pendingWrites.get(id);
       if (write) {
         await db.pendingWrites.update(id, {
@@ -450,7 +411,7 @@ export const offlineCache = {
   async markAsFailed(ids: number[], error: string): Promise<void> {
     if (ids.length === 0) return;
     try {
-      const db = getDb();
+      const db = await getDb();
       await Promise.all(
         ids.map(id => db.pendingWrites.update(id, { lastError: error, retries: 999 }))
       );
@@ -464,7 +425,7 @@ export const offlineCache = {
    */
   async getPendingCountByCollection(): Promise<Record<string, number>> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const writes = await db.pendingWrites.toArray();
       const counts: Record<string, number> = {};
       for (const w of writes) {
@@ -483,7 +444,7 @@ export const offlineCache = {
    */
   async cleanupPendingWrites(maxRetries = 10, maxAge = 7 * 24 * 60 * 60 * 1000): Promise<number> {
     try {
-      const db = getDb();
+      const db = await getDb();
       const cutoff = Date.now() - maxAge;
       const toDelete = await db.pendingWrites
         .filter(w => w.retries >= maxRetries || w.createdAt < cutoff)

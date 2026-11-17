@@ -60,7 +60,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const companyId = currentUser?.companyId;
 
   // Use useCollection hook to fetch company config from Supabase
-  const { data: companyData, loading: loadingCollection, error } = useCollection<CompanyConfig>('companies', {
+  const { data: companyData, loading: loadingCollection } = useCollection<CompanyConfig>('companies', {
     filters: companyId ? [{ column: 'id', operator: 'eq', value: companyId }] : [],
     enabled: !!companyId,
     limit: 1,

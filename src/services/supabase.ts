@@ -46,3 +46,25 @@ export const authAccessToken = async (): Promise<string | null> => {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token ?? null;
 };
+
+/**
+ * ¿Queda una sesión guardada de una entrada anterior? Es síncrono y no toca la
+ * red, al contrario que `getSession`.
+ *
+ * Sirve para distinguir dos situaciones que por lo demás se parecen, porque en
+ * ambas el perfil del usuario está sin resolver: quien nunca ha entrado y está
+ * ante el formulario, y quien ya entró pero ahora no tiene cobertura, de modo
+ * que el perfil no se puede pedir. Al primero no hay que abrirle la caché local;
+ * al segundo es justo lo que le salva la jornada.
+ */
+export const hasPersistedSession = (): boolean => {
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && /^sb-.+-auth-token$/.test(key)) return true;
+    }
+  } catch {
+    // Almacenamiento bloqueado (ventana privada): se asume que no hay sesión.
+  }
+  return false;
+};

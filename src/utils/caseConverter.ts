@@ -81,11 +81,13 @@ export function toSnakeCase(obj: Record<string, any>): Record<string, any> {
   const result: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     const snakeKey = CAMEL_TO_SNAKE[key] || key.replace(/[A-Z]/g, l => `_${l.toLowerCase()}`);
-    if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
-      result[snakeKey] = JSON.stringify(value);
-    } else {
-      result[snakeKey] = value;
-    }
+    // Arrays/objetos viajan TAL CUAL: supabase-js JSON-encoda el payload y PostgREST
+    // los guarda como JSONB real. Stringificarlos aquí (JSON.stringify) producía
+    // JSONB *strings* ("[\"...\"]" en vez de un array), lo que partía los operadores
+    // y filtros jsonb — p.ej. `participants contains <id>` en Tasks resolvía vacío y
+    // la tarea recién creada "desaparecía" de la lista. Las columnas estructurales de
+    // la BD son todas JSONB (evidence, closing_data, warranty_jobs, files, participants).
+    result[snakeKey] = value;
   }
   return result;
 }

@@ -12,6 +12,8 @@ import { MobileNavigation } from './components/layout/MobileNavigation';
 import { InstallPWA } from './components/ui/InstallPWA';
 import UpdateNotification from './components/ui/UpdateNotification';
 import Login from './components/auth/Login';
+import ForgotPassword from './components/auth/ForgotPassword';
+import ResetPassword from './components/auth/ResetPassword';
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { useBackgroundSync } from './hooks/useBackgroundSync';
@@ -23,7 +25,7 @@ import { useModal } from './context/ModalContext';
 import { CompanyProvider, useCompany } from './context/CompanyContext';
 import { applyCompanyTheme } from './utils/theme';
 import CustomPageRenderer from './components/custom/CustomPageRenderer';
-import PERMISSIONS, { hasPermission } from './permissions';
+import PERMISSIONS, { hasPermission, isTabVisible } from './permissions';
 
 // --- LAZY LOADED COMPONENTS ---
 const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
@@ -49,6 +51,7 @@ const ClientMap = React.lazy(() => import('./components/map/ClientMap'));
 const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
 const CompanyStats = React.lazy(() => import('./components/admin/CompanyStats'));
 const SupportAdmin = React.lazy(() => import('./components/admin/SupportAdmin'));
+const ServiceRequestInbox = React.lazy(() => import('./components/requests/ServiceRequestInbox'));
 
 // --- CONSTANTS AND INTERFACES ---
 const GPS_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutes
@@ -197,15 +200,17 @@ function AppContent({
   }
 
   return (
-    <div className="h-[100dvh] bg-gray-50 flex flex-col md:flex-row">
+    <div className="h-[100dvh] bg-surface flex flex-col md:flex-row">
 
-      {!isOnline && <div className="fixed top-0 left-0 right-0 bg-gray-900 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><Save size={14} className="text-orange-400" /><span>Modo En Cache (Offline)</span></div>}
-      {isOnline && isSyncing && <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><RefreshCw size={14} className="animate-spin" /><span>Sincronizando con la Nube...</span></div>}
+      {!isOnline && <div className="fixed top-0 left-0 right-0 bg-ink text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-[11px] font-semibold tracking-wide"><Save size={13} className="text-orange-400" /><span>Modo en caché (sin conexión)</span></div>}
+      {isOnline && isSyncing && <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-[11px] font-semibold tracking-wide"><RefreshCw size={13} className="animate-spin" /><span>Sincronizando con la nube…</span></div>}
       <InstallPWA deferredPrompt={deferredPrompt} forceShow={installBannerOpen} onDismiss={() => setInstallBannerOpen(false)} />
       <UpdateNotification />
 
       {!currentUser ? (
         <Routes>
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="*" element={<Login />} />
         </Routes>
       ) : (
@@ -238,7 +243,7 @@ function AppContent({
                       : <RouteWithLayout title="Inicio"><Dashboard /></RouteWithLayout>
                   } />
                   <Route path="/tasks" element={<RouteWithLayout title="Tareas"><Tasks /></RouteWithLayout>} />
-                  {currentUser && currentUser.role === 'developer' && (
+                  {currentUser && isTabVisible('accounting', currentUser.role, company?.features).visible && (
                       <Route path="/accounting" element={<RouteWithLayout title="Contable"><Accounting /></RouteWithLayout>} />
                   )}
                   {/* /admin: super_admin → panel multi-tenant; admin/developer →
@@ -274,6 +279,14 @@ function AppContent({
                           <Route path="/inventory/new" element={<RouteWithLayout title="Nuevo Repuesto"><InventoryForm /></RouteWithLayout>} />
                           <Route path="/inventory/:id" element={<RouteWithLayout title="Detalle de Repuesto"><InventoryDetail /></RouteWithLayout>} />
                           <Route path="/inventory/:id/edit" element={<RouteWithLayout title="Editar Repuesto"><InventoryForm /></RouteWithLayout>} />
+                      </>
+                  )}
+
+                  {/* Solicitudes del asistente: permiso MANAGE_SERVICE_REQUESTS + features.aiAssistant */}
+                  {currentUser && isTabVisible('requests', currentUser.role, company?.features).visible && (
+                      <>
+                          <Route path="/requests" element={<RouteWithLayout title="Solicitudes"><ServiceRequestInbox /></RouteWithLayout>} />
+                          <Route path="/requests/:id" element={<RouteWithLayout title="Solicitud"><ServiceRequestInbox /></RouteWithLayout>} />
                       </>
                   )}
 

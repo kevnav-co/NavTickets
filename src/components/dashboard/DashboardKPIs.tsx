@@ -4,14 +4,43 @@ import { OrderStatus } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
+import { Clock, Loader, CircleCheck, ShieldCheck } from 'lucide-react';
 import PERMISSIONS, { hasPermission } from '../../permissions'; // <-- Importar permisos
 
 const KPIPlaceholder: React.FC<{ title: string }> = ({ title }) => (
-  <div className="bg-gray-100 p-2 md:p-5 rounded-xl md:rounded-2xl animate-pulse">
-    <p className="text-[7px] md:text-xs font-bold text-gray-500 mb-0.5 uppercase">{title}</p>
-    <p className="text-xl md:text-3xl font-black text-gray-400">-</p>
+  <div className="bg-sunken p-3 md:p-5 rounded-xl border border-line-soft">
+    <div className="skeleton h-3 w-10 mb-2" />
+    <p className="text-[9px] md:text-[11px] font-semibold text-ink-faint uppercase tracking-wide">{title}</p>
   </div>
 );
+
+// Tono por estado: fondo muy claro, texto e icono saturados. `color` alimenta
+// el `currentColor` del halo decorativo de `.kpi-tile`.
+const KPI_STYLES = {
+  pending: { bg: 'bg-orange-50/70 border-orange-100 hover:border-orange-200', text: 'text-orange-600', icon: Clock },
+  open: { bg: 'bg-blue-50/70 border-blue-100 hover:border-blue-200', text: 'text-blue-600', icon: Loader },
+  closed: { bg: 'bg-emerald-50/70 border-emerald-100 hover:border-emerald-200', text: 'text-emerald-600', icon: CircleCheck },
+  warranty: { bg: 'bg-indigo-50/70 border-indigo-100 hover:border-indigo-200', text: 'text-indigo-600', icon: ShieldCheck },
+} as const;
+
+const KPITile: React.FC<{
+  label: string;
+  value: number;
+  kind: keyof typeof KPI_STYLES;
+  onClick: () => void;
+}> = ({ label, value, kind, onClick }) => {
+  const style = KPI_STYLES[kind];
+  const Icon = style.icon;
+  return (
+    <button onClick={onClick} className={`kpi-tile border text-left ${style.bg} ${style.text}`}>
+      <div className="relative flex items-start justify-between gap-1">
+        <p className={`text-[9px] md:text-[11px] font-semibold uppercase tracking-wide ${style.text}`}>{label}</p>
+        <Icon size={14} className={`shrink-0 opacity-50 ${style.text}`} />
+      </div>
+      <p className="relative text-2xl md:text-4xl font-bold text-ink mt-1 tabular-nums tracking-tight">{value}</p>
+    </button>
+  );
+};
 
 const DashboardKPIs: React.FC = () => {
   const navigate = useNavigate();
@@ -45,7 +74,7 @@ const DashboardKPIs: React.FC = () => {
 
   if (!kpis) {
     return (
-      <div className="grid grid-cols-4 gap-1.5 md:gap-4 pt-2">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
         <KPIPlaceholder title="Pendientes" />
         <KPIPlaceholder title="En Progreso" />
         <KPIPlaceholder title="Cerrados" />
@@ -55,11 +84,11 @@ const DashboardKPIs: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-4 gap-1.5 md:gap-4 pt-2">
-      <button onClick={() => navigate(`/orders?status=${OrderStatus.PENDING}`)} className="bg-orange-50 p-2 md:p-5 rounded-xl md:rounded-2xl text-left border border-orange-100 hover:bg-orange-100 transition-colors"><p className="text-[7px] md:text-xs font-bold text-orange-600 mb-0.5 uppercase">Pendientes</p><p className="text-xl md:text-3xl font-black text-gray-900">{kpis.pending}</p></button>
-      <button onClick={() => navigate(`/orders?status=${OrderStatus.OPEN}`)} className="bg-blue-50 p-2 md:p-5 rounded-xl md:rounded-2xl text-left border border-blue-100 hover:bg-blue-100 transition-colors"><p className="text-[7px] md:text-xs font-bold text-blue-700 mb-0.5 uppercase">En Progreso</p><p className="text-xl md:text-3xl font-black text-gray-900">{kpis.open}</p></button>
-      <button onClick={() => navigate(`/orders?status=${OrderStatus.CLOSED}`)} className="bg-green-50 p-2 md:p-5 rounded-xl md:rounded-2xl text-left border border-green-100 hover:bg-green-100 transition-colors"><p className="text-[7px] md:text-xs font-bold text-green-600 mb-0.5 uppercase">Cerrados</p><p className="text-xl md:text-3xl font-black text-gray-900">{kpis.closed}</p></button>
-      <button onClick={() => navigate(`/orders?status=Warranty`)} className="bg-indigo-50 p-2 md:p-5 rounded-xl md:rounded-2xl text-left border border-indigo-100 hover:bg-indigo-100 transition-colors"><p className="text-[7px] md:text-xs font-bold text-indigo-600 mb-0.5 uppercase">Garantía</p><p className="text-xl md:text-3xl font-black text-gray-900">{kpis.warranty}</p></button>
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
+      <KPITile label="Pendientes" value={kpis.pending} kind="pending" onClick={() => navigate(`/orders?status=${OrderStatus.PENDING}`)} />
+      <KPITile label="En Progreso" value={kpis.open} kind="open" onClick={() => navigate(`/orders?status=${OrderStatus.OPEN}`)} />
+      <KPITile label="Cerrados" value={kpis.closed} kind="closed" onClick={() => navigate(`/orders?status=${OrderStatus.CLOSED}`)} />
+      <KPITile label="Garantía" value={kpis.warranty} kind="warranty" onClick={() => navigate('/orders?status=Warranty')} />
     </div>
   );
 };

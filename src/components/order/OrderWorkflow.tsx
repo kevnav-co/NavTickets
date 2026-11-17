@@ -16,9 +16,8 @@ import { Loader2, Package, Plus, X } from 'lucide-react';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import ImageModal from '../ui/ImageModal';
 import { useCollection } from '../../hooks/useCollection';
-import { QueryFilter } from '../../hooks/useSupabaseQuery';
 import PERMISSIONS, { hasPermission } from '../../permissions';
-import { supabase } from '../../services/supabase';
+import { deleteOrderEvidenceFiles } from '../../services/data';
 
 const OrderWorkflow: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,7 +39,7 @@ const OrderWorkflow: React.FC = () => {
   const [showUserSearch, setShowUserSearch] = useState(false);
 
   // Repuestos usados en esta orden (tabla M:N order_inventory_lines).
-  const { data: orderLines } = useCollection<OrderInventoryLine>('order_inventory_lines', {
+  const { data: orderLines } = useCollection<OrderInventoryLine & { id: string }>('order_inventory_lines', {
     filters: id ? [{ column: 'order_id', operator: 'eq', value: id }] : [],
   });
 
@@ -80,8 +79,9 @@ const OrderWorkflow: React.FC = () => {
     sessionStorage.removeItem('accountingOrdersCache'); // Invalidate cache
   }, [order, updateValidated]);
 
+  const placeholderDoc = useMemo(() => ({ id: '' }), []);
   const { selectedImage, handleSelectImage, handleCloseModal, isUploading, error: fileError, getFileUrl, handleUpload, handleRemove } = useFileHandler({
-    doc: order!,
+    doc: (order ?? placeholderDoc) as ServiceOrder,
     updateDoc: handleUpdateOrder,
     storagePath: 'orders',
   });
@@ -104,37 +104,8 @@ const OrderWorkflow: React.FC = () => {
     if (!order || !window.confirm('¿Estás seguro de que quieres eliminar esta orden? Esta acción es irreversible y borrará todos los datos y fotos asociadas.')) return;
     setIsDeleting(true);
     try {
-      // Delete order evidence images from Supabase Storage
-      const evidenceItems = [
-        ...(order.initialEvidence || []),
-        ...(order.closingData?.evidenceImages || []),
-      ];
-      const storageUrls = evidenceItems.filter(
-        (item): item is string => typeof item === 'string' && item.includes('supabase.co/storage/v1/object/public')
-      );
-
-      if (storageUrls.length > 0) {
-        const pathsToDelete = storageUrls.map(url => {
-          try {
-            const [, rest] = url.split('/public/');
-            const parts = rest[0].split('/');
-            parts.shift();
-            return parts.join('/');
-          } catch {
-            return null;
-          }
-        }).filter(Boolean) as string[];
-
-        if (pathsToDelete.length > 0) {
-          const { error: storageError } = await supabase.storage.from('order-photos').remove(pathsToDelete);
-          if (storageError) {
-            console.warn('Failed to delete some evidence files from Supabase Storage:', storageError.message);
-          }
-        }
-      }
-
-      // Delete the order record from Supabase
       await deleteItem('orders', order.id);
+      await deleteOrderEvidenceFiles(order);
       sessionStorage.removeItem('accountingOrdersCache');
       navigate('/orders');
     } catch (error) {
@@ -147,10 +118,10 @@ const OrderWorkflow: React.FC = () => {
 
   const handleClientUpdate = useCallback(async (selectedClient: Client) => {
     if (order) {
+      // Solo actualizar cliente; no incluir equipmentIds para no sobreescribirlos.
       await updateValidated('orders', order.id, {
         clientId: selectedClient.id,
         clientName: selectedClient.name,
-        equipmentIds: [],
       }, ServiceOrderSchema);
       sessionStorage.removeItem('accountingOrdersCache');
     }
@@ -187,7 +158,7 @@ const OrderWorkflow: React.FC = () => {
   }, [order, navigate, location.pathname]);
 
   // Guarda las líneas de repuestos de la orden (reemplazo del set completo).
-  const handleInventoryLinesSave = useCallback(async (lines: OrderInventoryLine[]) => {
+  const handleInventoryLinesSave = useCallback(async (lines: Omit<OrderInventoryLine, 'orderId'>[]) => {
     if (!order) return;
     try {
       const current = orderLines || [];
@@ -255,16 +226,16 @@ const OrderWorkflow: React.FC = () => {
   }, [order, client, technician, selectedEquips]);
 
   if (orderLoading || dataLoading) {
-    return <div className="w-full h-screen flex flex-col items-center justify-center gap-4 text-center font-bold text-gray-400"><Loader2 className="animate-spin text-gray-300" size={40} /><p>Cargando datos de la orden...</p></div>;
+    return <div className="w-full h-screen flex flex-col items-center justify-center gap-4 text-center font-bold text-ink-faint"><Loader2 className="animate-spin text-ink-faint" size={40} /><p>Cargando datos de la orden...</p></div>;
   }
 
   const anyError = orderError || dataError;
   if (anyError) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError.message}</div>;
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar los datos: {anyError instanceof Error ? anyError.message : anyError}</div>;
   }
 
   if (!order) {
-    return <div className="p-10 text-center font-bold text-gray-400">Orden no encontrada...</div>;
+    return <div className="p-10 text-center font-bold text-ink-faint">Orden no encontrada...</div>;
   }
 
   if (!canViewOrder) {
@@ -287,9 +258,9 @@ const OrderWorkflow: React.FC = () => {
       )}
       {notification.show && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center" onClick={() => setNotification({ ...notification, show: false })}>
-          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center border-t-8 border-red-500 animate-in zoom-in-95">
-            <h3 className="text-lg font-black text-gray-800 mb-2">{notification.title}</h3>
-            <p className="text-sm text-gray-500 whitespace-pre-line">{notification.message}</p>
+          <div className="bg-raised rounded-3xl shadow-2xl p-8 max-w-sm w-full mx-4 text-center border-t-8 border-red-500 animate-in zoom-in-95">
+            <h3 className="text-lg font-black text-ink mb-2">{notification.title}</h3>
+            <p className="text-sm text-ink-soft whitespace-pre-line">{notification.message}</p>
           </div>
         </div>
       )}
@@ -326,11 +297,11 @@ const OrderWorkflow: React.FC = () => {
 
       {/* ─── Repuestos usados en la orden (Fase 6) ─────────────────────── */}
       <div className="max-w-2xl mx-auto px-4 pb-6">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="bg-raised rounded-2xl shadow-sm border border-line-soft overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line-soft">
             <div className="flex items-center gap-2">
               <Package size={16} className="text-primary" />
-              <h3 className="text-xs font-black text-gray-800 uppercase tracking-wider">Repuestos Usados</h3>
+              <h3 className="text-xs font-black text-ink uppercase tracking-wider">Repuestos Usados</h3>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                 {(() => { let n = 0; for (const l of orderLines || []) n += l.quantityOut || 0; return n; })()}
               </span>
@@ -350,17 +321,17 @@ const OrderWorkflow: React.FC = () => {
               orderLines!.map(line => {
                 const item = inventoryItems?.find(i => i.id === line.inventoryItemId);
                 return (
-                  <div key={line.id} className="flex items-center gap-3 px-2 py-2.5 border-b border-gray-100 last:border-0">
+                  <div key={line.id} className="flex items-center gap-3 px-2 py-2.5 border-b border-line-soft last:border-0">
                     <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                       <Package size={14} className="text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-gray-800 truncate">{item?.name || 'Repuesto'}</p>
-                      <p className="text-[10px] font-bold text-gray-400">{(item?.sku || '') || ''}</p>
+                      <p className="font-bold text-sm text-ink truncate">{item?.name || 'Repuesto'}</p>
+                      <p className="text-[10px] font-bold text-ink-faint">{(item?.sku || '') || ''}</p>
                     </div>
-                    <span className="text-sm font-black text-gray-800 shrink-0">
+                    <span className="text-sm font-black text-ink shrink-0">
                       x{line.quantityOut || 1}
-                      <span className="text-[10px] font-bold text-gray-400 ml-1">{item?.unit || ''}</span>
+                      <span className="text-[10px] font-bold text-ink-faint ml-1">{item?.unit || ''}</span>
                     </span>
                     {canEdit && line.id && (
                       <button
@@ -377,7 +348,7 @@ const OrderWorkflow: React.FC = () => {
             ) : (
               <button
                 onClick={() => canEdit && setShowInventorySelector(true)}
-                className={`w-full py-3 text-center text-xs font-bold text-gray-400 ${canEdit ? 'hover:bg-gray-50' : ''} rounded-xl transition-colors`}
+                className={`w-full py-3 text-center text-xs font-bold text-ink-faint ${canEdit ? 'hover:bg-sunken' : ''} rounded-xl transition-colors`}
               >
                 {canEdit ? 'Agregar repuestos usados en esta orden...' : 'Sin repuestos registrados'}
               </button>

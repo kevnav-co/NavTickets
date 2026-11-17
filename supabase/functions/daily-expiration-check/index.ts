@@ -11,13 +11,58 @@
 // key from secrets for full schema privileges (same pattern as `task-scheduler`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-const supabase = serviceRole
-  ? createClient(SUPABASE_URL, serviceRole)
-  : createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
+// Sin service role este cron no puede crear notificaciones para los admins de
+// cada tenant. Fallar pronto en vez de degradar a anon (no-op silencioso).
+if (!serviceRole) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
+}
+const supabase = createClient(SUPABASE_URL, serviceRole);
+
+// Envía un push Web Push API a un conjunto de user ids (vencimientos/mantenimiento).
+async function sendPushToUserIds(
+  userIds: (string | null)[],
+  title: string,
+  body: string,
+  path: string,
+): Promise<number> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return 0;
+
+  let sent = 0;
+  for (const userId of unique) {
+    try {
+      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRole}`,
+          "Content-Type": "application/json",
+          "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") || "",
+        },
+        body: JSON.stringify({
+          userId,
+          title,
+          body,
+          data: { path },
+        }),
+      });
+
+      if (pushResp.ok) {
+        sent++;
+      } else {
+        console.error(`[Expiration Check] Failed to send push to ${userId}:`, await pushResp.text());
+      }
+    } catch (error) {
+      console.error(`[Expiration Check] Error sending push to ${userId}:`, error);
+    }
+  }
+
+  return sent;
+}
 
 interface CompanyBranding {
   name: string;
@@ -31,14 +76,15 @@ async function loadAllCompanyBrandings(): Promise<Record<string, CompanyBranding
   try {
     const { data: companies, error } = await supabase
       .from("companies")
-      .select("id, name, theme, whatsapp_number");
+      // whatsapp_number no es una columna de companies: el número sale de theme si existe.
+      .select("id, name, theme");
     if (error) throw error;
     for (const company of companies || []) {
       brandings[company.id] = {
         name: company.name || "Empresa",
         primaryColor: company.theme?.primaryColor || "#7b1113",
         logoUrl: company.theme?.logoUrl || "/assets/logo-inicio.png",
-        whatsappNumber: company.whatsapp_number || "573117142337",
+        whatsappNumber: company.theme?.whatsappNumber || "573117142337",
       };
     }
   } catch (e) {
@@ -100,17 +146,20 @@ function getWarrantyEmailHtml(
     </body></html>`;
 }
 
-async function sendPushNotification(userId: string, title: string, body: string, path: string) {
+async function sendPushNotification(userId: string, companyId: string, title: string, body: string, path: string) {
   try {
-    await supabase.from("notifications").insert({
+    const { error } = await supabase.from("notifications").insert({
+      company_id: companyId,
       user_id: userId,
       title,
       body,
+      text: title,
       path,
-      type: "expiration",
+      type: "alert",
       read: false,
       created_at: new Date().toISOString(),
     });
+    if (error) throw error;
   } catch (error) {
     console.error("[Expiration Check] Error sending push:", error);
   }
@@ -128,7 +177,9 @@ async function sendWhatsApp(_to: string, message: string): Promise<boolean> {
   return false;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req: Request) => {
+  if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
+
   const now = new Date();
   const nextWeek = new Date(now);
   nextWeek.setDate(now.getDate() + 7);
@@ -177,8 +228,14 @@ Deno.serve(async () => {
           .eq("company_id", companyId);
         if (adminError) throw adminError;
         for (const admin of admins || []) {
-          await sendPushNotification(admin.id, title, body, path);
+          await sendPushNotification(admin.id, companyId, title, body, path);
         }
+        await sendPushToUserIds(
+          (admins || []).map((a) => a.id),
+          title,
+          body,
+          path,
+        );
 
         if (eq.client_id) {
           const { data: client } = await supabase
@@ -209,7 +266,8 @@ Deno.serve(async () => {
     // --- 2. CHECK WARRANTY EXPIRATIONS ---
     const { data: orders, error: orderError } = await supabase
       .from("orders")
-      .select("id, order_number, warranty_expiration, client_id, company_id, equipment_name, warranty_notification_sent")
+      // orders no tiene equipment_name: se usa el nombre del servicio (name).
+      .select("id, order_number, name, warranty_expiration, client_id, company_id, warranty_notification_sent")
       .eq("status", "Cerrado")
       .eq("warranty_notification_sent", false);
 
@@ -237,8 +295,14 @@ Deno.serve(async () => {
           .eq("company_id", companyId);
         if (adminError) throw adminError;
         for (const admin of admins || []) {
-          await sendPushNotification(admin.id, title, body, path);
+          await sendPushNotification(admin.id, companyId, title, body, path);
         }
+        await sendPushToUserIds(
+          (admins || []).map((a) => a.id),
+          title,
+          body,
+          path,
+        );
 
         if (order.client_id) {
           const { data: client } = await supabase
@@ -250,7 +314,7 @@ Deno.serve(async () => {
             const expDateStr = expirationDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
             const clientBody = `Hola ${client.name}, te informamos que la garantía de tu servicio #${order.order_number} vence el ${expDateStr}.`;
             const clientHtmlBody = getWarrantyEmailHtml(
-              { clientName: client.name, orderNumber: order.order_number, machineName: order.equipment_name || "Equipo de Cocina", expirationDate: expDateStr },
+              { clientName: client.name, orderNumber: order.order_number, machineName: order.name || "el equipo atendido", expirationDate: expDateStr },
               branding,
             );
 

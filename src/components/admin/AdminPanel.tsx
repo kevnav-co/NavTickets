@@ -6,6 +6,7 @@
 //    name/slug/auth vía trigger migración 012).
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Shield, ArrowLeft, Building2 } from 'lucide-react';
 import CompanyList from './CompanyList';
 import CompanyForm from './CompanyForm';
@@ -16,7 +17,8 @@ import { useAuth } from '../../context/AuthContext';
 type AdminView = 'list' | 'form' | 'users';
 
 const AdminPanel: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, startImpersonation } = useAuth();
+  const navigate = useNavigate();
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const ownCompanyId = currentUser?.companyId ?? null;
 
@@ -40,6 +42,18 @@ const AdminPanel: React.FC = () => {
     setView('users');
   };
 
+  // Vista previa: el super_admin entra a la empresa como un admin de esa empresa.
+  // `currentUser` pasa a ser el admin efectivo → DataContext/routing/nav re-escalan
+  // al tenant. Se navega a '/' (con rol 'admin' ya no redirige a /admin).
+  const handlePreview = async (companyId: string) => {
+    const ok = await startImpersonation(companyId);
+    if (ok) {
+      navigate('/', { replace: true });
+    } else {
+      setToast('No se pudo iniciar la vista previa. Verifica tu sesión.');
+    }
+  };
+
   const handleFormSaved = (message: string) => {
     setView('list');
     setToast(message);
@@ -56,7 +70,7 @@ const AdminPanel: React.FC = () => {
   };
 
   if (!currentUser) {
-    return <div className="p-6 text-sm text-gray-400">Cargando sesión...</div>;
+    return <div className="p-6 text-sm text-ink-faint">Cargando sesión...</div>;
   }
 
   return (
@@ -66,17 +80,17 @@ const AdminPanel: React.FC = () => {
         {isSuperAdmin && view !== 'list' && (
           <button
             onClick={handleBackToList}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-sunken rounded-xl transition-colors"
           >
-            <ArrowLeft size={20} className="text-gray-500" />
+            <ArrowLeft size={20} className="text-ink-soft" />
           </button>
         )}
         {isSuperAdmin ? <Shield size={28} className="text-primary" /> : <Building2 size={28} className="text-primary" />}
         <div>
-          <h1 className="text-xl font-black text-gray-900">
+          <h1 className="text-xl font-black text-ink">
             {isSuperAdmin ? 'Panel de Administración' : 'Configuración de mi empresa'}
           </h1>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-soft">
             {isSuperAdmin ? 'Gestión multi-tenant del sistema' : 'Personaliza el branding de tu empresa'}
           </p>
         </div>
@@ -89,6 +103,7 @@ const AdminPanel: React.FC = () => {
               onEdit={handleEdit}
               onCreate={handleCreate}
               onManageUsers={handleManageUsers}
+              onPreview={handlePreview}
             />
           )}
 
@@ -112,8 +127,13 @@ const AdminPanel: React.FC = () => {
         <CompanyForm
           key={ownCompanyId ?? 'self'}
           companyId={ownCompanyId}
-          onSaved={msg => setToast(msg)}
-          onCancel={() => {}}
+          onSaved={msg => {
+            setToast(msg);
+            // Tras guardar la configuración de la propia empresa, volver al
+            // inicio de la app (el toast alcanza a mostrarse ~un segundo).
+            setTimeout(() => navigate('/'), 900);
+          }}
+          onCancel={() => navigate('/')}
         />
       )}
 

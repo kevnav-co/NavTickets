@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import type { QueryFilter } from './useSupabaseQuery';
+import { snakeToCamel } from '../utils/caseConverter';
 
 /**
  * Options for the pagination hook.
@@ -10,8 +11,8 @@ interface UsePaginatedCollectionOptions {
   filters?: QueryFilter[];
   /** Number of items per page. */
   pageSize?: number;
-  /** Order by configuration. */
-  orderBy?: { column: string; ascending?: boolean };
+  /** Order by configuration (lista de columnas, en orden de precedencia). */
+  orderBy?: { column: string; ascending?: boolean }[];
 }
 
 // Simple in‑memory cache to avoid refetching the same query within a short period.
@@ -74,17 +75,20 @@ export const usePaginatedCollection = <T extends { id: string }>(
           else if (op === 'is') query = query.is(f.column, f.value);
           else console.warn(`Unsupported filter operator '${op}'`);
         }
-        // Apply ordering if provided.
-        if (orderBy) {
-          query = query.order(orderBy.column, { ascending: orderBy.ascending ?? false });
+        // Apply ordering if provided (puede ser una lista; no asumir un solo objeto).
+        if (orderBy && orderBy.length) {
+          for (const ob of orderBy) {
+            query = query.order(ob.column, { ascending: ob.ascending ?? false });
+          }
         }
         // Apply range for pagination.
         query = query.range(from, to);
 
-        const { data: newDocs, error: err } = await query;
+        const { data: rows, error: err } = await query;
         if (err) throw new Error(err.message);
+        const newDocs = (rows || []).map((row: Record<string, any>) => snakeToCamel(row));
 
-        const finalHasMore = (newDocs || []).length === pageSize;
+        const finalHasMore = newDocs.length === pageSize;
         setHasMore(finalHasMore);
         if (isInitialLoad) {
           setPage(0);

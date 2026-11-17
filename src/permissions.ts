@@ -35,6 +35,12 @@ const PERMISSIONS = {
   REOPEN_WARRANTY_ORDER: 'reopen_warranty_order',
   UPDATE_CLOSED_ORDER: 'update_closed_order',
 
+  // Solicitudes del asistente de ventas y servicio (migraciones 042/043): ver la
+  // bandeja, confirmar y rechazar. Espejo SQL: public.can_manage_service_requests()
+  // (admin, supervisor, aux_admin, developer, super_admin). Además exige
+  // companies.features.aiAssistant.
+  MANAGE_SERVICE_REQUESTS: 'manage_service_requests',
+
   // Permisos de Tareas Personales (NUEVO)
   VIEW_OWN_TASKS: 'view_own_tasks',
   CREATE_TASK: 'create_task',
@@ -58,6 +64,9 @@ const PERMISSIONS = {
   UPDATE_INVENTORY: 'update_inventory',
   DELETE_INVENTORY: 'delete_inventory',
   VIEW_INVENTORY: 'view_inventory',
+
+  // Contabilidad / caja menor (migración 017). Además exige companies.features.accounting.
+  VIEW_ACCOUNTING: 'view_accounting',
 
   // Permisos de Usuarios
   CREATE_USER: 'create_user',
@@ -95,10 +104,12 @@ const supervisorPermissions = [
   PERMISSIONS.UPDATE_EQUIPMENT,
   PERMISSIONS.VIEW_EQUIPMENT,
   PERMISSIONS.VIEW_INVENTORY,
+  PERMISSIONS.VIEW_ACCOUNTING,
   PERMISSIONS.UPLOAD_INITIAL_EVIDENCE,
   PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
   PERMISSIONS.RESTART_ORDER,
   PERMISSIONS.RESCHEDULE_ORDER,
+  PERMISSIONS.MANAGE_SERVICE_REQUESTS,
   PERMISSIONS.VIEW_TEAM_LOCATIONS_MAP,
   PERMISSIONS.VIEW_OWN_TASKS,
   PERMISSIONS.CREATE_TASK,
@@ -119,6 +130,7 @@ const ROLES_PERMISSIONS: Record<User['role'], string[]> = {
     PERMISSIONS.CREATE_EQUIPMENT,
     PERMISSIONS.UPDATE_EQUIPMENT,
     PERMISSIONS.VIEW_INVENTORY,
+    PERMISSIONS.VIEW_ACCOUNTING,
     PERMISSIONS.UPLOAD_INITIAL_EVIDENCE, // Restaurado
     PERMISSIONS.UPLOAD_FINAL_EVIDENCE,
     PERMISSIONS.VIEW_OWN_TASKS,
@@ -173,15 +185,17 @@ export const TAB_PERMISSION_MAP: Record<string, string> = {
   equipment: PERMISSIONS.VIEW_EQUIPMENT,
   users: PERMISSIONS.VIEW_USERS,
   map: PERMISSIONS.VIEW_MAP,
-  accounting: PERMISSIONS.VIEW_REPORTS,
+  accounting: PERMISSIONS.VIEW_ACCOUNTING,
   inventory: PERMISSIONS.VIEW_INVENTORY,
   reports: PERMISSIONS.VIEW_REPORTS,
+  requests: PERMISSIONS.MANAGE_SERVICE_REQUESTS,
 };
 
 export const TAB_FEATURE_MAP: Record<string, keyof CompanyFeatures> = {
   equipment: 'equipmentManagement',
   map: 'maps',
   accounting: 'accounting',
+  requests: 'aiAssistant',
 };
 
 // Dado un tab built-in, ¿es visible para este rol con estas features?
@@ -191,8 +205,21 @@ export const isTabVisible = (
   features: Partial<CompanyFeatures> | undefined
 ): { visible: boolean } => {
   if (!builtInComponent) return { visible: true };
-  const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
-  if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+
+  // Casos especiales con "O" lógico entre permisos
+  if (builtInComponent === 'orders') {
+    if (!hasPermission(role, PERMISSIONS.VIEW_ALL_ORDERS) && !hasPermission(role, PERMISSIONS.VIEW_OWN_ORDERS)) {
+      return { visible: false };
+    }
+  } else if (builtInComponent === 'map') {
+    if (!hasPermission(role, PERMISSIONS.VIEW_MAP) && !hasPermission(role, PERMISSIONS.VIEW_TEAM_LOCATIONS_MAP)) {
+      return { visible: false };
+    }
+  } else {
+    const requiredPerm = TAB_PERMISSION_MAP[builtInComponent];
+    if (requiredPerm && !hasPermission(role, requiredPerm)) return { visible: false };
+  }
+
   const requiredFeature = TAB_FEATURE_MAP[builtInComponent];
   if (requiredFeature && features?.[requiredFeature] === false) return { visible: false };
   return { visible: true };

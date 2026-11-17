@@ -90,7 +90,7 @@ export interface WarrantyJob {
 export interface ServiceOrder {
   id:string;
   companyId: string;      // ← NUEVO
-  orderNumber: number;
+  orderNumber?: number;
   name: string;
   clientId?: string;
   clientName?: string; // Added for denormalization
@@ -117,8 +117,8 @@ export interface ServiceOrder {
   priority: 'Baja' | 'Media' | 'Alta' | 'Urgente';
   isUnderWarrantyReview?: boolean;
   warrantyJobs?: WarrantyJob[]; // Corregido de 'Jobs' a 'warrantyJobs'
-  warrantyStartTime?: string;
-  warrantyEndTime?: string;
+  warrantyStartTime?: string | null;
+  warrantyEndTime?: string | null;
   closingData?: {
     tasksPerformed?: string[];
     additionalComments?: string;
@@ -142,6 +142,8 @@ export interface User {
   name: string;
   role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin' | 'super_admin';
   username: string;
+  /** Correo real de recuperación de contraseña (NO el username@dominio). */
+  email?: string;
   identification?: string;
   address?: string;
   latitude?: number;
@@ -189,7 +191,7 @@ export interface AppNotification {
   body: string;
   timestamp: string;
   read: boolean;
-  type: 'info' | 'alert' | 'success';
+  type: 'info' | 'alert' | 'success' | 'reminder' | 'due_date' | 'expiration';
   path?: string;
   text: string;
   timeAgo: string;

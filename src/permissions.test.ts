@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isTabVisible, TAB_PERMISSION_MAP, TAB_FEATURE_MAP } from './permissions';
+import PERMISSIONS, { hasPermission, isTabVisible, TAB_PERMISSION_MAP, TAB_FEATURE_MAP } from './permissions';
 
 describe('isTabVisible (Fase 5 — pestañas por rol y feature)', () => {
   it('permite ver una pestaña built-in sin permiso ni feature asociada', () => {
@@ -17,10 +17,11 @@ describe('isTabVisible (Fase 5 — pestañas por rol y feature)', () => {
     expect(isTabVisible('map', 'admin', { maps: true }).visible).toBe(true);
   });
 
-  it('accounting exige feature Y permiso view_reports (que technician no tiene)', () => {
-    expect(isTabVisible('accounting', 'admin', { accounting: true }).visible).toBe(true);
-    expect(isTabVisible('accounting', 'admin', { accounting: false }).visible).toBe(false);
-    expect(isTabVisible('accounting', 'technician', { accounting: true }).visible).toBe(false);
+  it('accounting (caja menor) es para todos los roles operativos, pero solo con la feature activa', () => {
+    for (const role of ['technician', 'supervisor', 'aux_admin', 'admin', 'developer'] as const) {
+      expect(isTabVisible('accounting', role, { accounting: true }).visible).toBe(true);
+      expect(isTabVisible('accounting', role, { accounting: false }).visible).toBe(false);
+    }
   });
 
   it('oculta /users por permiso (solo admin/developer lo ven)', () => {
@@ -71,5 +72,29 @@ describe('isTabVisible — Fase 6 (inventario y reportes)', () => {
   it('cada built-in nuevo (inventory/reports) tiene su permiso en TAB_PERMISSION_MAP', () => {
     expect(TAB_PERMISSION_MAP.inventory).toBe('view_inventory');
     expect(TAB_PERMISSION_MAP.reports).toBe('view_reports');
+  });
+});
+describe('MANAGE_SERVICE_REQUESTS (asistente, migraciones 042/043)', () => {
+  // Debe coincidir con public.can_manage_service_requests(): si cambia uno, cambia el otro.
+  const managers = ['admin', 'supervisor', 'aux_admin', 'developer', 'super_admin'] as const;
+
+  it('lo tienen exactamente los roles gestores de la regla SQL', () => {
+    for (const role of managers) {
+      expect(hasPermission(role, PERMISSIONS.MANAGE_SERVICE_REQUESTS)).toBe(true);
+    }
+    expect(hasPermission('technician', PERMISSIONS.MANAGE_SERVICE_REQUESTS)).toBe(false);
+    expect(hasPermission(undefined, PERMISSIONS.MANAGE_SERVICE_REQUESTS)).toBe(false);
+  });
+});
+
+describe('pestaña «Solicitudes» (asistente, migración 046)', () => {
+  it('la ven los gestores solo con la bandera aiAssistant', () => {
+    for (const role of ['admin', 'supervisor', 'aux_admin', 'developer'] as const) {
+      expect(isTabVisible('requests', role, { aiAssistant: true }).visible).toBe(true);
+      expect(isTabVisible('requests', role, { aiAssistant: false }).visible).toBe(false);
+    }
+  });
+  it('el técnico no la ve aunque la empresa tenga el asistente', () => {
+    expect(isTabVisible('requests', 'technician', { aiAssistant: true }).visible).toBe(false);
   });
 });

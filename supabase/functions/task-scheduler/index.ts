@@ -11,23 +11,62 @@
 // the client off the incoming `Authorization` header to retain full schema privileges.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+// El scheduler ejecuta este function server-to-server: necesita privilegios
+// completos. Usar la service role key como secret, nunca la anon (que no lee
+// nada privilegiado y degradaría el cron a un no-op silencioso).
+const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+if (!serviceRole) {
+  throw new Error("SUPABASE_SERVICE_ROLE_KEY no configurado");
+}
+const supabase = createClient(SUPABASE_URL, serviceRole);
+
+// Envía un push Web Push API a un conjunto de user ids (recordatorios, vencimientos).
+async function sendPushToUserIds(
+  userIds: (string | null)[],
+  title: string,
+  body: string,
+  path: string,
+): Promise<number> {
+  const unique = [...new Set(userIds.filter(Boolean))];
+  if (unique.length === 0) return 0;
+
+  let sent = 0;
+  for (const userId of unique) {
+    try {
+      const pushResp = await fetch(`${SUPABASE_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${serviceRole}`,
+          "Content-Type": "application/json",
+          "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") || "",
+        },
+        body: JSON.stringify({
+          userId,
+          title,
+          body,
+          data: { path },
+        }),
+      });
+
+      if (pushResp.ok) {
+        sent++;
+      } else {
+        console.error(`[Task Scheduler] Failed to send push to ${userId}:`, await pushResp.text());
+      }
+    } catch (error) {
+      console.error(`[Task Scheduler] Error sending push to ${userId}:`, error);
+    }
+  }
+
+  return sent;
+}
 
 Deno.serve(async (req: Request) => {
-  // Usa la service role key (env secret) para privilegios completos.
-  // Fallback: si no está seteada como secret, usa el JWT que el scheduler
-  // pasa en el header Authorization (patrón heredado).
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-  const supabase = serviceRole
-    ? createClient(SUPABASE_URL, serviceRole)
-    : createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization") ?? "" },
-        },
-      });
+  if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
 
   const now = new Date();
   const results: {
@@ -42,7 +81,7 @@ Deno.serve(async (req: Request) => {
     const { data: reminders, error: remindersError } = await supabase
       .from("tasks")
       .select(
-        "id, title, created_by, assigned_to, reminder, reminder_notification_sent",
+        "id, title, created_by, assigned_to, reminder, reminder_notification_sent, company_id",
       )
       .neq("reminder", null)
       .lte("reminder", now.toISOString())
@@ -57,16 +96,24 @@ Deno.serve(async (req: Request) => {
 
       for (const userId of recipients) {
         await supabase.from("notifications").insert({
+          company_id: task.company_id,
           user_id: userId,
           title: `Recordatorio: ${task.title}`,
           body: `Recuerda la tarea: "${task.title}".`,
+          text: `Recordatorio: ${task.title}`,
           path: "/tasks",
-          type: "reminder",
+          type: "info",
           read: false,
           created_at: new Date().toISOString(),
         });
-        // TODO: Trigger OneSignal push notification
       }
+
+      await sendPushToUserIds(
+        recipients,
+        `Recordatorio: ${task.title}`,
+        `Recuerda la tarea: "${task.title}".`,
+        "/tasks",
+      );
 
       await supabase
         .from("tasks")
@@ -86,7 +133,7 @@ Deno.serve(async (req: Request) => {
       const { data: dueTasks, error: dueError } = await supabase
         .from("tasks")
         .select(
-          "id, title, created_by, assigned_to, due_date, due_date_notification_sent",
+          "id, title, created_by, assigned_to, due_date, due_date_notification_sent, company_id",
         )
         .gte("due_date", startOfDay.toISOString())
         .lte("due_date", endOfDay.toISOString())
@@ -101,16 +148,24 @@ Deno.serve(async (req: Request) => {
 
         for (const userId of recipients) {
           await supabase.from("notifications").insert({
+            company_id: task.company_id,
             user_id: userId,
             title: `Vencimiento: ${task.title}`,
             body: `La tarea "${task.title}" se vence hoy.`,
+            text: `Vencimiento: ${task.title}`,
             path: "/tasks",
-            type: "due_date",
+            type: "alert",
             read: false,
             created_at: new Date().toISOString(),
           });
-          // TODO: Trigger OneSignal push notification
         }
+
+        await sendPushToUserIds(
+          recipients,
+          `Vencimiento: ${task.title}`,
+          `La tarea "${task.title}" se vence hoy.`,
+          "/tasks",
+        );
 
         await supabase
           .from("tasks")

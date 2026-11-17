@@ -59,7 +59,7 @@ Flags de feature de empresa (`companies.features`): `accounting`, `maps`, `equip
 
 | Entidad | Tabla | Notas |
 |---------|-------|-------|
-| **Usuario** | `users` | Vinculado a Supabase Auth por `supabase_auth_id`; `role`, `company_id`, `onesignal_player_id` |
+| **Usuario** | `users` | Vinculado a Supabase Auth por `supabase_auth_id`; `role`, `company_id`, `email` (recuperación), `onesignal_player_id` |
 | **Cliente** | `clients` | Coordenadas GPS para el mapa |
 | **Equipo** | `equipment` | Frecuencia/estado de mantenimiento; pertenece a un `client_id` |
 | **Orden de servicio** | `orders` | Workflow Pendiente → En Progreso → Cerrado (+ reapertura por garantía) |
@@ -91,6 +91,7 @@ Una orden cerrada puede adjuntar **repuestos usados** (`order_inventory_lines`):
 |------|-----------|
 | **1 — RLS por rol** | Migración 009: control de escritura por rol en la DB (`user_can`, políticas granulares) |
 | **2 — Auth real** | Migración 010: se elimina `users.password` (texto plano); login 100% por Supabase Auth; edge `update-user-password`; campo `must_reset_password` |
+| **7 — Recuperación de clave** | Migración 019: `users.email` (correo real de recuperación) + username único global + tabla `password_reset_tokens` (token de un solo uso, 30 min); edges públicos `request-password-reset` / `reset-password-with-token`; links "¿Olvidaste tu clave?" → `/forgot-password` y `/reset-password`. Login = solo usuario (el `@dominio` es interno) |
 | **3 — Higiene** | Un solo scheduler (Supabase Edge); sync offline idempotente (UUID cliente + upsert); `support-notify` por trigger de BD; push OneSignal end-to-end |
 | **4 — Branding self-serve** | Migración 012: el admin/developer edita solo **su** empresa (theme/tabs/features, nunca identidad) |
 | **5 — Features & tabs** | Migración 013: visibilidad de tabs por permiso Y flag; `isTabVisible` como única fuente |
@@ -108,6 +109,8 @@ Una orden cerrada puede adjuntar **repuestos usados** (`order_inventory_lines`):
 | `create-company` | Supabase Edge | Llamada | Crear empresa nueva (multi-tenant) |
 | `create-user` | Supabase Edge | Llamada | Crea la cuenta Auth + fila `users` vinculada |
 | `update-user-password` | Supabase Edge | Llamada | Cambio/reset de clave por `access_token` |
+| `request-password-reset` | Supabase Edge | Llamada (público) | Genera token y manda link al `users.email` del username (olvidé mi clave) |
+| `reset-password-with-token` | Supabase Edge | Llamada (público) | Valida el token de un solo uso y aplica la nueva clave |
 
 > Los schedules viven **solo en Supabase Edge Functions**. Vercel `api/*` queda únicamente para endpoints live (webhooks de triggers y proxies), sin crons ni stubs.
 

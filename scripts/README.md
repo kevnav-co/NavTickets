@@ -14,7 +14,7 @@ El flujo actual va por el edge `create-company` (bootstrap service-role) y, si s
 |--------|-----------|
 | `create-company.mjs` | Crear un tenant nuevo e interactuar con el edge `create-company` |
 | `create-superadmin.mjs` | Crear/garantizar la cuenta `super_admin` |
-| `seed-and-verify.mjs` | Sembrar los 3 tenants demo + usuarios ficticios (login `usuario@navas.com`/`Demo#2026`). **NO re-correr**: borra vínculos y deja `supabase_auth_id` en null |
+| `seed-and-verify.mjs` | Sembrar los 3 tenants demo + usuarios ficticios (login `usuario@navas.com`; clave en la variable `DEMO_PASSWORD`, nunca en el repositorio). **NO re-correr**: borra vínculos y deja `supabase_auth_id` en null |
 | `verify-seed.mjs` | Verificar el seed demo (login + aislamiento multi-tenant) |
 | `verify-selfserve.mjs` | Chequear el self-serve de branding cross-tenant (solo login, sin seed) |
 | `verify-inventory-rls.mjs` | Matriz RLS de inventario (select/insert admin/cross-tenant → 4/4) |

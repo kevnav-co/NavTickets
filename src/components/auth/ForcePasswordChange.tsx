@@ -53,16 +53,16 @@ export const ForcePasswordChange: React.FC = () => {
   };
 
   return (
-    <div className="h-[100dvh] w-full flex items-center justify-center bg-gray-100 p-4 font-sans">
-      <div className="w-full max-w-sm bg-white rounded-[2rem] p-8 shadow-2xl">
+    <div className="h-[100dvh] w-full flex items-center justify-center bg-sunken p-4 font-sans">
+      <div className="w-full max-w-sm bg-raised rounded-[2rem] p-8 shadow-2xl">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
             {done ? <ShieldCheck size={28} className="text-green-500" /> : <Lock size={28} className="text-primary" />}
           </div>
-          <h2 className="text-lg font-black text-gray-900">
+          <h2 className="text-lg font-black text-ink">
             {done ? '¡Contraseña actualizada!' : 'Crea tu nueva contraseña'}
           </h2>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-ink-soft mt-1">
             {done
               ? 'Ya puedes continuar.'
               : `Hola, ${currentUser?.name || ''}. Un administrador solicitó que cambies tu clave antes de continuar.`}
@@ -72,22 +72,22 @@ export const ForcePasswordChange: React.FC = () => {
         {done ? null : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Nueva contraseña</label>
+              <label className="text-[10px] font-bold text-ink-faint uppercase tracking-widest ml-1">Nueva contraseña</label>
               <input
                 type="password"
                 value={pass}
                 onChange={e => setPass(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
+                className="w-full bg-sunken border border-line-soft rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Confirmar</label>
+              <label className="text-[10px] font-bold text-ink-faint uppercase tracking-widest ml-1">Confirmar</label>
               <input
                 type="password"
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
+                className="w-full bg-sunken border border-line-soft rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-primary transition-colors"
               />
             </div>
 

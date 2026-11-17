@@ -1,7 +1,8 @@
 import { z } from 'zod';
+import { OrderStatus } from '../types';
 
 // ─── Enums ──────────────────────────────────────────────
-export const OrderStatusEnum = z.enum(['Pendiente', 'En Progreso', 'Cerrado']);
+export const OrderStatusEnum = z.enum(OrderStatus);
 export type OrderStatusType = z.infer<typeof OrderStatusEnum>;
 
 export const PriorityEnum = z.enum(['Baja', 'Media', 'Alta', 'Urgente']);
@@ -43,7 +44,7 @@ export type ClosingDataType = z.infer<typeof ClosingDataSchema>;
 export const ServiceOrderSchema = z.object({
   id: z.string(),
   companyId: z.string().min(1),
-  orderNumber: z.number().int().positive('El número de orden debe ser positivo'),
+  orderNumber: z.number().int().positive('El número de orden debe ser positivo').optional(),
   name: z.string().min(1, 'El nombre es obligatorio'),
   clientId: z.string().optional(),
   clientName: z.string().optional(),
@@ -54,7 +55,7 @@ export const ServiceOrderSchema = z.object({
   scheduledEndTime: z.string().optional(),
   actualStartDate: z.string().optional(),
   description: z.string().min(1, 'La descripción es obligatoria'),
-  status: OrderStatusEnum.default('Pendiente'),
+  status: OrderStatusEnum.default(OrderStatus.PENDING),
   observations: z.string().optional().default(''),
   initialPhotos: z.array(z.union([z.string(), z.instanceof(Blob)])).optional(),
   initialEvidence: z.array(z.union([z.string(), z.instanceof(Blob)])).optional(),
@@ -65,19 +66,22 @@ export const ServiceOrderSchema = z.object({
   endTime: z.string().optional(),
   orderType: OrderTypeEnum,
   serviceName: z.string().min(1, 'El nombre del servicio es obligatorio'),
-  warrantyPeriod: z.number().int().positive('El período de garantía debe ser positivo').optional(),
+  warrantyPeriod: z.number().int().min(0, 'La garantía debe ser ≥ 0').optional(),
   warrantyExpiration: z.string().nullable().optional(),
   priority: PriorityEnum.default('Media'),
   isUnderWarrantyReview: z.boolean().optional().default(false),
   warrantyJobs: z.array(WarrantyJobSchema).optional(),
-  warrantyStartTime: z.string().optional(),
-  warrantyEndTime: z.string().optional(),
+  warrantyStartTime: z.string().nullable().optional(),
+  warrantyEndTime: z.string().nullable().optional(),
   closingData: ClosingDataSchema.optional(),
   warrantyNotificationSent: z.boolean().optional().default(false),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   lastUpdatedBy: z.string().optional(),
 });
+
+// Alta de orden: el id lo genera la BD/cliente; companyId SÍ viaja (RLS y NOT NULL lo exigen).
+export const NewServiceOrderSchema = ServiceOrderSchema.omit({ id: true });
 
 export type ServiceOrderInput = z.input<typeof ServiceOrderSchema>;
 export type ServiceOrderOutput = z.output<typeof ServiceOrderSchema>;

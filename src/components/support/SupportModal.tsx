@@ -9,6 +9,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { useCollection } from '../../hooks/useCollection';
 import { SupportTicket, SupportMessage, SupportTicketStatus } from '../../types';
+import ChatThread from './ChatThread';
+import { formatDateTime } from '../../utils/chat';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -21,10 +23,6 @@ const STATUS_META: Record<SupportTicketStatus, { label: string; cls: string }> =
   [SupportTicketStatus.CLOSED]: { label: 'Cerrado', cls: 'bg-green-100 text-green-700' },
 };
 
-const formatDate = (iso: string) => {
-  const d = new Date(iso);
-  return isNaN(d.getTime()) ? '' : d.toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-};
 
 const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const { currentUser } = useAuth();
@@ -65,17 +63,23 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const handleCreate = async () => {
     if (!subject.trim() || !message.trim()) return;
     setBusy(true);
-    const { data, error } = await addItem('support_tickets', {
-      companyId: currentUser.companyId,
-      userId: currentUser.id,
-      subject: subject.trim(),
-      message: message.trim(),
-    });
-    setBusy(false);
-    if (error) { alert('No se pudo enviar la consulta: ' + error); return; }
-    setSelectedId(data?.id ?? null);
-    setSubject(''); setMessage('');
-    setView('detail');
+    try {
+      // addItem devuelve el id nuevo como string y LANZA un Error al fallar
+      // (no `{ data, error }`). Usar el id real para abrir el detalle.
+      const id = await addItem('support_tickets', {
+        companyId: currentUser.companyId,
+        userId: currentUser.id,
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+      setSelectedId(id);
+      setSubject(''); setMessage('');
+      setView('detail');
+    } catch (e) {
+      alert('No se pudo enviar la consulta: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setBusy(false);
+    }
     // El aviso al super_admin (push + contador) lo dispara un trigger de la BD
     // (migración 011 → edge `support-notify`); no hace falta fire desde el front.
   };
@@ -83,31 +87,35 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   const handleReply = async () => {
     if (!selectedId || !reply.trim()) return;
     setBusy(true);
-    const { error } = await addItem('support_messages', {
-      ticketId: selectedId,
-      userId: currentUser.id,
-      role: 'empresa',
-      message: reply.trim(),
-    });
-    setBusy(false);
-    if (error) { alert('No se pudo enviar el mensaje: ' + error); return; }
-    setReply('');
+    try {
+      await addItem('support_messages', {
+        ticketId: selectedId,
+        userId: currentUser.id,
+        role: 'empresa',
+        message: reply.trim(),
+      });
+      setReply('');
+    } catch (e) {
+      alert('No se pudo enviar el mensaje: ' + (e instanceof Error ? e.message : String(e)));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const btnCls = "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors";
-  const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
+  const inputCls = "w-full bg-sunken border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col" style={{ height: 'min(80vh, 640px)' }} onClick={e => e.stopPropagation()}>
+      <div className="bg-raised rounded-3xl shadow-2xl w-full max-w-lg flex flex-col" style={{ height: 'min(80vh, 640px)' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-line-soft">
           {view !== 'list' && (
-            <button onClick={goList} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500"><ArrowLeft size={18} /></button>
+            <button onClick={goList} className="p-1.5 hover:bg-sunken rounded-full text-ink-soft"><ArrowLeft size={18} /></button>
           )}
           <LifeBuoy size={20} className="text-primary" />
-          <h2 className="text-lg font-bold text-gray-800 flex-1">Soporte de la app</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+          <h2 className="text-lg font-bold text-ink flex-1">Soporte de la app</h2>
+          <button onClick={onClose} className="p-2 text-ink-faint hover:bg-sunken rounded-full"><X size={20} /></button>
         </div>
 
         {/* Body */}
@@ -122,11 +130,11 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
               </button>
 
               {ticketsLoading && (
-                <div className="flex items-center justify-center gap-2 text-gray-400 py-8"><Loader2 className="animate-spin" size={22} /><span>Cargando soportes...</span></div>
+                <div className="flex items-center justify-center gap-2 text-ink-faint py-8"><Loader2 className="animate-spin" size={22} /><span>Cargando soportes...</span></div>
               )}
-              {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError.message}</p>}
+              {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError}</p>}
               {!ticketsLoading && !ticketsError && (tickets || []).length === 0 && (
-                <p className="text-center text-sm text-gray-400 py-10">No tienes consultas de soporte aún. Crea una "Nueva consulta".</p>
+                <p className="text-center text-sm text-ink-faint py-10">No tienes consultas de soporte aún. Crea una "Nueva consulta".</p>
               )}
 
               {(tickets || []).map(t => {
@@ -135,12 +143,12 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
                   <button
                     key={t.id}
                     onClick={() => { setSelectedId(t.id); setView('detail'); }}
-                    className="w-full text-left p-4 rounded-2xl border border-gray-100 hover:border-primary/30 hover:bg-gray-50/60 transition-colors flex items-start gap-3"
+                    className="w-full text-left p-4 rounded-2xl border border-line-soft hover:border-primary/30 hover:bg-sunken/60 transition-colors flex items-start gap-3"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{t.subject}</p>
-                      <p className="text-xs text-gray-400 font-medium truncate">{t.message}</p>
-                      <span className="text-[10px] text-gray-300 font-semibold">{formatDate(t.createdAt)}</span>
+                      <p className="text-sm font-bold text-ink truncate">{t.subject}</p>
+                      <p className="text-xs text-ink-faint font-medium truncate">{t.message}</p>
+                      <span className="text-[10px] text-ink-faint font-semibold">{formatDateTime(t.createdAt)}</span>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${meta.cls} flex-shrink-0`}>{meta.label}</span>
                   </button>
@@ -166,38 +174,22 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
           {view === 'detail' && selected && (
             <div className="flex flex-col h-full min-h-[300px]">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-gray-800 truncate">{selected.subject}</h3>
+                <h3 className="font-bold text-ink truncate">{selected.subject}</h3>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).cls}`}>
                   {(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).label}
                 </span>
               </div>
 
-              {/* Hilo */}
-              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-                {/* Mensaje de apertura */}
-                <div className="max-w-[85%] p-3 rounded-2xl bg-gray-100 text-sm text-gray-700">
-                  <p>{selected.message}</p>
-                  <span className="text-[10px] text-gray-400 font-semibold">{formatDate(selected.createdAt)}</span>
-                </div>
-
-                {(messages || []).map(m => (
-                  <div
-                    key={m.id}
-                    className={`max-w-[85%] p-3 rounded-2xl text-sm text-gray-700 ${m.role === 'empresa' ? 'bg-gray-100' : 'bg-red-50 border border-red-100'}`}
-                  >
-                    <p className="whitespace-pre-wrap">{m.message}</p>
-                    <span className="text-[10px] text-gray-400 font-semibold">
-                      {m.role === 'admin' ? 'Soporte · ' : ''}{formatDate(m.createdAt)}
-                    </span>
-                  </div>
-                ))}
+              {/* Chat */}
+              <div className="flex-1 overflow-y-auto pr-1">
+                <ChatThread ticket={selected} messages={messages} viewerId={currentUser?.id} viewerRole="empresa" />
               </div>
 
               {/* Responder */}
               {selected.status !== SupportTicketStatus.CLOSED && (
                 <div className="mt-3 flex items-end gap-2">
                   <input
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none"
+                    className="flex-1 bg-sunken border border-line rounded-xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
                     placeholder="Escribe un mensaje..."
                     value={reply}
                     onChange={e => setReply(e.target.value)}

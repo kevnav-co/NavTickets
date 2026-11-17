@@ -1,56 +1,51 @@
+export type AccountType = 'Efectivo' | 'Transferencia';
 
-// Base type for user information
-export type User = {
+// Filas tal como llegan de Supabase (tablas transactions / expenses / incomes, migración 017).
+interface BaseRecord {
   id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'developer' | 'supervisor' | 'technician';
-};
-
-// Financial Movement Base Types
-interface BaseMovement {
-    id: string;
-    amount: number;
-    concept: string;
-    createdAt: string;
-    isAnnulment?: boolean;
-    relatedMovementId?: string;
-    annulmentReason?: string;
+  companyId: string;
+  amount: number;
+  concept: string;
+  createdAt: string;
+  isAnnulment?: boolean;
+  relatedMovementId?: string | null;
+  annulmentReason?: string | null;
 }
 
-// Specific Movement Types
-export type Transaction = BaseMovement & {
+export type Transaction = BaseRecord & {
   senderId: string;
   senderName: string;
   recipientId: string;
   recipientName: string;
-  method: 'Efectivo' | 'Transferencia';
-  transactionGroupId?: string;
+  method: AccountType;
+  transactionGroupId?: string | null;
+  /** Solo en movimientos entre cuentas propias: 'out' sale de `method`, 'in' entra a `method`. */
+  selfEntry?: 'in' | 'out' | null;
 };
 
-export type Expense = BaseMovement & {
+export type Expense = BaseRecord & {
   userId: string;
   userName: string;
-  origin: 'Efectivo' | 'Transferencia';
-  orderId?: string;
+  origin: AccountType;
+  orderId?: string | null;
 };
 
-export type Income = BaseMovement & {
+export type Income = BaseRecord & {
   userId: string;
   userName: string;
-  origin: 'Efectivo' | 'Transferencia';
+  origin: AccountType;
 };
 
-// Union type with a discriminator ('movementType')
-export type TransactionMovement = Transaction & { movementType: 'transaction' };
-export type ExpenseMovement = Expense & { movementType: 'expense' };
-export type IncomeMovement = Income & { movementType: 'income' };
+type AsMovement<T, K extends string> = Omit<T, 'createdAt'> & { createdAt: number; movementType: K };
+
+export type TransactionMovement = AsMovement<Transaction, 'transaction'>;
+export type ExpenseMovement = AsMovement<Expense, 'expense'>;
+export type IncomeMovement = AsMovement<Income, 'income'>;
 export type Movement = TransactionMovement | ExpenseMovement | IncomeMovement;
 
-// Type for grouping movements by date
 export type GroupedMovements = {
-    [key: string]: {
-        movements: Movement[];
-        dailyBalance: number;
-    };
+  [dateKey: string]: {
+    movements: Movement[];
+    dailyBalance: number;
+  };
 };

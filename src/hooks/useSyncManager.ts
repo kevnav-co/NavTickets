@@ -2,6 +2,10 @@ import { useEffect, useCallback, useRef, useState } from 'react';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { offlineCache } from './useOfflineCache';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Tabla elegida en tiempo de ejecución: el tipado generado de Database no aplica.
+const fromTable = (table: string) => (supabase as unknown as SupabaseClient).from(table);
 import { toSnakeCase } from '../utils/caseConverter';
 
 interface SyncManagerResult {
@@ -21,7 +25,13 @@ interface SyncManagerResult {
  * 3. Elimina las operaciones exitosas de la cola
  * 4. Reintenta las fallidas (máximo 3 intentos)
  */
-export function useSyncManager(): SyncManagerResult {
+/**
+ * @param enabled Sin sesión no hay nada que drenar: las escrituras pendientes van
+ *   a Supabase y las reglas RLS exigen un usuario. Mantenerlo apagado en la
+ *   pantalla de inicio de sesión evita además abrir la base local y descargar
+ *   Dexie antes de que alguien entre.
+ */
+export function useSyncManager(enabled: boolean = true): SyncManagerResult {
   const { isOnline, text: connectionText } = useConnectivityStatus();
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -72,23 +82,20 @@ export function useSyncManager(): SyncManagerResult {
             case 'create': {
               // Upsert idempotente: el id de `write.data` es el UUID del cliente
               // (ver addItem offline en useSupabaseActions) → retry sin duplicar.
-              const { error: e } = await supabase
-                .from(table)
+              const { error: e } = await fromTable(table)
                 .upsert(toSnakeCase(write.data), { onConflict: 'id' });
               error = e;
               break;
             }
             case 'update': {
-              const { error: e } = await supabase
-                .from(table)
+              const { error: e } = await fromTable(table)
                 .update(toSnakeCase(write.data))
                 .eq('id', write.docId);
               error = e;
               break;
             }
             case 'delete': {
-              const { error: e } = await supabase
-                .from(table)
+              const { error: e } = await fromTable(table)
                 .delete()
                 .eq('id', write.docId);
               error = e;
@@ -132,6 +139,8 @@ export function useSyncManager(): SyncManagerResult {
   // ─── Efecto: detectar reconexión ───────────────────────────────────────────
 
   useEffect(() => {
+    if (!enabled) return;
+
     if (!wasOfflineRef.current && !isOnline) {
       wasOfflineRef.current = true;
     }
@@ -142,25 +151,27 @@ export function useSyncManager(): SyncManagerResult {
       const timer = setTimeout(() => triggerSync(), 3000); // Esperar 3s para estabilizar
       return () => clearTimeout(timer);
     }
-  }, [isOnline, triggerSync]);
+  }, [enabled, isOnline, triggerSync]);
 
   // ─── Efecto: conteo inicial y polling ──────────────────────────────────────
 
   useEffect(() => {
+    if (!enabled) return;
     updatePendingCount();
     const interval = setInterval(updatePendingCount, 30000); // Cada 30s
     return () => clearInterval(interval);
-  }, [updatePendingCount]);
+  }, [enabled, updatePendingCount]);
 
   // ─── Sincronizar también cuando cambia connectionText ───────────────────────
 
   useEffect(() => {
+    if (!enabled) return;
     if (connectionText === 'Online' && pendingCount > 0 && !syncingRef.current) {
       const timer = setTimeout(() => triggerSync(), 5000);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionText]);
+  }, [enabled, connectionText]);
 
   return {
     isSyncing,

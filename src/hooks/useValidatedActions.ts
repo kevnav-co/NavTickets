@@ -1,5 +1,8 @@
 import { useCallback } from 'react';
-import { z } from 'zod';
+// Solo en posiciones de tipo: con `import type` zod no entra en el paquete que
+// genera el compilador, y este módulo deja de arrastrarlo a la pantalla de
+// inicio de sesión.
+import type { z } from 'zod';
 import { useData } from '../context/DataContext';
 
 /**
@@ -22,7 +25,7 @@ export const useValidatedActions = () => {
   const addValidated = useCallback(
     async <T extends Record<string, any>>(
       collectionName: string,
-      data: T,
+      data: unknown,
       schema: z.ZodSchema<T>
     ): Promise<string> => {
       const result = schema.safeParse(data);
@@ -74,7 +77,7 @@ export const useValidatedActions = () => {
   const addValidatedSafe = useCallback(
     async <T extends Record<string, any>>(
       collectionName: string,
-      data: T,
+      data: unknown,
       schema: z.ZodSchema<T>
     ): Promise<{ success: true; id: string } | { success: false; errors: z.ZodIssue[] }> => {
       const result = schema.safeParse(data);

@@ -371,24 +371,78 @@ authorization_url_path = "/oauth/consent"
 # Allow dynamic client registration
 allow_dynamic_registration = false
 
-# Task Scheduler — migrado del cron de Vercel (api/edge/task-scheduler.ts) a
-# programación nativa de Supabase. Dispara cada 5 minutos vía pg_cron.
+# Task Scheduler y Daily Expiration Check — los programa pg_cron (migración
+# 047: cada 5 minutos y a las 08:00 de Colombia) y los llama vía pg_net con
+# x-cron-secret, que no es un JWT: con verify_jwt = true el gateway los
+# rechazaría. Las funciones exigen el secreto por su cuenta
+# (_shared/cron-auth.ts, fail-closed). La CLI no admite `schedule` aquí.
 [functions.task-scheduler]
 enabled = true
-verify_jwt = true
-schedule = "*/5 * * * *"
+verify_jwt = false
 
-# Daily Expiration Check — mismo day-check de Vercel cron, ahora en Supabase
-# (0 8 * * *). Invocación programada lleva JWT válido del scheduler.
 [functions.daily-expiration-check]
 enabled = true
-verify_jwt = true
-schedule = "0 8 * * *"
+verify_jwt = false
 
 # Support Notify — lo dispara un trigger de la BD (pg_net, migración 011) sin
 # JWT de sesión, por eso verify_jwt = false. El control de acceso es la cabecera
 # x-webhook-secret (si se define el secret WEBHOOK_SECRET en la función).
 [functions.support-notify]
+enabled = true
+verify_jwt = false
+
+# Support Reply Notify — push al autor del caso cuando el super_admin
+# responde. Lo dispara el trigger support_message_notify_author vía pg_net
+# (migración 027), sin JWT de sesión -> verify_jwt = false. Mismo acceso por
+# x-webhook-secret (WEBHOOK_SECRET).
+[functions.support-reply-notify]
+enabled = true
+verify_jwt = false
+
+# Support Chat Notify — push a los super_admins cuando la EMPRESA escribe en el
+# chat de soporte. Lo dispara el trigger support_message_notify_staff (migración
+# 028) vía pg_net, sin JWT de sesión -> verify_jwt = false. Mismo acceso por
+# x-webhook-secret (WEBHOOK_SECRET).
+[functions.support-chat-notify]
+enabled = true
+verify_jwt = false
+
+# On Order Assigned / On Task Assigned — los dispara la BD vía pg_net (migración
+# 029) con Authorization: Bearer <WEBHOOK_SECRET>, que no es un JWT: con
+# verify_jwt = true el gateway los rechaza antes de llegar a la función. El
+# acceso lo controla _shared/webhook-auth.ts (fail-closed).
+[functions.on-order-assigned]
+enabled = true
+verify_jwt = false
+
+[functions.on-task-assigned]
+enabled = true
+verify_jwt = false
+
+# Send Push — la llaman las demás Edge Functions (_shared/push.ts) con
+# x-webhook-secret. Con verify_jwt = true el gateway la cortaba (401) antes de
+# llegar a la función, que ya exige el secreto por su cuenta (fail-closed).
+[functions.send-push]
+enabled = true
+verify_jwt = false
+
+# Service Request Notify — push a los gestores cuando una solicitud del
+# asistente queda pendiente (trigger de la migración 046, pg_net). Mismo
+# acceso por WEBHOOK_SECRET.
+[functions.service-request-notify]
+enabled = true
+verify_jwt = false
+
+# Request Password Reset — público (usuario olvidó la clave, no hay sesión).
+# verify_jwt=false; no revela si el username existe. Genera el token y manda el
+# link al correo de recuperación (users.email).
+[functions.request-password-reset]
+enabled = true
+verify_jwt = false
+
+# Reset Password With Token — público; el token de un solo uso es la credencial.
+# Valida el token y aplica la nueva clave vía auth.admin (service_role).
+[functions.reset-password-with-token]
 enabled = true
 verify_jwt = false
 

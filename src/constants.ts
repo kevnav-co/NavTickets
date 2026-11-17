@@ -1,22 +1,3 @@
-
-import { Client, Equipment, ServiceOrder, User } from './types';
-
-export const MOCK_USERS: User[] = [
-  { 
-    id: 'u001',
-    companyId: 'default', // ← NUEVO
-    name: 'Kevin Navas', 
-    role: 'admin', 
-    username: 'knavas', 
-    password: '1234',
-    identification: '1065002094' 
-  }
-];
-
-export const MOCK_CLIENTS: Client[] = [];
-export const MOCK_EQUIPMENT: Equipment[] = [];
-export const MOCK_ORDERS: ServiceOrder[] = [];
-
 export const SUGGESTED_EQUIPMENT_NAMES = [
 "ABATIDOR TORNADO: 10 BANDEJAS / 40 KILOS",
 "AMASADORA INDUSTRIAL: 1/2 ARROBA",

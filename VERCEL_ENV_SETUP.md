@@ -14,32 +14,28 @@
 |----------|-------------|---------|
 | `VITE_SUPABASE_URL` | Same as SUPABASE_URL | `https://abcdefg.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | Same as SUPABASE_ANON_KEY | `eyJhbGciOiJIUzI1NiIs...` |
-| `VITE_ONESIGNAL_APP_ID` | OneSignal App ID (from Dashboard → Settings → Keys & IDs) | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `VITE_VAPID_PUBLIC_KEY` | Web Push VAPID public key (must equal `VAPID_PUBLIC_KEY` in Supabase secrets) | `BEl62iUYgUivxIkv69yViEuiBIa-Ib9...` |
 
 ### Cron & Webhook Security
 | Variable | Description | Generation |
 |----------|-------------|------------|
-| `CRON_SECRET` | Secret for cron job authorization | `openssl rand -hex 32` |
-| `WEBHOOK_SECRET` | Shared secret for Supabase pg_net webhooks | **Same as CRON_SECRET** |
+| `WEBHOOK_SECRET` | Ya no se usa en Vercel: los webhooks de asignación viven en Supabase Edge (migración 029). Se configura como secret de Supabase y en `app.webhook_secret` (ver `docs/MANUAL_OPERACION.md`). | `openssl rand -hex 32` |
 
 ### Application URLs
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VERCEL_API_BASE` | Production Vercel URL | `https://navticket.vercel.app` |
-
-### OneSignal Configuration
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `ONESIGNAL_API_KEY` | OneSignal REST API Key (Settings → Keys & IDs) | `YWNiYz...` |
+| `APP_URL` | URL pública de la app (deep-links de push) | `https://navtickets.vercel.app` |
 
 ### Cuenti ERP Proxy (Optional - for client import feature)
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `CUENTI_API_TOKEN` | Cuenti API Token | `dEmafMDjPaYNJEY0eLlMi2OAz...` |
-| `CUENTI_EMPRESA_ID` | Cuenti Empresa ID | `14507` |
-| `CUENTI_USER_ID` | Cuenti User ID | `22736` |
+| `CUENTI_API_TOKEN` | Cuenti API Token | `<token de Cuenti>` |
+| `CUENTI_EMPRESA_ID` | Cuenti Empresa ID | `<id empresa>` |
+| `CUENTI_USER_ID` | Cuenti User ID | `<id usuario>` |
+| `CUENTI_COMPANY_ID` | UUID de la empresa NavTickets dueña de las credenciales Cuenti (solo ella y super_admin pueden importar) | `<uuid de companies.id>` |
 
-> Las variables `VITE_FIREBASE_*` / `VITE_VAPID_KEY` quedaron **retiradas**: el push ya no usa Firebase Messaging (ver `directivas/directiva_notificaciones_fcm.md`). El push se sirve con **OneSignal** (`VITE_ONESIGNAL_APP_ID` en frontend + `ONESIGNAL_API_KEY`/`ONESIGNAL_APP_ID` como secrets del proyecto Supabase).
+> Push: **Web Push con claves VAPID** (ver `directivas/directiva_notificaciones_fcm.md`). En Vercel solo va `VITE_VAPID_PUBLIC_KEY`; la clave privada, `VAPID_SUBJECT` y la pública del servidor son **secrets del proyecto Supabase**, nunca variables de Vercel. Quedaron **retiradas** y no deben volver a añadirse: `VITE_FIREBASE_*`, `VITE_VAPID_KEY` (nombre antiguo), `VITE_ONESIGNAL_APP_ID`, `ONESIGNAL_APP_ID` y `ONESIGNAL_API_KEY`. Si alguna sigue en el panel de Vercel, se puede borrar.
 
 ---
 
@@ -59,17 +55,18 @@ vercel env add SUPABASE_SERVICE_ROLE_KEY production
 vercel env add SUPABASE_ANON_KEY production
 vercel env add VITE_SUPABASE_URL production
 vercel env add VITE_SUPABASE_ANON_KEY production
-vercel env add VITE_ONESIGNAL_APP_ID production
+vercel env add VITE_VAPID_PUBLIC_KEY production
 vercel env add CRON_SECRET production
 vercel env add WEBHOOK_SECRET production
 vercel env add VERCEL_API_BASE production
-vercel env add ONESIGNAL_API_KEY production
+vercel env add APP_URL production
 vercel env add CUENTI_API_TOKEN production
 vercel env add CUENTI_EMPRESA_ID production
 vercel env add CUENTI_USER_ID production
+vercel env add CUENTI_COMPANY_ID production
 
-# NOTA: NO agregues variables VITE_FIREBASE_* ni VITE_VAPID_KEY.
-# Firebase Messaging quedó retirado; el push es OneSignal (solo VITE_ONESIGNAL_APP_ID + ONESIGNAL_API_KEY).
+# NOTA: NO agregues VITE_FIREBASE_*, VITE_VAPID_KEY ni ninguna variable ONESIGNAL_*.
+# El push es Web Push con VAPID: aquí solo VITE_VAPID_PUBLIC_KEY; el resto son secrets de Supabase.
 
 # Then deploy
 vercel --prod
@@ -95,12 +92,11 @@ app.webhook_secret = 'YOUR_WEBHOOK_SECRET_VALUE'
 ```
 The `app.webhook_secret` must exactly match the `WEBHOOK_SECRET` in Vercel.
 
-### 2. OneSignal Setup
-1. Create app at [OneSignal Dashboard](https://dashboard.onesignal.com)
-2. Platform: **Web Push**
-3. Site URL: `https://your-app.vercel.app`
-4. Copy **App ID** → `VITE_ONESIGNAL_APP_ID`
-5. Copy **REST API Key** → `ONESIGNAL_API_KEY`
+### 2. Web Push (VAPID) Setup
+1. Generate a key pair once: `npx web-push generate-vapid-keys`
+2. Public key → `VITE_VAPID_PUBLIC_KEY` in Vercel, then redeploy (it is baked in at build time)
+3. In Supabase: `npx supabase secrets set VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:<contact>`
+4. Both public keys must be the same value, or browsers will reject the pushes
 
 ### 3. Supabase Auth Configuration
 In **Supabase Dashboard** → **Authentication** → **URL Configuration**:
@@ -123,14 +119,14 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 After setting variables and deploying:
 
 ```bash
-# Test Supabase connection
-curl https://your-app.vercel.app/api/edge/cuenti-proxy
+# Cuenti: sin token debe responder 401; con token de un rol permitido, 200
+curl -i https://your-app.vercel.app/api/cuenti/clients
 
-# Test cron jobs (in Vercel Dashboard → Cron Jobs)
-# Click "Run Now" for:
-# - /api/edge/task-scheduler
-# - /api/edge/daily-expiration-check
+# Los schedules (task-scheduler, daily-expiration-check) y los webhooks de
+# asignación viven en Supabase, no en Vercel (ver docs/MANUAL_OPERACION.md)
 
-# Test OneSignal
-# Login to app → Enable notifications in header → Check device for push
+# Test Web Push
+# Login → enable notifications in the header → a row appears in push_subscriptions
+# → create a support ticket and check the super_admin's device receives the push
 ```
+Sin header `Authorization` (o con rol no admin), `cuenti-proxy` responde 401/403.

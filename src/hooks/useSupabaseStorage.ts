@@ -21,8 +21,6 @@ interface UseSupabaseStorageResult {
 /**
  * Hook para subir/eliminar archivos en Supabase Storage.
  *
- * Reemplaza el uso de Firebase Storage (ref, uploadBytes, getDownloadURL).
- *
  * Buckets disponibles:
  *   - order-photos:   Fotos de órdenes de servicio
  *   - equipment-photos: Fotos de equipos

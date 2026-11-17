@@ -28,15 +28,15 @@ const UserManager: React.FC = () => {
 
   return (
     <div className="w-full h-full max-w-7xl mx-auto">
-      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm pt-4 pb-3 px-4 md:px-6">
+      <div className="sticky top-0 z-10 bg-sunken/95 backdrop-blur-sm pt-4 pb-3 px-4 md:px-6">
         <div className="relative mb-3">
-            <span className="absolute inset-y-0 left-0 pl-4 flex items-center"><Search className="text-gray-400" size={18} /></span>
+            <span className="absolute inset-y-0 left-0 pl-4 flex items-center"><Search className="text-ink-faint" size={18} /></span>
             <input 
                 type="text" 
                 placeholder="Buscar usuarios..." 
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full h-12 bg-raised border border-line rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
         </div>
 
@@ -54,12 +54,12 @@ const UserManager: React.FC = () => {
       <div className="p-4 md:p-6 pt-3">
         <div className="flex justify-between items-center mb-4">
           <h2 className="font-bold">Usuarios del Sistema</h2>
-          <span className="text-xs font-bold bg-gray-100 px-2 py-1 rounded-lg">{filteredUsers.length}</span>
+          <span className="text-xs font-bold bg-sunken px-2 py-1 rounded-lg">{filteredUsers.length}</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredUsers.length === 0 ? (
-             <div className="col-span-full text-center py-16 text-gray-400">
+             <div className="col-span-full text-center py-16 text-ink-faint">
                 <Search size={32} className="mx-auto mb-2"/>
                 {searchTerm ? 'No se encontraron usuarios.' : 'No hay usuarios en el equipo.'}
             </div>
@@ -68,21 +68,21 @@ const UserManager: React.FC = () => {
               <div 
                 key={user.id} 
                 onClick={() => navigate(`/users/${user.id}`)}
-                className="bg-white p-4 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer group"
+                className="bg-raised p-4 rounded-2xl shadow-sm flex items-center gap-4 cursor-pointer group"
               >
                 <div className="w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 bg-red-50 text-primary">
                   {getInitials(user.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold truncate text-sm">{user.name}</h3>
-                  <p className="text-xs text-gray-500 truncate">@{user.username}</p>
+                  <p className="text-xs text-ink-soft truncate">@{user.username}</p>
                 </div>
                 <div className="flex items-center gap-2 pl-2">
                     {user.role === 'admin' ? <span title="Admin" className="bg-red-100/80 text-primary p-1.5 rounded-full"><Shield size={16} /></span>
                     : user.role === 'supervisor' ? <span title="Supervisor" className="bg-blue-100/80 text-blue-600 p-1.5 rounded-full"><Shield size={16} /></span>
                     : user.role === 'developer' ? <span title="Developer" className="bg-purple-100/80 text-purple-600 p-1.5 rounded-full"><Code size={16} /></span>
-                    : <span title="Técnico" className="bg-gray-100 text-gray-600 p-1.5 rounded-full"><HardHat size={16} /></span>}
-                    <ChevronRight size={18} className="text-gray-300" />
+                    : <span title="Técnico" className="bg-sunken text-ink-soft p-1.5 rounded-full"><HardHat size={16} /></span>}
+                    <ChevronRight size={18} className="text-ink-faint" />
                 </div>
               </div>
             ))

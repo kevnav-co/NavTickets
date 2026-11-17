@@ -107,20 +107,20 @@ const LiveTimer: React.FC<LiveTimerProps> = ({ order, isWarranty }) => {
         <p className={`text-4xl font-mono font-black ${isWarranty ? 'text-blue-600' : 'text-primary'} tracking-tighter`}>
           {formatDuration(elapsed)}
         </p>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tiempo Transcurrido</p>
+        <p className="text-[10px] font-bold text-ink-faint uppercase tracking-widest">Tiempo Transcurrido</p>
       </div>
-      <div className="grid grid-cols-3 gap-2 text-center text-xs px-2 py-3 bg-gray-50 rounded-2xl border-t border-gray-100">
+      <div className="grid grid-cols-3 gap-2 text-center text-xs px-2 py-3 bg-sunken rounded-2xl border-t border-line-soft">
         <div>
-          <p className="font-black text-gray-800">{(relevantStartTime && format(new Date(relevantStartTime), 'HH:mm')) || '--:--'}</p>
-          <p className="text-[8px] font-bold text-gray-400 uppercase">Inicio Real</p>
+          <p className="font-black text-ink">{(relevantStartTime && format(new Date(relevantStartTime), 'HH:mm')) || '--:--'}</p>
+          <p className="text-[8px] font-bold text-ink-faint uppercase">Inicio Real</p>
         </div>
         <div>
-          <p className="font-black text-gray-800">{getDurationText()}</p>
-          <p className="text-[8px] font-bold text-gray-400 uppercase">Duración</p>
+          <p className="font-black text-ink">{getDurationText()}</p>
+          <p className="text-[8px] font-bold text-ink-faint uppercase">Duración</p>
         </div>
         <div>
-          <p className="font-black text-gray-800">{getEstimatedEndTime()}</p>
-          <p className="text-[8px] font-bold text-gray-400 uppercase">Fin Previsto</p>
+          <p className="font-black text-ink">{getEstimatedEndTime()}</p>
+          <p className="text-[8px] font-bold text-ink-faint uppercase">Fin Previsto</p>
         </div>
       </div>
     </div>

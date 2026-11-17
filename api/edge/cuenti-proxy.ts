@@ -9,6 +9,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const IMPORT_ROLES = ['admin', 'developer', 'super_admin', 'supervisor', 'aux_admin'];
+
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'GET') {
     return new Response('Method Not Allowed', { status: 405 });
@@ -22,7 +24,37 @@ export default async function handler(req: Request): Promise<Response> {
     return new Response('Not Found', { status: 404 });
   }
 
-  const cuentiURL = 'https://app.cuenti.com/jServerj4ErpPro/com/j4ErpPro/server/adm/cliente/ConsultarClientePaginado/1/0';
+  // Autenticar: exige una sesión real con un rol que pueda importar clientes.
+  // El endpoint usa el cliente service_role, así que no puede quedar abierto.
+  // `users.id` no es el id de Supabase Auth: el vínculo es `supabase_auth_id`.
+  const authHeader = req.headers.get('authorization') ?? '';
+  if (!authHeader.startsWith('Bearer ')) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
+  if (authError || !user) {
+    return new Response('Invalid token', { status: 401 });
+  }
+  const { data: caller } = await supabase
+    .from('users')
+    .select('role, company_id')
+    .eq('supabase_auth_id', user.id)
+    .single();
+  if (!caller || !IMPORT_ROLES.includes(caller.role)) {
+    return new Response('Forbidden', { status: 403 });
+  }
+  // Los datos de Cuenti pertenecen a una sola empresa: si CUENTI_COMPANY_ID está
+  // definido, solo esa empresa (o super_admin) puede consultarlos.
+  const allowedCompany = process.env.CUENTI_COMPANY_ID;
+  if (allowedCompany && caller.company_id !== allowedCompany && caller.role !== 'super_admin') {
+    return new Response('Forbidden', { status: 403 });
+  }
+
+  // Puente GCP con la lista de clientes Cuenti. Antes el frontend golpeaba ESTA
+  // URL directo (quedaba hardcodeada en el bundle y era alcanzable por cualquiera
+  // sin auth). Ahora la URL vive solo server-side: el browser ve /api/cuenti/clients
+  // y este edge (autenticado por JWT + rol) hace el fetch upstream.
+  const cuentiURL = 'https://api-iawzelmu2a-uc.a.run.app/cuenti/clients';
   console.log(`[Cuenti Proxy] Fetching from: ${cuentiURL}`);
 
   try {
@@ -30,10 +62,6 @@ export default async function handler(req: Request): Promise<Response> {
       method: 'GET',
       headers: {
         'Accept': 'application/json, text/plain, */*',
-        'X-Auth-Token': process.env.CUENTI_API_TOKEN || '',
-        'X-Auth-Token-Empresa': process.env.CUENTI_EMPRESA_ID || '',
-        'X-Auth-Token-Id-Usuario': process.env.CUENTI_USER_ID || '',
-        'X-Auth-Token-Usuario': process.env.CUENTI_USER_ID || '',
       },
     });
 

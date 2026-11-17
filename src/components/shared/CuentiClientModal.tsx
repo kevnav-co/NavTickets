@@ -2,11 +2,12 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { X, Search, UserPlus, Loader2, ServerCrash, Crown, RefreshCw, ListFilter, UploadCloud } from 'lucide-react';
 import { CuentiClient, Client } from '../../types';
 import { useData } from '../../context/DataContext';
+import { useAuth } from '../../context/AuthContext';
+import { authAccessToken } from '../../services/supabase';
 
 interface CuentiClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportClient: (client: CuentiClient) => void;
   existingClients: Client[];
 }
 
@@ -21,8 +22,9 @@ interface ApiClientData {
   ciudad: string;
 }
 
-export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, onClose, onImportClient, existingClients }) => {
+export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, onClose, existingClients }) => {
   const { addItem, updateItem } = useData();
+  const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [fetchedClients, setFetchedClients] = useState<(CuentiClient & { isVIP: boolean; existsInDB: boolean; needsUpdate: boolean })[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +42,13 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
         setIsLoading(true);
         setError(null);
         try {
-          const response = await fetch('https://api-iawzelmu2a-uc.a.run.app/cuenti/clients');
+          // Ir por el edge autenticado (cuenti-proxy): nunca exponer la URL de
+          // Cuenti/GCP en el bundle ni dejar el endpoint abierto. El edge valida
+          // el access_token JWT del usuario y su rol antes de hacer el fetch upstream.
+          const token = await authAccessToken();
+          const response = await fetch('/api/cuenti/clients', {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
 
           if (!response.ok) {
             const errorText = await response.text();
@@ -147,119 +155,78 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
     };
   }, [fetchedClients]);
 
+  // Crea o actualiza en la BD un cliente de Cuenti. Devuelve 'created' | 'updated' | 'unchanged'.
+  const syncClient = useCallback(async (client: CuentiClient): Promise<'created' | 'updated' | 'unchanged'> => {
+    const dbMatch = existingClients.find(c => c.identification === client.identification);
+    if (dbMatch) {
+      const updates: Partial<Client> = {};
+      if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
+      if (client.email && client.email !== dbMatch.email) updates.email = client.email;
+      if (client.address && !dbMatch.address?.includes(client.address)) {
+        updates.address = [client.address, client.city].filter(Boolean).join(', ');
+      }
+      if (Object.keys(updates).length === 0) return 'unchanged';
+      await updateItem('clients', dbMatch.id, updates);
+      return 'updated';
+    }
+    if (!currentUser?.companyId) throw new Error('Sesión sin empresa asociada');
+    await addItem('clients', {
+      companyId: currentUser.companyId,
+      name: client.name,
+      identification: client.identification,
+      contact: client.phone || '',
+      email: client.email || '',
+      address: [client.address, client.city].filter(Boolean).join(', '),
+      city: client.city || '',
+    });
+    return 'created';
+  }, [existingClients, addItem, updateItem, currentUser?.companyId]);
+
   const handleBulkSync = async () => {
     if (filteredClients.length === 0 || isSyncingBulk) return;
-
-    const confirmMsg = `¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos del sistema?`;
-    if (!window.confirm(confirmMsg)) return;
+    if (!window.confirm(`¿Deseas sincronizar los ${filteredClients.length} clientes filtrados a la base de datos del sistema?`)) return;
 
     setIsSyncingBulk(true);
-    let newCount = 0;
-    let updateCount = 0;
-
-    try {
-      filteredClients.forEach(client => {
-        const dbMatch = existingClients.find(c => c.identification === client.identification);
-
-        if (dbMatch) {
-          // Es una actualización
-          if (client.needsUpdate) {
-            const updates: any = {};
-            if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
-            if (client.email && client.email !== dbMatch.email) updates.email = client.email;
-            // Si hay dirección, comparamos. Si no, mantenemos la vieja.
-            if (client.address) {
-                // Si la dirección de cuenti no está contenida en la vieja, actualizamos
-                if (!dbMatch.address?.includes(client.address)) {
-                    updates.address = [client.address, client.city].filter(Boolean).join(', ');
-                }
-            }
-
-            if (Object.keys(updates).length > 0) {
-              updateItem('clients', dbMatch.id, updates);
-              updateCount++;
-            }
-          }
-        } else {
-          // Es un cliente nuevo
-          addItem('clients', {
-            id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-            name: client.name,
-            identification: client.identification,
-            contact: client.phone || '',
-            email: client.email || '',
-            address: [client.address, client.city].filter(Boolean).join(', ') || '',
-            createdAt: new Date().toISOString()
-          });
-          newCount++;
-        }
-      });
-
-      if (newCount > 0 || updateCount > 0) {
-        // Note: Supabase writes are async, we don't await each one
-        // In a real batch scenario, you'd want to ensure all complete
-        alert(`Sincronización finalizada:\n- ${newCount} nuevos agregados\n- ${updateCount} actualizados`);
-        onClose(); // Cerramos el modal tras sincronizar
-      } else {
-        alert("No se detectaron cambios pendientes para sincronizar.");
+    const counts = { created: 0, updated: 0, unchanged: 0, failed: 0 };
+    const failures: string[] = [];
+    for (const client of filteredClients) {
+      try {
+        counts[await syncClient(client)]++;
+      } catch (err: any) {
+        counts.failed++;
+        failures.push(`${client.name}: ${err.message}`);
       }
-    } catch (err: any) {
-      console.error("Error en sincronización masiva:", err);
-      alert("Error al sincronizar los datos: " + err.message);
-    } finally {
-      setIsSyncingBulk(false);
     }
+    setIsSyncingBulk(false);
+
+    if (counts.failed > 0) console.error('[Cuenti] Fallos de sincronización:', failures);
+    if (counts.created + counts.updated + counts.failed === 0) {
+      alert('No se detectaron cambios pendientes para sincronizar.');
+      return;
+    }
+    alert(`Sincronización finalizada:\n- ${counts.created} nuevos agregados\n- ${counts.updated} actualizados` +
+      (counts.failed ? `\n- ${counts.failed} con error (ej.: ${failures[0]})` : ''));
+    if (counts.failed === 0) onClose();
   };
 
-  const handleSingleSync = useCallback(async (client: any) => {
+  const handleSingleSync = useCallback(async (client: CuentiClient & { needsUpdate: boolean; existsInDB: boolean }) => {
     if (isSyncingBulk) return;
-
-    const isUpdate = client.needsUpdate && client.existsInDB;
-    const actionText = isUpdate ? 'actualizar' : 'importar';
-
+    const actionText = client.needsUpdate && client.existsInDB ? 'actualizar' : 'importar';
     try {
-      const dbMatch = existingClients.find(c => c.identification === client.identification);
-
-      if (isUpdate && dbMatch) {
-          const updates: any = {};
-          if (client.phone && client.phone !== dbMatch.contact) updates.contact = client.phone;
-          if (client.email && client.email !== dbMatch.email) updates.email = client.email;
-          if (client.address) {
-              if (!dbMatch.address?.includes(client.address)) {
-                  updates.address = [client.address, client.city].filter(Boolean).join(', ');
-              }
-          }
-
-          if (Object.keys(updates).length > 0) {
-            await updateItem('clients', dbMatch.id, updates);
-          }
-      } else {
-          await addItem('clients', {
-            id: `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-            name: client.name,
-            identification: client.identification,
-            contact: client.phone || '',
-            email: client.email || '',
-            address: [client.address, client.city].filter(Boolean).join(', ') || '',
-            createdAt: new Date().toISOString()
-          });
-      }
-
-      // Actualizamos el estado local para que desaparezca de la lista si hay filtros.
+      await syncClient(client);
       setFetchedClients(prev => prev.map(c => c.id === client.id ? { ...c, existsInDB: true, needsUpdate: false } : c));
-
     } catch (err: any) {
       console.error(`Error al ${actionText} cliente:`, err);
       alert(`Error al ${actionText}: ` + err.message);
     }
-  }, [existingClients, addItem, updateItem, isSyncingBulk]);
+  }, [syncClient, isSyncingBulk]);
 
   if (!isOpen) return null;
 
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center h-full text-gray-500">
+        <div className="flex flex-col items-center justify-center h-full text-ink-soft">
           <Loader2 className="animate-spin mb-4" size={48} />
           <p className="font-semibold text-lg">Conectando con Cuenti...</p>
           <p>Obteniendo lista de clientes.</p>
@@ -282,9 +249,9 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
       <>
         {/* Filtros Inteligentes */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-          <div className="bg-white p-2.5 rounded-xl shadow-sm border border-gray-100">
-            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Total Registros</p>
-            <p className="text-xl font-black text-gray-900 mt-0.5">{stats.total}</p>
+          <div className="bg-raised p-2.5 rounded-xl shadow-sm border border-line-soft">
+            <p className="text-[8px] font-black text-ink-faint uppercase tracking-widest">Total Registros</p>
+            <p className="text-xl font-black text-ink mt-0.5">{stats.total}</p>
           </div>
 
           <div 
@@ -346,15 +313,15 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
           {filteredClients.length > 0 ? (
             <ul className="space-y-2">
               {filteredClients.map((client) => (
-                <li key={client.id} className={`p-3 rounded-lg shadow-sm flex items-center justify-between border-l-4 ${client.needsUpdate ? 'bg-orange-50 border-orange-400' : !client.existsInDB ? 'bg-white border-blue-400' : 'bg-white border-gray-200'}`}>
+                <li key={client.id} className={`p-3 rounded-lg shadow-sm flex items-center justify-between border-l-4 ${client.needsUpdate ? 'bg-orange-50 border-orange-400' : !client.existsInDB ? 'bg-raised border-blue-400' : 'bg-raised border-line'}`}>
                   <div className="flex items-center gap-3">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">{client.name}</p>
+                        <p className="font-semibold text-ink">{client.name}</p>
                         {client.isVIP && <Crown size={14} className="text-yellow-600 fill-yellow-600" />}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-xs text-gray-500 font-mono italic">ID: {client.identification || 'N/A'}</p>
+                        <p className="text-xs text-ink-soft font-mono italic">ID: {client.identification || 'N/A'}</p>
                         {client.needsUpdate && <span className="text-[9px] font-bold bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded uppercase">Actualizar</span>}
                         {!client.existsInDB && <span className="text-[9px] font-bold bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase">Nuevo</span>}
                       </div>
@@ -371,15 +338,15 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
               ))}
             </ul>
           ) : (
-            <div className="text-center py-16 text-gray-500">
+            <div className="text-center py-16 text-ink-soft">
               <Search size={32} className="mx-auto mb-2" />
               <p className="font-medium">No se encontraron clientes.</p>
               <p className="text-sm">La lista de Cuenti está vacía o no hay coincidencias con los filtros.</p>
             </div>
           )}
         </div>
-        <div className="text-right mt-4 pt-2 border-t border-gray-200">
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{filteredClients.length} de {fetchedClients.length} cargados</p>
+        <div className="text-right mt-4 pt-2 border-t border-line">
+            <p className="text-xs font-bold text-ink-faint uppercase tracking-widest">{filteredClients.length} de {fetchedClients.length} cargados</p>
         </div>
       </>
     );
@@ -387,12 +354,12 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl h-[90vh] bg-gray-50 rounded-3xl shadow-2xl flex flex-col p-6 m-4">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-800">Importar Cliente desde Cuenti</h2>
+      <div className="relative w-full max-w-2xl h-[90vh] bg-sunken rounded-3xl shadow-2xl flex flex-col p-6 m-4">
+        <div className="flex items-center justify-between mb-4 pb-4 border-b border-line">
+          <h2 className="text-2xl font-bold text-ink">Importar Cliente desde Cuenti</h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 transition-colors"
+            className="p-2 rounded-full text-ink-soft hover:bg-line hover:text-ink transition-colors"
           >
             <X size={24} />
           </button>
@@ -401,13 +368,13 @@ export const CuentiClientModal: React.FC<CuentiClientModalProps> = ({ isOpen, on
         {!isLoading && !error && (
           <div className="flex gap-2 mb-4">
             <div className="relative flex-grow">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-faint" size={18} />
               <input
                 type="text"
                 placeholder="Buscar por nombre o identificación..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-11 bg-white border border-gray-300 rounded-xl pl-11 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                className="w-full h-11 bg-raised border border-line rounded-xl pl-11 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
               />
             </div>
             {(filterVIPOnly || filterNotAddedOnly || filterNeedsUpdateOnly) && filteredClients.length > 0 && (
