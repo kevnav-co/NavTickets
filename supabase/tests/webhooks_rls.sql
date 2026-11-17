@@ -1,6 +1,7 @@
 -- =============================================================================
--- Prueba del secreto de los webhooks pg_net (migración 044) y del aviso de
--- solicitudes (046). Requiere supabase_stubs.sql + migraciones.
+-- Prueba del secreto de los webhooks pg_net (migración 044), del aviso de
+-- solicitudes (046) y de las tareas programadas (047). Requiere
+-- supabase_stubs.sql + migraciones.
 --   psql -d nt -f supabase/tests/webhooks_rls.sql
 -- Sustituye net.http_post por una versión que guarda lo que envían los triggers
 -- y lo restaura al final.
@@ -69,6 +70,17 @@ SELECT pg_temp.expect_eq($q$select headers ->> 'Authorization' from net.captured
 SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-notify'$q$, '1', 'un solo aviso por solicitud');
 UPDATE service_requests SET contact_name = 'Webhook editada' WHERE contact_name = 'Webhook';
 SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-notify'$q$, '1', 'editar una pendiente no repite el aviso');
+
+-- 6) Tareas programadas (047): firma con el secreto del cron y solo funciones permitidas
+SET ROLE authenticated;
+SELECT pg_temp.expect_fail($q$select public.invoke_scheduled_function('task-scheduler')$q$, 'authenticated dispara una tarea programada');
+SELECT pg_temp.expect_fail($q$select public.cron_secret()$q$, 'authenticated lee el secreto del cron');
+RESET ROLE;
+SELECT pg_temp.expect_fail($q$select public.invoke_scheduled_function('send-push')$q$, 'invocar una función no programada');
+INSERT INTO vault.decrypted_secrets (name, decrypted_secret) VALUES ('cron_secret', 'cron-desde-vault');
+SELECT public.invoke_scheduled_function('daily-expiration-check');
+SELECT pg_temp.expect_eq($q$select headers ->> 'x-cron-secret' from net.captured where url like '%/daily-expiration-check' order by at desc limit 1$q$,
+  'cron-desde-vault', 'firma de la tarea programada');
 
 -- Limpieza: sin Vault falso y con el stub original
 DROP SCHEMA vault CASCADE;
