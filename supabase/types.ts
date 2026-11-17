@@ -780,6 +780,150 @@ export interface Database {
         };
         Relationships: [];
       };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          company_id: string;
+          endpoint: string;
+          auth: string;
+          p256dh: string;
+          user_agent: string | null;
+          created_at: string | null;
+          last_seen_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          company_id: string;
+          endpoint: string;
+          auth: string;
+          p256dh: string;
+          user_agent?: string | null;
+          created_at?: string | null;
+          last_seen_at?: string | null;
+        };
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      service_requests: {
+        Row: {
+          id: string;
+          company_id: string;
+          status: Database['public']['Enums']['service_request_status'];
+          channel: 'web' | 'whatsapp' | 'manual';
+          conversation_id: string | null;
+          client_id: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          contact_email: string | null;
+          contact_identification: string | null;
+          address: string | null;
+          city: string | null;
+          equipment_ids: string[];
+          equipment_description: string | null;
+          service_type_id: string | null;
+          service_name: string | null;
+          order_type: Database['public']['Enums']['order_type'];
+          description: string;
+          suggested_priority: Database['public']['Enums']['priority_level'];
+          preferred_slots: unknown;
+          proposed_date: string | null;
+          proposed_time: string | null;
+          proposed_duration_minutes: number | null;
+          proposed_technician_id: string | null;
+          order_id: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          rejection_reason: string | null;
+          created_by: string | null;
+          submitted_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        // Desde el navegador solo se insertan solicitudes manuales (RLS de la 042).
+        Insert: {
+          id?: string;
+          company_id: string;
+          status?: 'borrador' | 'pendiente';
+          channel?: 'web' | 'whatsapp' | 'manual';
+          conversation_id?: string | null;
+          client_id?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          contact_email?: string | null;
+          contact_identification?: string | null;
+          address?: string | null;
+          city?: string | null;
+          equipment_ids?: string[];
+          equipment_description?: string | null;
+          service_type_id?: string | null;
+          service_name?: string | null;
+          order_type?: Database['public']['Enums']['order_type'];
+          description?: string;
+          suggested_priority?: Database['public']['Enums']['priority_level'];
+          preferred_slots?: unknown;
+          created_by?: string | null;
+        };
+        // Sin UPDATE por la API: confirmar y rechazar van por RPC (043).
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      assistant_conversations: {
+        Row: {
+          id: string;
+          company_id: string;
+          channel: 'web' | 'whatsapp';
+          status: 'abierta' | 'cerrada' | 'bloqueada';
+          client_id: string | null;
+          verified_email: string | null;
+          verified_at: string | null;
+          ip_hash: string | null;
+          turn_count: number;
+          input_tokens: number;
+          output_tokens: number;
+          provider: string | null;
+          model: string | null;
+          created_at: string;
+          last_message_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      assistant_messages: {
+        Row: {
+          id: number;
+          conversation_id: string;
+          company_id: string;
+          role: 'user' | 'assistant' | 'tool';
+          content: unknown;
+          created_at: string;
+        };
+        Insert: Record<string, never>;
+        Update: Record<string, never>;
+        Relationships: [];
+      };
+      assistant_settings: {
+        Row: {
+          company_id: string;
+          timezone: string;
+          working_hours: Record<string, [string, string][]>;
+          service_types: { id: string; name: string; orderType: 'Correctivo' | 'Preventivo'; durationMinutes: number }[];
+          blocked_dates: string[];
+          min_lead_hours: number;
+          slot_step_minutes: number;
+          max_days_ahead: number;
+          technician_ids: string[];
+          welcome_message: string;
+          retention_days: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['assistant_settings']['Row']> & { company_id: string };
+        Update: Partial<Database['public']['Tables']['assistant_settings']['Row']>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -800,6 +944,18 @@ export interface Database {
         Args: Record<string, never>;
         Returns: undefined;
       };
+      available_slots: {
+        Args: { p_company: string; p_from: string; p_to: string; p_duration_minutes: number; p_technician?: string | null };
+        Returns: { slot_date: string; slot_time: string; free_technicians: number; technician_ids: string[] }[];
+      };
+      confirm_service_request: {
+        Args: { p_request: string; p_date: string; p_time: string; p_duration_minutes: number; p_technician: string };
+        Returns: string;
+      };
+      reject_service_request: {
+        Args: { p_request: string; p_reason: string };
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: 'admin' | 'technician' | 'supervisor' | 'developer' | 'aux_admin' | 'super_admin';
@@ -812,6 +968,7 @@ export interface Database {
       notification_type: 'info' | 'alert' | 'success';
       seguimiento_type: 'creacion' | 'estado' | 'asignacion' | 'cierre' | 'comentario' | 'reabrio_garantia';
       support_status: 'abierto' | 'en_progreso' | 'cerrado';
+      service_request_status: 'borrador' | 'pendiente' | 'confirmada' | 'rechazada' | 'cancelada';
     };
   };
 }

@@ -408,6 +408,32 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# On Order Assigned / On Task Assigned — los dispara la BD vía pg_net (migración
+# 029) con Authorization: Bearer <WEBHOOK_SECRET>, que no es un JWT: con
+# verify_jwt = true el gateway los rechaza antes de llegar a la función. El
+# acceso lo controla _shared/webhook-auth.ts (fail-closed).
+[functions.on-order-assigned]
+enabled = true
+verify_jwt = false
+
+[functions.on-task-assigned]
+enabled = true
+verify_jwt = false
+
+# Send Push — la llaman las demás Edge Functions (_shared/push.ts) con
+# x-webhook-secret. Con verify_jwt = true el gateway la cortaba (401) antes de
+# llegar a la función, que ya exige el secreto por su cuenta (fail-closed).
+[functions.send-push]
+enabled = true
+verify_jwt = false
+
+# Service Request Notify — push a los gestores cuando una solicitud del
+# asistente queda pendiente (trigger de la migración 046, pg_net). Mismo
+# acceso por WEBHOOK_SECRET.
+[functions.service-request-notify]
+enabled = true
+verify_jwt = false
+
 # Request Password Reset — público (usuario olvidó la clave, no hay sesión).
 # verify_jwt=false; no revela si el username existe. Genera el token y manda el
 # link al correo de recuperación (users.email).

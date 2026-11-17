@@ -7,7 +7,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
-import { sendPush } from "../_shared/push.ts";
+import { sendPushDetailed } from "../_shared/push.ts";
 
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!serviceRole) {
@@ -81,19 +81,20 @@ Deno.serve(async (req: Request) => {
       console.error("[OnOrderAssigned] Error al insertar notificación interna:", notifError);
     }
 
-    const pushSent = await sendPush({
+    const push = await sendPushDetailed({
       userId: technicianId,
       title: `📋 ${notifTitle}`,
       body: orderMsg,
       data: { path: targetPath },
     });
 
-    if (!pushSent) {
-      console.error("[OnOrderAssigned] Error send-push para", technicianId);
+    if (!push.ok) {
+      console.error("[OnOrderAssigned] Error send-push para", technicianId, push.status, push.detail);
     }
 
     return new Response(
-      JSON.stringify({ success: true, orderId, technicianId, pushSent }),
+      // pushStatus/pushDetail quedan en net._http_response para diagnosticar sin acceso a los logs.
+      JSON.stringify({ success: true, orderId, technicianId, pushSent: push.ok, pushStatus: push.status, pushDetail: push.detail }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {

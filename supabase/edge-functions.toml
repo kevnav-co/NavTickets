@@ -13,6 +13,7 @@ root = "."
 #  - support-chat-notify  (trigger 028, verify_jwt=false)
 #  - on-order-assigned    (trigger 029, verify_jwt=false)
 #  - on-task-assigned     (trigger 029, verify_jwt=false)
+#  - service-request-notify (trigger 046, verify_jwt=false)
 [[edge_functions]]
   id = "on-order-assigned"
   path = "supabase/functions/on-order-assigned"
@@ -23,6 +24,13 @@ root = "."
 [[edge_functions]]
   id = "on-task-assigned"
   path = "supabase/functions/on-task-assigned"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+[[edge_functions]]
+  id = "service-request-notify"
+  path = "supabase/functions/service-request-notify"
   main = "index.ts"
   schedule = ""
   verify_jwt = false

@@ -7,7 +7,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedWebhook, unauthorizedWebhookResponse } from "../_shared/webhook-auth.ts";
-import { sendPush } from "../_shared/push.ts";
+import { sendPushDetailed } from "../_shared/push.ts";
 
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 if (!serviceRole) {
@@ -71,18 +71,18 @@ Deno.serve(async (req: Request) => {
         console.error("[OnTaskAssigned] Error al insertar notificación interna:", notifError);
       }
 
-      const pushOk = await sendPush({
+      const push = await sendPushDetailed({
         userId: assignedTo,
         title: `📌 ${notifTitle}`,
         body: assignmentMsg,
         data: { path: targetPath },
       });
 
-      if (!pushOk) {
-        console.error("[OnTaskAssigned] Error send-push asignado:", assignedTo);
+      if (!push.ok) {
+        console.error("[OnTaskAssigned] Error send-push asignado:", assignedTo, push.status, push.detail);
       }
 
-      results.push(`Notificado asignado: ${assignedTo}`);
+      results.push(`Notificado asignado: ${assignedTo} (push ${push.ok ? "ok" : `falló ${push.status}`})`);
     }
 
     // 2. Notificar al creador si la tarea fue completada
@@ -107,18 +107,18 @@ Deno.serve(async (req: Request) => {
         console.error("[OnTaskAssigned] Error al insertar notificación creador:", notifError);
       }
 
-      const pushOk = await sendPush({
+      const push = await sendPushDetailed({
         userId: createdBy,
         title: `✅ ${completedTitle}`,
         body: completedMsg,
         data: { path: targetPath },
       });
 
-      if (!pushOk) {
-        console.error("[OnTaskAssigned] Error send-push creador:", createdBy);
+      if (!push.ok) {
+        console.error("[OnTaskAssigned] Error send-push creador:", createdBy, push.status, push.detail);
       }
 
-      results.push(`Notificado creador: ${createdBy}`);
+      results.push(`Notificado creador: ${createdBy} (push ${push.ok ? "ok" : `falló ${push.status}`})`);
     }
 
     return new Response(
