@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Prueba del secreto de los webhooks pg_net (migración 044) y del aviso de
--- solicitudes (045). Requiere supabase_stubs.sql + migraciones.
+-- solicitudes (046). Requiere supabase_stubs.sql + migraciones.
 --   psql -d nt -f supabase/tests/webhooks_rls.sql
 -- Sustituye net.http_post por una versión que guarda lo que envían los triggers
 -- y lo restaura al final.
@@ -62,7 +62,7 @@ VALUES ('b6000000-0000-0000-0000-00000000000a', 'W2', 'b6000000-0000-0000-0001-0
 SELECT pg_temp.expect_eq($q$select headers ->> 'Authorization' from net.captured where url like '%/on-order-assigned' order by at desc limit 1$q$,
   'Bearer desde-vault', 'firma del aviso de asignación con Vault');
 
--- 5) Una solicitud pendiente avisa a service-request-notify con la misma firma (045)
+-- 5) Una solicitud pendiente avisa a service-request-notify con la misma firma (046)
 INSERT INTO service_requests (company_id, status, contact_name) VALUES ('b6000000-0000-0000-0000-00000000000a', 'pendiente', 'Webhook');
 SELECT pg_temp.expect_eq($q$select headers ->> 'Authorization' from net.captured where url like '%/service-request-notify' order by at desc limit 1$q$,
   'Bearer desde-vault', 'firma del aviso de solicitud pendiente');

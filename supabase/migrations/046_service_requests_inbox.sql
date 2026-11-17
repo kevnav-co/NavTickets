@@ -1,5 +1,5 @@
 -- =============================================================================
--- 045 — Asistente de ventas y servicio técnico (fase 2): bandeja y push
+-- 046 — Asistente de ventas y servicio técnico (fase 2): bandeja y push
 -- =============================================================================
 -- 1) Pestaña built-in «Solicitudes» (/requests) para los gestores. La anexa a
 --    cada empresa el trigger normalize_company_config (015/016) al tocar `tabs`.

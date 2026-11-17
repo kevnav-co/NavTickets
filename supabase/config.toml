@@ -421,7 +421,7 @@ enabled = true
 verify_jwt = false
 
 # Service Request Notify — push a los gestores cuando una solicitud del
-# asistente queda pendiente (trigger de la migración 045, pg_net). Mismo
+# asistente queda pendiente (trigger de la migración 046, pg_net). Mismo
 # acceso por WEBHOOK_SECRET.
 [functions.service-request-notify]
 enabled = true

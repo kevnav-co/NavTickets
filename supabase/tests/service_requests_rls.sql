@@ -273,7 +273,7 @@ SELECT pg_temp.expect_eq($q$select (conversation_id is null)::text || ' ' || sta
 SELECT pg_temp.expect_eq($q$select count(*)::text from assistant_messages where conversation_id = 'a5000000-0000-0000-0004-000000000001'$q$, '0', 'mensajes purgados');
 
 -- ═════════════════════════════════════════════════════════════════════════════
--- 6) Fase 2 (migración 045): pestaña y push
+-- 6) Fase 2 (migración 046): pestaña y push
 -- ═════════════════════════════════════════════════════════════════════════════
 SELECT pg_temp.expect_eq($q$select count(*)::text from companies c, jsonb_array_elements(c.tabs) t
   where c.id = 'a5000000-0000-0000-0000-00000000000a' and t ->> 'builtInComponent' = 'requests'$q$, '1', 'pestaña Solicitudes en la empresa');
@@ -285,6 +285,25 @@ SELECT pg_temp.as_service();
 SELECT pg_temp.expect_rows($q$insert into service_requests (company_id, status, contact_name) values ('a5000000-0000-0000-0000-00000000000a', 'pendiente', 'Con push')$q$, 1, 'solicitud pendiente con webhook');
 RESET ROLE;
 RESET app.supabase_base_url;
+
+-- ═════════════════════════════════════════════════════════════════════════════
+-- 7) Variante de producción: orders.equipment_ids como text[] (033) en vez de
+--    jsonb (036). La confirmación debe funcionar con las dos (migración 045).
+--    Todo dentro de una transacción que se deshace.
+-- ═════════════════════════════════════════════════════════════════════════════
+BEGIN;
+CREATE FUNCTION pg_temp.j2a(jsonb) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$ SELECT coalesce(array(SELECT jsonb_array_elements_text($1)), '{}') $$;
+ALTER TABLE orders ALTER COLUMN equipment_ids DROP DEFAULT;
+ALTER TABLE orders ALTER COLUMN equipment_ids TYPE text[] USING pg_temp.j2a(equipment_ids);
+INSERT INTO service_requests (id, company_id, status, contact_name, contact_email, equipment_ids, description) VALUES
+ ('a5000000-0000-0000-0005-000000000009','a5000000-0000-0000-0000-00000000000a','pendiente','Cliente Existente','existente@cliente.co','["a5000000-0000-0000-0003-000000000001","a5000000-0000-0000-0003-000000000002"]','Con text[]');
+SET ROLE authenticated;
+SELECT pg_temp.as_user('a5000000-0000-0000-00a0-000000000001');
+SELECT pg_temp.expect_eq($q$select (confirm_service_request('a5000000-0000-0000-0005-000000000009', pg_temp.mon() + 2, '10:00', 60, 'a5000000-0000-0000-0001-000000000004') is not null)::text$q$, 'true', 'confirmar con equipment_ids text[]');
+RESET ROLE;
+SELECT pg_temp.expect_eq($q$select o.equipment_ids::text from orders o join service_requests r on r.order_id = o.id where r.id = 'a5000000-0000-0000-0005-000000000009'$q$,
+  '{a5000000-0000-0000-0003-000000000001}', 'equipos guardados como text[]');
+ROLLBACK;
 
 RESET request.jwt.claim.sub;
 RESET request.jwt.claim.role;

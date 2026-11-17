@@ -1,4 +1,4 @@
-// Solicitudes del asistente de ventas y servicio (migraciones 042, 043 y 045).
+// Solicitudes del asistente de ventas y servicio (migraciones 042, 043, 045 y 046).
 // Las columnas llegan en camelCase vía snakeToCamel.
 
 export type ServiceRequestStatus = 'borrador' | 'pendiente' | 'confirmada' | 'rechazada' | 'cancelada';

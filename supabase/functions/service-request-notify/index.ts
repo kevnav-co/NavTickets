@@ -1,5 +1,5 @@
 // Supabase Edge Function — Service Request Notify (Web Push).
-// La dispara el trigger trg_service_request_notify_webhook (migración 045) vía
+// La dispara el trigger trg_service_request_notify_webhook (migración 046) vía
 // pg_net cuando una solicitud del asistente queda en 'pendiente'. Envía un push a
 // los gestores de la empresa (admin, supervisor, aux_admin), salvo a quien la
 // registró a mano. La notificación de la campana ya la crea la migración 042.
