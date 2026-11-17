@@ -1,13 +1,13 @@
 -- =============================================================================
--- 044 — Asistente de ventas y servicio técnico (fase 2): bandeja y push
+-- 045 — Asistente de ventas y servicio técnico (fase 2): bandeja y push
 -- =============================================================================
 -- 1) Pestaña built-in «Solicitudes» (/requests) para los gestores. La anexa a
 --    cada empresa el trigger normalize_company_config (015/016) al tocar `tabs`.
 --    La visibilidad final la decide el cliente: permiso MANAGE_SERVICE_REQUESTS
 --    y bandera companies.features.aiAssistant (src/permissions.ts).
 -- 2) Push a los gestores cuando una solicitud queda pendiente: trigger pg_net →
---    Edge Function service-request-notify, con el mismo patrón y el mismo
---    secreto que las migraciones 029/039 (app.webhook_secret ↔ WEBHOOK_SECRET).
+--    Edge Function service-request-notify, con el mismo patrón que las
+--    migraciones 029/039 y el secreto de public.webhook_secret() (044, Vault).
 --    La notificación de la campana ya la crea el trigger de la 042; aquí solo
 --    se añade el push. Solo se envía el id: la Edge Function relee la solicitud
 --    con la service role y no confía en el contenido del webhook.
@@ -61,7 +61,7 @@ BEGIN
         ),
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
-          'Authorization', 'Bearer ' || current_setting('app.webhook_secret', true)
+          'Authorization', 'Bearer ' || public.webhook_secret()
         )
       );
     EXCEPTION WHEN OTHERS THEN

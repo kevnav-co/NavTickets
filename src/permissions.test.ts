@@ -87,7 +87,7 @@ describe('MANAGE_SERVICE_REQUESTS (asistente, migraciones 042/043)', () => {
   });
 });
 
-describe('pestaña «Solicitudes» (asistente, migración 044)', () => {
+describe('pestaña «Solicitudes» (asistente, migración 045)', () => {
   it('la ven los gestores solo con la bandera aiAssistant', () => {
     for (const role of ['admin', 'supervisor', 'aux_admin', 'developer'] as const) {
       expect(isTabVisible('requests', role, { aiAssistant: true }).visible).toBe(true);

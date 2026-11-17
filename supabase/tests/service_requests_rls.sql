@@ -273,7 +273,7 @@ SELECT pg_temp.expect_eq($q$select (conversation_id is null)::text || ' ' || sta
 SELECT pg_temp.expect_eq($q$select count(*)::text from assistant_messages where conversation_id = 'a5000000-0000-0000-0004-000000000001'$q$, '0', 'mensajes purgados');
 
 -- ═════════════════════════════════════════════════════════════════════════════
--- 6) Fase 2 (migración 044): pestaña y push
+-- 6) Fase 2 (migración 045): pestaña y push
 -- ═════════════════════════════════════════════════════════════════════════════
 SELECT pg_temp.expect_eq($q$select count(*)::text from companies c, jsonb_array_elements(c.tabs) t
   where c.id = 'a5000000-0000-0000-0000-00000000000a' and t ->> 'builtInComponent' = 'requests'$q$, '1', 'pestaña Solicitudes en la empresa');

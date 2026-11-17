@@ -13,7 +13,7 @@ root = "."
 #  - support-chat-notify  (trigger 028, verify_jwt=false)
 #  - on-order-assigned    (trigger 029, verify_jwt=false)
 #  - on-task-assigned     (trigger 029, verify_jwt=false)
-#  - service-request-notify (trigger 044, verify_jwt=false)
+#  - service-request-notify (trigger 045, verify_jwt=false)
 [[edge_functions]]
   id = "on-order-assigned"
   path = "supabase/functions/on-order-assigned"
