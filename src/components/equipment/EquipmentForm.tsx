@@ -219,10 +219,10 @@ const EquipmentForm: React.FC = () => {
   };
 
   const getStatusIndicator = (status?: EquipmentStatus) => {
-    if (!status) return {dot: 'bg-gray-400', text: 'text-gray-800', bg: 'bg-gray-100 border-gray-200'};
+    if (!status) return {dot: 'bg-gray-400', text: 'text-ink', bg: 'bg-sunken border-line'};
     const styles: Record<EquipmentStatus, {dot: string, text: string, bg: string}> = {
         'Activa': {dot: 'bg-green-500', text: 'text-green-800', bg: 'bg-green-100 border-green-200'},
-        'Inactiva': {dot: 'bg-gray-400', text: 'text-gray-800', bg: 'bg-gray-100 border-gray-200'},
+        'Inactiva': {dot: 'bg-gray-400', text: 'text-ink', bg: 'bg-sunken border-line'},
         'En Mantenimiento': {dot: 'bg-orange-500', text: 'text-orange-800', bg: 'bg-orange-100 border-orange-200'},
         'Retirada': {dot: 'bg-red-500', text: 'text-red-800', bg: 'bg-red-100 border-red-200'},
     };
@@ -245,9 +245,9 @@ const EquipmentForm: React.FC = () => {
     }
   };
 
-  if (!isDataLoaded || !clients) return <div className="w-full h-screen flex items-center justify-center"><Loader2 className="animate-spin text-gray-300" size={40}/></div>;
+  if (!isDataLoaded || !clients) return <div className="w-full h-screen flex items-center justify-center"><Loader2 className="animate-spin text-ink-faint" size={40}/></div>;
 
-  const Label = ({ children }: { children: React.ReactNode }) => <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 block">{children}</label>;
+  const Label = ({ children }: { children: React.ReactNode }) => <label className="text-[10px] font-black text-ink-faint uppercase tracking-widest ml-1 block">{children}</label>;
   const statusIndicator = getStatusIndicator(formData.status);
   const statusOptions: { value: EquipmentStatus, label: string }[] = [
     { value: 'Activa', label: 'Operativo' },
@@ -275,30 +275,30 @@ const EquipmentForm: React.FC = () => {
       
       {fileError && <div className="fixed top-5 right-5 bg-red-100 text-red-700 p-4 rounded-lg z-50">{fileError}</div>}
 
-      <div className="min-h-screen bg-gray-50/50">
-        <header className="px-5 py-4 flex items-center justify-between border-b border-gray-100 sticky top-0 bg-white/80 backdrop-blur-md z-40 shadow-sm">
-          <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200 transition-colors"><X size={20} /></button>
-          <h1 className="text-sm font-black text-gray-800 uppercase tracking-[0.2em]">{isEditMode ? 'Editar Máquina' : 'Nueva Máquina'}</h1>
+      <div className="min-h-screen bg-sunken/50">
+        <header className="px-5 py-4 flex items-center justify-between border-b border-line-soft sticky top-0 bg-raised/80 backdrop-blur-md z-40 shadow-sm">
+          <button onClick={() => navigate(-1)} className="p-2 -ml-2 bg-sunken text-ink-faint rounded-full hover:bg-line transition-colors"><X size={20} /></button>
+          <h1 className="text-sm font-black text-ink uppercase tracking-[0.2em]">{isEditMode ? 'Editar Máquina' : 'Nueva Máquina'}</h1>
           <div className="w-10"></div>
         </header>
 
         <div className="w-full max-w-2xl mx-auto p-4 pb-24">
           <form id="equipment-form" onSubmit={handleSubmit} className="w-full space-y-6">
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-              <div className="flex items-center mb-5"><div className="w-1 h-5 bg-red-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Identidad Visual</h2></div>
+            <div className="bg-raised p-6 rounded-[2rem] shadow-sm border border-line-soft">
+              <div className="flex items-center mb-5"><div className="w-1 h-5 bg-red-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-ink-soft uppercase tracking-wider">Identidad Visual</h2></div>
               <div className="space-y-4">
-                <div className="h-48 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center relative group">
-                    {isUploading && <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-2xl z-10"><Loader2 className="animate-spin text-primary"/></div>}
+                <div className="h-48 bg-sunken rounded-2xl border-2 border-dashed border-line flex flex-col items-center justify-center text-center relative group">
+                    {isUploading && <div className="absolute inset-0 bg-raised/70 flex items-center justify-center rounded-2xl z-10"><Loader2 className="animate-spin text-primary"/></div>}
                     
                     {formData.imageUrl ? (
                       <>
                         <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-contain rounded-lg p-2"/>
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-2xl">
                           <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button title="Reemplazar desde galería" type="button" onClick={() => galleryInputRef.current?.click()} className="bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg p-2.5 text-xs font-bold text-gray-600 shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
+                              <button title="Reemplazar desde galería" type="button" onClick={() => galleryInputRef.current?.click()} className="bg-raised/80 backdrop-blur-sm border border-line rounded-lg p-2.5 text-xs font-bold text-ink-soft shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
                                   <ImageUp size={16}/> 
                               </button>
-                              <button title="Reemplazar con cámara" type="button" onClick={() => cameraInputRef.current?.click()} className="bg-white/80 backdrop-blur-sm border border-gray-300 rounded-lg p-2.5 text-xs font-bold text-gray-600 shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
+                              <button title="Reemplazar con cámara" type="button" onClick={() => cameraInputRef.current?.click()} className="bg-raised/80 backdrop-blur-sm border border-line rounded-lg p-2.5 text-xs font-bold text-ink-soft shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
                                   <Camera size={16}/> 
                               </button>
                           </div>
@@ -317,13 +317,13 @@ const EquipmentForm: React.FC = () => {
                       </>
                     ) : (
                       <>
-                        <Camera size={28} className="text-gray-300 mb-2"/>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">Añadir foto del equipo</p>
+                        <Camera size={28} className="text-ink-faint mb-2"/>
+                        <p className="text-[10px] font-bold text-ink-faint uppercase tracking-wider mb-3">Añadir foto del equipo</p>
                         <div className="flex items-center gap-2">
-                            <button type="button" onClick={() => galleryInputRef.current?.click()} className="bg-white border border-gray-300 rounded-lg py-2 px-3 text-xs font-bold text-gray-600 shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
+                            <button type="button" onClick={() => galleryInputRef.current?.click()} className="bg-raised border border-line rounded-lg py-2 px-3 text-xs font-bold text-ink-soft shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
                                 <ImageUp size={16}/> Galería
                             </button>
-                            <button type="button" onClick={() => cameraInputRef.current?.click()} className="bg-white border border-gray-300 rounded-lg py-2 px-3 text-xs font-bold text-gray-600 shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
+                            <button type="button" onClick={() => cameraInputRef.current?.click()} className="bg-raised border border-line rounded-lg py-2 px-3 text-xs font-bold text-ink-soft shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
                                 <Camera size={16}/> Cámara
                             </button>
                         </div>
@@ -335,17 +335,17 @@ const EquipmentForm: React.FC = () => {
                       <Label>Cliente Propietario</Label>
                       <div className="relative mt-1">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                              <Building2 className="text-gray-400" size={16}/>
+                              <Building2 className="text-ink-faint" size={16}/>
                           </div>
                           <button
                               type="button"
                               onClick={() => setShowClientSearch(true)}
-                              className="w-full text-left pl-12 pr-10 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 h-[58px] flex items-center"
+                              className="w-full text-left pl-12 pr-10 py-4 bg-sunken rounded-2xl border border-line outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 h-[58px] flex items-center"
                           >
                               {selectedClient ? (
-                                  <span className="text-gray-800 truncate">{selectedClient.name}</span>
+                                  <span className="text-ink truncate">{selectedClient.name}</span>
                               ) : (
-                                  <span className="text-gray-500">SELECCIÓN CLIENTE (OPCIONAL)</span>
+                                  <span className="text-ink-soft">SELECCIÓN CLIENTE (OPCIONAL)</span>
                               )}
                           </button>
                           {selectedClient && (
@@ -353,7 +353,7 @@ const EquipmentForm: React.FC = () => {
                                   <button
                                       type="button"
                                       onClick={() => setFormData(prev => ({...prev, clientId: ''}))}
-                                      className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                                      className="p-1 text-ink-faint hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                                       title="Limpiar cliente"
                                   >
                                       <X size={16} />
@@ -366,28 +366,28 @@ const EquipmentForm: React.FC = () => {
                   <div className="relative">
                       <Label>Nombre Comercial / Modelo</Label>
                       <div className="relative mt-1">
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Cog className="text-gray-400" size={16}/></div>
-                          <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} onFocus={() => setShowNameSuggestions(true)} onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)} placeholder="Ej: Licuadora Industrial Lar 15L" className={`w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border ${validationErrors.name ? 'border-red-500' : 'border-gray-200'} outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase`} />
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Cog className="text-ink-faint" size={16}/></div>
+                          <input type="text" name="name" value={formData.name || ''} onChange={handleInputChange} onFocus={() => setShowNameSuggestions(true)} onBlur={() => setTimeout(() => setShowNameSuggestions(false), 200)} placeholder="Ej: Licuadora Industrial Lar 15L" className={`w-full pl-12 pr-4 py-4 bg-sunken rounded-2xl border ${validationErrors.name ? 'border-red-500' : 'border-line'} outline-none font-bold text-sm focus:ring-2 focus:ring-primary/20 uppercase`} />
                       </div>
                       {validationErrors.name && <p className="text-xs text-red-500 ml-4 mt-1">{validationErrors.name}</p>}
                       {showNameSuggestions && nameSuggestions.length > 0 && (
-                          <div className="absolute w-full mt-1 bg-white border border-gray-200 rounded-2xl shadow-lg z-20 max-h-48 overflow-y-auto"><div className="p-1">
-                              {nameSuggestions.map((s, i) => <button key={i} type="button" onClick={() => { setFormData({...formData, name: s}); setShowNameSuggestions(false); }} className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded-xl text-sm font-medium text-gray-700">{s}</button>)}
+                          <div className="absolute w-full mt-1 bg-raised border border-line rounded-2xl shadow-lg z-20 max-h-48 overflow-y-auto"><div className="p-1">
+                              {nameSuggestions.map((s, i) => <button key={i} type="button" onClick={() => { setFormData({...formData, name: s}); setShowNameSuggestions(false); }} className="w-full text-left px-3 py-2 hover:bg-sunken rounded-xl text-sm font-medium text-ink-soft">{s}</button>)}
                           </div></div>
                       )}
                   </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-                <div className="flex items-center mb-5"><div className="w-1 h-5 bg-blue-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Configuración Técnica</h2></div>
+            <div className="bg-raised p-6 rounded-[2rem] shadow-sm border border-line-soft">
+                <div className="flex items-center mb-5"><div className="w-1 h-5 bg-blue-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-ink-soft uppercase tracking-wider">Configuración Técnica</h2></div>
                 <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Número de Serie (S/N)</Label>
                             <div className="relative mt-1">
                                 <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Hash className="text-black-400" size={16}/></div>
-                                <input name="serialNumber" value={formData.serialNumber || ''} onChange={handleInputChange} className={`w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border ${validationErrors.serialNumber ? 'border-red-500' : 'border-gray-200'} outline-none font-bold text-sm focus:ring-2 focus:ring-blue-400/20`}/>
+                                <input name="serialNumber" value={formData.serialNumber || ''} onChange={handleInputChange} className={`w-full pl-12 pr-4 py-4 bg-sunken rounded-2xl border ${validationErrors.serialNumber ? 'border-red-500' : 'border-line'} outline-none font-bold text-sm focus:ring-2 focus:ring-blue-400/20`}/>
                             </div>
                             {validationErrors.serialNumber && <p className="text-xs text-red-500 ml-4 mt-1">{validationErrors.serialNumber}</p>}
                         </div>
@@ -395,12 +395,12 @@ const EquipmentForm: React.FC = () => {
                             <Label>Tensión</Label>
                             <div className="relative mt-1">
                                 <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Zap className="text-red-400" size={16}/></div>
-                                <select name="voltage" value={formData.voltage || '110V'} onChange={handleInputChange} className="w-full pl-12 pr-8 py-4 bg-gray-50 rounded-2xl border border-gray-200 appearance-none outline-none font-bold text-sm focus:ring-2 focus:ring-blue-400/20">
+                                <select name="voltage" value={formData.voltage || '110V'} onChange={handleInputChange} className="w-full pl-12 pr-8 py-4 bg-sunken rounded-2xl border border-line appearance-none outline-none font-bold text-sm focus:ring-2 focus:ring-blue-400/20">
                                     <option>110V</option>
                                     <option>220V</option>
                                     <option>330V</option>
                                 </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none"><ChevronDown className="text-gray-400" size={18}/></div>
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none"><ChevronDown className="text-ink-faint" size={18}/></div>
                             </div>
                         </div>
                     </div>
@@ -429,29 +429,29 @@ const EquipmentForm: React.FC = () => {
                     <div>
                         <Label>Observaciones Preventivas</Label>
                         <div className="relative mt-1">
-                            <textarea name="description" value={formData.description || ''} onChange={handleInputChange} className="w-full bg-gray-50 rounded-2xl p-4 pr-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400/20 resize-none h-24 no-scrollbar" placeholder="Detalles sobre cuidados especiales o historial breve..."></textarea>
-                            <button type="button" onClick={toggleListening} className={`absolute right-3 bottom-3 p-2 rounded-full transition-colors ${isListening ? 'bg-red-500/10 text-red-600' : 'text-gray-400 hover:bg-gray-100'}`}><Mic size={16} /></button>
+                            <textarea name="description" value={formData.description || ''} onChange={handleInputChange} className="w-full bg-sunken rounded-2xl p-4 pr-12 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400/20 resize-none h-24 no-scrollbar" placeholder="Detalles sobre cuidados especiales o historial breve..."></textarea>
+                            <button type="button" onClick={toggleListening} className={`absolute right-3 bottom-3 p-2 rounded-full transition-colors ${isListening ? 'bg-red-500/10 text-red-600' : 'text-ink-faint hover:bg-sunken'}`}><Mic size={16} /></button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
-              <div className="flex items-center mb-5"><div className="w-1 h-5 bg-green-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Ciclo de Mantenimiento</h2></div>
+            <div className="bg-raised p-6 rounded-[2rem] shadow-sm border border-line-soft">
+              <div className="flex items-center mb-5"><div className="w-1 h-5 bg-green-500 rounded-full mr-3"></div><h2 className="text-xs font-bold text-ink-soft uppercase tracking-wider">Ciclo de Mantenimiento</h2></div>
               <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                           <Label>Última Intervención</Label>
                           <div className="relative mt-1">
                               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><Calendar className="text-green-400" size={16}/></div>
-                              <input type="date" name="lastMaintenanceDate" value={formData.lastMaintenanceDate || ''} onChange={handleInputChange} className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border border-gray-200 outline-none font-bold text-sm focus:ring-2 focus:ring-green-400/20"/>
+                              <input type="date" name="lastMaintenanceDate" value={formData.lastMaintenanceDate || ''} onChange={handleInputChange} className="w-full pl-12 pr-4 py-4 bg-sunken rounded-2xl border border-line outline-none font-bold text-sm focus:ring-2 focus:ring-green-400/20"/>
                           </div>
                       </div>
                       <div>
                           <Label>Frecuencia Programada</Label>
                           <div className="relative mt-1">
                               <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none"><ShieldCheck className="text-green-400" size={16}/></div>
-                              <select name="maintenanceFrequency" value={formData.maintenanceFrequency || 3} onChange={handleInputChange} className="w-full pl-12 pr-8 py-4 bg-gray-50 rounded-2xl border border-gray-200 appearance-none outline-none font-bold text-sm focus:ring-2 focus:ring-green-400/20">
+                              <select name="maintenanceFrequency" value={formData.maintenanceFrequency || 3} onChange={handleInputChange} className="w-full pl-12 pr-8 py-4 bg-sunken rounded-2xl border border-line appearance-none outline-none font-bold text-sm focus:ring-2 focus:ring-green-400/20">
                                   {[1,2,3,4,6,8,10,12].map(m => <option key={m} value={m}>Cada {m} Mes{m > 1 ? 'es' : ''}</option>)}
                               </select>
                               <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none"><ChevronDown size={18}/></div>
@@ -462,7 +462,7 @@ const EquipmentForm: React.FC = () => {
                       <div className={`rounded-2xl p-3.5 text-center ${nextMaintenanceInfo.days < 7 ? 'bg-red-50' : 'bg-green-50'}`}>
                         <div className={`flex items-center justify-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${nextMaintenanceInfo.days < 7 ? 'text-red-600' : 'text-green-700'}`}><Clock size={12}/>Próxima Fecha Sugerida</div>
                         <div className="flex items-baseline justify-center gap-2 mt-1">
-                          <span className="text-2xl font-black text-gray-800 tracking-tight">{nextMaintenanceInfo.text}</span>
+                          <span className="text-2xl font-black text-ink tracking-tight">{nextMaintenanceInfo.text}</span>
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${nextMaintenanceInfo.days < 0 ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>{nextMaintenanceInfo.days > 0 ? `en ${nextMaintenanceInfo.days} días` : nextMaintenanceInfo.days === 0 ? 'Hoy' : `Vencido`}</span>
                         </div>
                       </div>

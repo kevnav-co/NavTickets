@@ -42,10 +42,10 @@ export const AnnulmentConfirmModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-gray-900/75 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md m-auto shadow-2xl relative animate-in fade-in zoom-in duration-200">
+      <div className="bg-raised rounded-2xl p-6 w-full max-w-md m-auto shadow-2xl relative animate-in fade-in zoom-in duration-200">
         <button 
           onClick={close} 
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          className="absolute top-3 right-3 text-ink-faint hover:text-ink-soft p-2 rounded-full hover:bg-sunken transition-colors"
         >
           <X size={24} />
         </button>
@@ -55,8 +55,8 @@ export const AnnulmentConfirmModal: React.FC = () => {
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="text-green-500 w-10 h-10" />
             </div>
-            <h2 className="text-xl font-bold text-gray-800">¡Anulado con éxito!</h2>
-            <p className="text-gray-500 mt-2">El movimiento ha sido invalidado correctamente.</p>
+            <h2 className="text-xl font-bold text-ink">¡Anulado con éxito!</h2>
+            <p className="text-ink-soft mt-2">El movimiento ha sido invalidado correctamente.</p>
           </div>
         ) : (
           <>
@@ -65,25 +65,25 @@ export const AnnulmentConfirmModal: React.FC = () => {
                 <AlertTriangle className="text-red-600 w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Confirmar Anulación</h2>
-                <p className="text-xs text-gray-500">Esta acción no se puede deshacer.</p>
+                <h2 className="text-xl font-bold text-ink">Confirmar Anulación</h2>
+                <p className="text-xs text-ink-soft">Esta acción no se puede deshacer.</p>
               </div>
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mb-6">
-              <p className="text-sm text-gray-600 mb-1 font-medium">Concepto:</p>
-              <p className="text-sm font-bold text-gray-800 line-through decoration-red-400">
+            <div className="bg-sunken p-4 rounded-xl border border-line-soft mb-6">
+              <p className="text-sm text-ink-soft mb-1 font-medium">Concepto:</p>
+              <p className="text-sm font-bold text-ink line-through decoration-red-400">
                 {movement?.concept || 'Cargando...'}
               </p>
             </div>
 
             <div className="mb-6">
-              <label htmlFor="annulment-reason" className="block text-sm font-bold text-gray-700 mb-2">
-                Motivo de la anulación <span className="text-gray-400 font-normal">(Opcional)</span>
+              <label htmlFor="annulment-reason" className="block text-sm font-bold text-ink-soft mb-2">
+                Motivo de la anulación <span className="text-ink-faint font-normal">(Opcional)</span>
               </label>
               <textarea
                 id="annulment-reason"
-                className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none"
+                className="w-full p-4 bg-sunken border border-line rounded-xl text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none"
                 placeholder="Ej: Error en el monto, duplicado, etc..."
                 rows={3}
                 value={reason}
@@ -97,7 +97,7 @@ export const AnnulmentConfirmModal: React.FC = () => {
               <button 
                 onClick={close} 
                 disabled={submitting}
-                className="flex-1 bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className="flex-1 bg-sunken text-ink-soft font-bold py-3 px-4 rounded-xl hover:bg-line transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>

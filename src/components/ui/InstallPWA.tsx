@@ -55,10 +55,10 @@ export const InstallPWA: React.FC<Props> = ({ deferredPrompt, onInstall, forceSh
 
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-300 border border-gray-100">
+        <div className="bg-raised rounded-3xl shadow-2xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-300 border border-line-soft">
           <button 
             onClick={() => { setShowPrompt(false); if(onDismiss) onDismiss(); }} 
-            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 p-2 bg-gray-100 rounded-full transition-colors hover:bg-gray-200"
+            className="absolute top-3 right-3 text-ink-faint hover:text-ink-soft p-2 bg-sunken rounded-full transition-colors hover:bg-line"
           >
             <X size={20} />
           </button>
@@ -68,27 +68,27 @@ export const InstallPWA: React.FC<Props> = ({ deferredPrompt, onInstall, forceSh
               <Smartphone size={32} />
             </div>
 
-            <h4 className="text-xl font-black text-gray-900 mb-2">Instalar Aplicación</h4>
+            <h4 className="text-xl font-black text-ink mb-2">Instalar Aplicación</h4>
             
             {isIOS ? (
-              <div className="text-sm text-gray-600 leading-relaxed space-y-3 w-full text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
-                  <p className="font-bold text-center text-gray-800 mb-2">Pasos para iPhone/iPad:</p>
+              <div className="text-sm text-ink-soft leading-relaxed space-y-3 w-full text-left bg-sunken p-4 rounded-xl border border-line-soft">
+                  <p className="font-bold text-center text-ink mb-2">Pasos para iPhone/iPad:</p>
                   <div className="flex items-center gap-3">
-                     <div className="bg-white p-1.5 rounded-lg shadow-sm border border-gray-200">
+                     <div className="bg-raised p-1.5 rounded-lg shadow-sm border border-line">
                         <ArrowUpFromLine size={20} className="text-blue-500" />
                      </div>
                      <span>1. Toca el botón <b>Compartir</b></span>
                   </div>
                   <div className="flex items-center gap-3">
-                     <div className="bg-white p-1.5 rounded-lg shadow-sm border border-gray-200">
-                        <PlusSquare size={20} className="text-gray-700" />
+                     <div className="bg-raised p-1.5 rounded-lg shadow-sm border border-line">
+                        <PlusSquare size={20} className="text-ink-soft" />
                      </div>
                      <span>2. Selecciona <b>Agregar al inicio</b></span>
                   </div>
               </div>
             ) : (
                 <>
-                    <p className="text-sm text-gray-500 mb-6 font-medium px-2">
+                    <p className="text-sm text-ink-soft mb-6 font-medium px-2">
                       Obtén la mejor experiencia: acceso sin conexión, pantalla completa y notificaciones.
                     </p>
                     {deferredPrompt ? (
@@ -99,7 +99,7 @@ export const InstallPWA: React.FC<Props> = ({ deferredPrompt, onInstall, forceSh
                          <Download size={18} /> Instalar Ahora
                        </button>
                    ) : (
-                       <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-center justify-center gap-2 w-full">
+                       <div className="text-sm text-ink-soft bg-sunken p-3 rounded-xl border border-line-soft flex items-center justify-center gap-2 w-full">
                           <MoreVertical size={16} />
                           <span>Ve al menú y elige "Instalar aplicación"</span>
                        </div>

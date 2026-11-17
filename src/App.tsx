@@ -199,10 +199,10 @@ function AppContent({
   }
 
   return (
-    <div className="h-[100dvh] bg-gray-50 flex flex-col md:flex-row">
+    <div className="h-[100dvh] bg-surface flex flex-col md:flex-row">
 
-      {!isOnline && <div className="fixed top-0 left-0 right-0 bg-gray-900 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><Save size={14} className="text-orange-400" /><span>Modo En Cache (Offline)</span></div>}
-      {isOnline && isSyncing && <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-xs font-bold"><RefreshCw size={14} className="animate-spin" /><span>Sincronizando con la Nube...</span></div>}
+      {!isOnline && <div className="fixed top-0 left-0 right-0 bg-ink text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-[11px] font-semibold tracking-wide"><Save size={13} className="text-orange-400" /><span>Modo en caché (sin conexión)</span></div>}
+      {isOnline && isSyncing && <div className="fixed top-0 left-0 right-0 bg-blue-600 text-white z-[100] px-4 py-2 flex items-center justify-center gap-2 text-[11px] font-semibold tracking-wide"><RefreshCw size={13} className="animate-spin" /><span>Sincronizando con la nube…</span></div>}
       <InstallPWA deferredPrompt={deferredPrompt} forceShow={installBannerOpen} onDismiss={() => setInstallBannerOpen(false)} />
       <UpdateNotification />
 

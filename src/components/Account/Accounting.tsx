@@ -87,33 +87,33 @@ const Accounting: React.FC = () => {
 
   return (
     <>
-    <div className="p-4 md:p-6 bg-gray-100 min-h-screen pb-32">
+    <div className="p-4 md:p-6 bg-sunken min-h-screen pb-32">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div className="md:col-span-1">
-                <div className="bg-white p-4 rounded-2xl shadow-sm h-full">
-                    <p className="text-xs font-bold text-gray-400">Mi Balance</p>
-                    <p className={`text-3xl font-black tracking-tighter mb-1 ${currentUserBalances.total >= 0 ? 'text-gray-800' : 'text-red-600'}`}>
+                <div className="bg-raised p-4 rounded-2xl shadow-sm h-full">
+                    <p className="text-xs font-bold text-ink-faint">Mi Balance</p>
+                    <p className={`text-3xl font-black tracking-tighter mb-1 ${currentUserBalances.total >= 0 ? 'text-ink' : 'text-red-600'}`}>
                         {formatCOP(currentUserBalances.total)}
                     </p>
-                    <div className="border-t border-gray-100 pt-2 mt-2 space-y-0.5">
-                        <div className="flex justify-between items-center text-xs"><span className="text-gray-500 font-medium">Efectivo</span><span className="font-bold text-gray-600">{formatCOP(currentUserBalances.cash)}</span></div>
-                        <div className="flex justify-between items-center text-xs"><span className="text-gray-500 font-medium">Transferencia</span><span className="font-bold text-gray-600">{formatCOP(currentUserBalances.transfer)}</span></div>
+                    <div className="border-t border-line-soft pt-2 mt-2 space-y-0.5">
+                        <div className="flex justify-between items-center text-xs"><span className="text-ink-soft font-medium">Efectivo</span><span className="font-bold text-ink-soft">{formatCOP(currentUserBalances.cash)}</span></div>
+                        <div className="flex justify-between items-center text-xs"><span className="text-ink-soft font-medium">Transferencia</span><span className="font-bold text-ink-soft">{formatCOP(currentUserBalances.transfer)}</span></div>
                     </div>
                 </div>
             </div>
 
             {isManager && (
                 <div className="md:col-span-2">
-                    <div className="bg-white p-4 rounded-2xl shadow-sm h-full">
+                    <div className="bg-raised p-4 rounded-2xl shadow-sm h-full">
                         <div className="flex items-center gap-3 mb-2">
-                            <Users className="text-gray-400" size={16}/>
-                            <h3 className="font-bold text-sm text-gray-800">Balances por Usuario</h3>
+                            <Users className="text-ink-faint" size={16}/>
+                            <h3 className="font-bold text-sm text-ink">Balances por Usuario</h3>
                         </div>
                         <div className="space-y-1">
-                            {loading ? <p className="text-xs text-gray-500">Calculando balances...</p> : userBalances.map(ub => (
-                                <button key={ub.userId} onClick={() => setViewedUser({ id: ub.userId, name: ub.userName })} className="w-full flex justify-between items-center px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                                    <span className="font-semibold text-gray-600">{ub.userName}</span>
-                                    <span className={`font-bold ${ub.balance >= 0 ? 'text-gray-800' : 'text-red-600'}`}>{formatCOP(ub.balance)}</span>
+                            {loading ? <p className="text-xs text-ink-soft">Calculando balances...</p> : userBalances.map(ub => (
+                                <button key={ub.userId} onClick={() => setViewedUser({ id: ub.userId, name: ub.userName })} className="w-full flex justify-between items-center px-2 py-1.5 rounded-lg hover:bg-sunken transition-colors text-sm">
+                                    <span className="font-semibold text-ink-soft">{ub.userName}</span>
+                                    <span className={`font-bold ${ub.balance >= 0 ? 'text-ink' : 'text-red-600'}`}>{formatCOP(ub.balance)}</span>
                                 </button>
                             ))}
                         </div>
@@ -122,24 +122,24 @@ const Accounting: React.FC = () => {
             )}
         </div>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm mb-6">
+      <div className="bg-raised p-4 rounded-2xl shadow-sm mb-6">
         <div className="flex justify-between items-center cursor-pointer" onClick={() => setIsChartCollapsed(!isChartCollapsed)}>
-          <h3 className="font-semibold text-sm text-gray-800">Resumen Semanal</h3>
+          <h3 className="font-semibold text-sm text-ink">Resumen Semanal</h3>
            <div className="flex items-center gap-2">
               <button
                   onClick={(e) => { e.stopPropagation(); setCurrentDate(d => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; }); }}
-                  className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
+                  className="p-1 rounded-md hover:bg-sunken text-ink-soft"
               >
                   <ChevronLeft size={16}/>
               </button>
-              <span className="text-xs font-bold text-gray-500 w-24 text-center">{formatWeekRange(currentDate)}</span>
+              <span className="text-xs font-bold text-ink-soft w-24 text-center">{formatWeekRange(currentDate)}</span>
               <button
                   onClick={(e) => { e.stopPropagation(); setCurrentDate(d => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; }); }}
-                  className="p-1 rounded-md hover:bg-gray-100 text-gray-500"
+                  className="p-1 rounded-md hover:bg-sunken text-ink-soft"
               >
                   <ChevronRight size={16}/>
               </button>
-              <ChevronDown size={20} className={`text-gray-400 transition-transform ${isChartCollapsed ? '' : 'rotate-180'}`} />
+              <ChevronDown size={20} className={`text-ink-faint transition-transform ${isChartCollapsed ? '' : 'rotate-180'}`} />
             </div>
         </div>
         {!isChartCollapsed && (
@@ -153,20 +153,20 @@ const Accounting: React.FC = () => {
 
       <div>
         <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-gray-800">Mi Historial de Movimientos</h3>
-            <div className="flex items-center gap-1 bg-gray-200 p-1 rounded-lg">
+            <h3 className="font-bold text-ink">Mi Historial de Movimientos</h3>
+            <div className="flex items-center gap-1 bg-line p-1 rounded-lg">
                 {RANGES.map(r => (
-                  <button key={r.id} onClick={() => setHistoryTimeRange(r.id)} className={`px-3 py-1 text-xs font-bold rounded-md ${historyTimeRange === r.id ? 'bg-white shadow-sm' : 'text-gray-500'}`}>{r.label}</button>
+                  <button key={r.id} onClick={() => setHistoryTimeRange(r.id)} className={`px-3 py-1 text-xs font-bold rounded-md ${historyTimeRange === r.id ? 'bg-raised shadow-sm' : 'text-ink-soft'}`}>{r.label}</button>
                 ))}
             </div>
         </div>
-        {loading ? <p className="text-center text-gray-500">Cargando historial...</p> : (
+        {loading ? <p className="text-center text-ink-soft">Cargando historial...</p> : (
             Object.keys(historyGroups).length > 0 ? (
                 <div className="space-y-4">
                     {Object.entries(historyGroups).map(([date, { movements, dailyBalance }]) => (
                         <div key={date}>
-                            <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-200">
-                                <h4 className="font-semibold text-gray-500 uppercase text-xs">{formatGroupDate(date)}</h4>
+                            <div className="flex justify-between items-center mb-2 pb-2 border-b border-line">
+                                <h4 className="font-semibold text-ink-soft uppercase text-xs">{formatGroupDate(date)}</h4>
                                 <p className={`font-bold text-sm ${dailyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCOP(dailyBalance, 'always')}</p>
                             </div>
                             <div className="space-y-2">
@@ -190,10 +190,10 @@ const Accounting: React.FC = () => {
                     ))}
                 </div>
             ) : (
-                <div className="text-center py-10 px-4 bg-white rounded-2xl shadow-sm">
-                    <Wallet size={40} className="mx-auto text-gray-300"/>
-                    <p className="mt-4 font-bold text-gray-700">Sin movimientos</p>
-                    <p className="text-sm text-gray-500">No hay transacciones ni gastos para el período seleccionado.</p>
+                <div className="text-center py-10 px-4 bg-raised rounded-2xl shadow-sm">
+                    <Wallet size={40} className="mx-auto text-ink-faint"/>
+                    <p className="mt-4 font-bold text-ink-soft">Sin movimientos</p>
+                    <p className="text-sm text-ink-soft">No hay transacciones ni gastos para el período seleccionado.</p>
                 </div>
             )
         )}
@@ -203,7 +203,7 @@ const Accounting: React.FC = () => {
         <button
             onClick={() => openModal('transfer', { balances: currentUserBalances })}
             disabled={!canSpend}
-            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-white text-primary border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform bg-raised text-primary border border-line hover:bg-sunken focus:ring-4 focus:ring-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
             title={canSpend ? 'Transferir Dinero' : 'No tienes saldo para transferir'}
         >
             <ArrowRightLeft size={24} />

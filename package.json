@@ -44,7 +44,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.27",
     "fake-indexeddb": "^6.2.7",
-    "happy-dom": "^15.11.7",
+    "happy-dom": "^21.0.4",
     "rollup-plugin-visualizer": "^7.0.1",
     "tailwindcss": "^4.1.18",
     "terser": "^5.37.0",

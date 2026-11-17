@@ -64,14 +64,14 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-[9999] flex justify-center items-start animate-in fade-in">
-      <div ref={modalRef} className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mt-16 border border-gray-200/80 flex flex-col" style={{ maxHeight: '80vh', height: '700px' }}>
+      <div ref={modalRef} className="relative bg-raised rounded-2xl shadow-2xl w-full max-w-md mt-16 border border-line/80 flex flex-col" style={{ maxHeight: '80vh', height: '700px' }}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+        <div className="flex items-center justify-between p-4 border-b border-line-soft">
           <div className="flex items-center gap-3">
             <Bell size={20} className="text-primary" />
-            <h2 className="text-lg font-bold text-gray-800">Notificaciones</h2>
+            <h2 className="text-lg font-bold text-ink">Notificaciones</h2>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full">
+          <button onClick={onClose} className="p-2 text-ink-faint hover:bg-sunken rounded-full">
             <X size={20} />
           </button>
         </div>
@@ -82,7 +82,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
             notifications.map(notif => (
               <div
                 key={notif.id}
-                className={`w-full text-left p-3 rounded-lg flex items-start justify-between gap-3 transition-colors ${!notif.read ? 'bg-red-50/50' : 'hover:bg-gray-50'}`}
+                className={`w-full text-left p-3 rounded-lg flex items-start justify-between gap-3 transition-colors ${!notif.read ? 'bg-red-50/50' : 'hover:bg-sunken'}`}
               >
                 <div
                   className="flex-grow flex items-start gap-3 cursor-pointer"
@@ -90,8 +90,8 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                 >
                   {!notif.read && <div className="w-2.5 h-2.5 rounded-full bg-primary mt-1.5 flex-shrink-0"></div>}
                   <div className={notif.read ? 'pl-5' : ''}>
-                    <p className="text-sm text-gray-700 break-words">{notif.body}</p>
-                    <span className="text-xs text-gray-400 font-medium">{formatTimestamp(notif.timestamp)}</span>
+                    <p className="text-sm text-ink-soft break-words">{notif.body}</p>
+                    <span className="text-xs text-ink-faint font-medium">{formatTimestamp(notif.timestamp)}</span>
                   </div>
                 </div>
                 <button
@@ -99,7 +99,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
                     e.stopPropagation();
                     onDeleteNotification(notif.id);
                   }}
-                  className="p-1 text-gray-400 hover:text-red-600 rounded-full flex-shrink-0"
+                  className="p-1 text-ink-faint hover:text-red-600 rounded-full flex-shrink-0"
                   aria-label="Eliminar notificación"
                 >
                   <Trash2 size={16} />
@@ -107,9 +107,9 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
               </div>
             ))
           ) : (
-            <div className="text-center py-20 flex flex-col items-center justify-center text-gray-400">
+            <div className="text-center py-20 flex flex-col items-center justify-center text-ink-faint">
               <Inbox size={40} className="mb-3" />
-              <h3 className="text-lg font-bold text-gray-500">Bandeja vacía</h3>
+              <h3 className="text-lg font-bold text-ink-soft">Bandeja vacía</h3>
               <p className="text-sm">No tienes notificaciones nuevas.</p>
               {onOpenSupport && (
                 <button
@@ -125,7 +125,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
 
         {/* Footer */}
         {notifications.length > 0 && (
-          <div className="p-3 border-t border-gray-100 space-y-2">
+          <div className="p-3 border-t border-line-soft space-y-2">
             {onOpenSupport && (
               <button
                 onClick={() => { onOpenSupport(); onClose(); }}
@@ -136,7 +136,7 @@ export const NotificationsModal: React.FC<NotificationsModalProps> = ({
             )}
             <div className="flex justify-center items-center gap-6">
               {notifications.some(n => !n.read) && (
-                <button onClick={() => onNotificationClick()} className="text-sm font-bold text-gray-600 hover:text-black">
+                <button onClick={() => onNotificationClick()} className="text-sm font-bold text-ink-soft hover:text-black">
                   Marcar todas como leídas
                 </button>
               )}

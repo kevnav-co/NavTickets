@@ -30,7 +30,12 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
   }, []);
 
   const closeModal = useCallback((modalName?: string) => {
-    if (modalName) {
+    // `onClose={closeModal}` en un <button> hace que React entregue el evento
+    // como primer argumento. Al ser un objeto, pasaba por la rama del nombre, no
+    // casaba con ningún modal y la pila se devolvía intacta: el modal no se
+    // cerraba. Solo una cadena identifica a un modal; cualquier otra cosa se
+    // trata como "cierra el de arriba".
+    if (typeof modalName === 'string') {
       setModalStack(stack => {
         const newStack = [...stack];
         const modalIndex = newStack.findIndex(m => m.name === modalName);

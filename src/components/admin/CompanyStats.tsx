@@ -120,7 +120,7 @@ const CompanyStats: React.FC = () => {
 
   if (ordersLoading || companiesLoading) {
     return (
-      <div className="w-full h-96 flex items-center justify-center gap-3 text-gray-400">
+      <div className="w-full h-96 flex items-center justify-center gap-3 text-ink-faint">
         <Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando estadísticas...</span>
       </div>
     );
@@ -132,14 +132,14 @@ const CompanyStats: React.FC = () => {
   }
 
   const KpiCard: React.FC<{ label: string; value: number; accent?: string }> = ({ label, value, accent }) => (
-    <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className={`text-3xl font-black mt-1 ${accent || 'text-gray-900'}`}>{value}</p>
+    <div className="bg-raised rounded-3xl p-5 shadow-sm border border-line-soft">
+      <p className="text-xs font-bold text-ink-faint uppercase tracking-wide">{label}</p>
+      <p className={`text-3xl font-black mt-1 ${accent || 'text-ink'}`}>{value}</p>
     </div>
   );
 
-  const cardCls = "bg-white rounded-3xl p-6 shadow-sm border border-gray-100";
-  const chartTitle = "text-base font-black text-gray-800 mb-4";
+  const cardCls = "bg-raised rounded-3xl p-6 shadow-sm border border-line-soft";
+  const chartTitle = "text-base font-black text-ink mb-4";
 
   return (
     <div className="space-y-6">
@@ -209,7 +209,7 @@ const CompanyStats: React.FC = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+              <tr className="text-left text-xs text-ink-faint uppercase tracking-wide border-b border-line-soft">
                 <th className="py-2 pr-4 font-bold">Empresa</th>
                 <th className="py-2 px-2 font-bold">Total</th>
                 <th className="py-2 px-2 font-bold text-amber-500">Pendiente</th>
@@ -222,11 +222,11 @@ const CompanyStats: React.FC = () => {
             </thead>
             <tbody>
               {stats.perCompany.length === 0 && (
-                <tr><td colSpan={8} className="py-6 text-center text-gray-400">Aún no hay tiquetes registrados.</td></tr>
+                <tr><td colSpan={8} className="py-6 text-center text-ink-faint">Aún no hay tiquetes registrados.</td></tr>
               )}
               {stats.perCompany.map((r) => (
-                <tr key={r.companyId} className="border-b border-gray-50 hover:bg-gray-50/50">
-                  <td className="py-2.5 pr-4 font-bold text-gray-800">{r.name}</td>
+                <tr key={r.companyId} className="border-b border-gray-50 hover:bg-sunken/50">
+                  <td className="py-2.5 pr-4 font-bold text-ink">{r.name}</td>
                   <td className="py-2.5 px-2 font-black">{r.total}</td>
                   <td className="py-2.5 px-2 text-amber-500">{r.pendiente}</td>
                   <td className="py-2.5 px-2 text-blue-500">{r.enProgreso}</td>

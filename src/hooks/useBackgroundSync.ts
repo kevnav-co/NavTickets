@@ -1,8 +1,6 @@
 import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { useValidatedActions } from './useValidatedActions';
-import { ServiceOrderSchema } from '../schemas/order.schema';
-import { EquipmentSchema } from '../schemas/equipment.schema';
 import { useConnectivityStatus } from './useConnectivityStatus';
 import { useSupabaseStorage } from './useSupabaseStorage';
 
@@ -66,7 +64,13 @@ export const useBackgroundSync = () => {
     }
     if (changedRoots.size === 0) return;
     const updates = Object.fromEntries([...changedRoots].map(root => [root, updated[root]]));
-    await updateValidated(collection, record.id, updates, collection === 'orders' ? ServiceOrderSchema : EquipmentSchema as any);
+    // Los esquemas arrastran zod, y este hook se monta con la aplicación aunque
+    // no haya nada que sincronizar. Pidiéndolos aquí, zod solo se descarga si de
+    // verdad hay una foto pendiente que subir.
+    const schema = collection === 'orders'
+      ? (await import('../schemas/order.schema')).ServiceOrderSchema
+      : (await import('../schemas/equipment.schema')).EquipmentSchema;
+    await updateValidated(collection, record.id, updates, schema as any);
   }, [updateValidated]);
 
   const syncAll = useCallback(async () => {

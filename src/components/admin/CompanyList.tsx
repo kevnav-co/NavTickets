@@ -83,7 +83,7 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
   return (
     <div>
       {/* Search + Filters + Create */}
-      <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm pb-4 space-y-3">
+      <div className="sticky top-0 z-10 bg-sunken/95 backdrop-blur-sm pb-4 space-y-3">
         {error && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-sm text-red-700">
             <AlertTriangle size={16} />
@@ -97,20 +97,20 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
         {/* Search */}
         <div className="relative">
           <span className="absolute inset-y-0 left-0 pl-4 flex items-center">
-            <Search className="text-gray-400" size={18} />
+            <Search className="text-ink-faint" size={18} />
           </span>
           <input
             type="text"
             placeholder="Buscar por nombre, slug o ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-12 bg-white border border-gray-200 rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full h-12 bg-raised border border-line rounded-xl pl-12 pr-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
 
         {/* Status Filter */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-600 uppercase tracking-wider">Estado:</span>
+          <span className="text-xs font-medium text-ink-soft uppercase tracking-wider">Estado:</span>
           <div className="flex gap-2 flex-1">
             {(['all', 'active', 'suspended'] as StatusFilter[]).map(status => (
               <button
@@ -119,7 +119,7 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
                 className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   statusFilter === status
                     ? 'bg-primary text-white shadow-md shadow-primary/20'
-                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                    : 'bg-raised border border-line text-ink-soft hover:bg-sunken'
                 }`}
               >
                 {status === 'all' ? 'Todas' : status === 'active' ? 'Activas' : 'Suspendidas'}
@@ -141,7 +141,7 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
       {/* Company Cards */}
       <div className="mt-4 space-y-3">
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400">
+          <div className="text-center py-16 text-ink-faint">
             <Building2 size={40} className="mx-auto mb-3 opacity-50" />
             <p className="font-bold">
               {searchTerm || statusFilter !== 'all' ? 'No se encontraron empresas.' : 'No hay empresas registradas.'}

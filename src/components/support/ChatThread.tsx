@@ -29,14 +29,14 @@ const ChatThread: React.FC<ChatThreadProps> = ({ ticket, messages = [], viewerId
     <div className="flex flex-col gap-2">
       {/* Mensaje de apertura (ticket inicial) */}
       <div
-        className={`max-w-[85%] p-3 rounded-2xl text-sm text-gray-700 whitespace-pre-wrap ${
+        className={`max-w-[85%] p-3 rounded-2xl text-sm text-ink-soft whitespace-pre-wrap ${
           isInitialFromSelf
             ? 'self-end bg-blue-50 border border-blue-100'
-            : 'self-start bg-gray-100'
+            : 'self-start bg-sunken'
         }`}
       >
         <p>{ticket.message}</p>
-        <span className="text-[10px] text-gray-400 font-semibold block mt-1">
+        <span className="text-[10px] text-ink-faint font-semibold block mt-1">
           {isInitialFromSelf ? '' : 'Consulta'} {formatTime(ticket.createdAt)}
         </span>
       </div>
@@ -45,11 +45,11 @@ const ChatThread: React.FC<ChatThreadProps> = ({ ticket, messages = [], viewerId
       {grouped.length > 0 && (
         <>
           <div className="flex items-center gap-2 my-2">
-            <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
+            <div className="flex-1 h-px bg-line" />
+            <span className="text-[10px] font-bold text-ink-faint uppercase tracking-wider">
               {grouped[0]?.date}
             </span>
-            <div className="flex-1 h-px bg-gray-200" />
+            <div className="flex-1 h-px bg-line" />
           </div>
 
           {/* Hilos por día */}
@@ -58,11 +58,11 @@ const ChatThread: React.FC<ChatThreadProps> = ({ ticket, messages = [], viewerId
               {/* Separador para días posteriores */}
               {dayIdx > 0 && (
                 <div className="flex items-center gap-2 my-2">
-                  <div className="flex-1 h-px bg-gray-200" />
-                  <span className="text-[10px] font-bold text-gray-300 uppercase tracking-wider">
+                  <div className="flex-1 h-px bg-line" />
+                  <span className="text-[10px] font-bold text-ink-faint uppercase tracking-wider">
                     {group.date}
                   </span>
-                  <div className="flex-1 h-px bg-gray-200" />
+                  <div className="flex-1 h-px bg-line" />
                 </div>
               )}
 
@@ -72,14 +72,14 @@ const ChatThread: React.FC<ChatThreadProps> = ({ ticket, messages = [], viewerId
                 return (
                   <div
                     key={m.id}
-                    className={`max-w-[85%] p-3 rounded-2xl text-sm text-gray-700 whitespace-pre-wrap ${
+                    className={`max-w-[85%] p-3 rounded-2xl text-sm text-ink-soft whitespace-pre-wrap ${
                       isOwn
                         ? 'self-end bg-blue-50 border border-blue-100'
-                        : 'self-start bg-gray-100'
+                        : 'self-start bg-sunken'
                     }`}
                   >
                     <p>{m.message}</p>
-                    <span className="text-[10px] text-gray-400 font-semibold block mt-1">
+                    <span className="text-[10px] text-ink-faint font-semibold block mt-1">
                       {isOwn ? '' : m.role === 'admin' ? 'Soporte ' : ''}
                       {formatTime(m.createdAt)}
                     </span>

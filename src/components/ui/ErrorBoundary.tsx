@@ -20,11 +20,11 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode }
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div role="alert" className="min-h-screen flex items-center justify-center p-6 bg-gray-50">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+      <div role="alert" className="min-h-screen flex items-center justify-center p-6 bg-sunken">
+        <div className="max-w-md w-full bg-raised rounded-2xl shadow-lg p-8 text-center">
           <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
-          <h1 className="text-xl font-bold text-gray-800 mb-2">Algo salió mal</h1>
-          <p className="text-sm text-gray-500 mb-6">
+          <h1 className="text-xl font-bold text-ink mb-2">Algo salió mal</h1>
+          <p className="text-sm text-ink-soft mb-6">
             La aplicación encontró un error inesperado. Tus datos guardados no se perdieron; recarga para continuar.
           </p>
           <button

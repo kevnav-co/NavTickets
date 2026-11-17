@@ -73,23 +73,23 @@ const CategorySheet: React.FC<{
     <div className="fixed inset-0 z-[60]" onClick={onClose}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
       <div
-        className="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl pt-2 px-2"
+        className="absolute bottom-0 inset-x-0 bg-raised rounded-t-2xl pt-2 px-2"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mx-auto w-10 h-1.5 bg-gray-300 rounded-full mb-1" />
-        <header className="flex items-center justify-between pl-2 pr-1 py-1">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Icon size={16} className="text-primary" />
+        <div className="mx-auto w-9 h-1 bg-line rounded-full mb-2" />
+        <header className="flex items-center justify-between pl-2 pr-1 pb-1">
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Icon size={15} className="text-primary" />
             </span>
-            <span className="text-xs font-black uppercase tracking-widest text-gray-700">{title}</span>
+            <span className="text-[11px] font-bold uppercase tracking-widest text-ink-soft">{title}</span>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600" aria-label="Cerrar">
+          <button onClick={onClose} className="p-2 text-ink-faint hover:text-ink-soft" aria-label="Cerrar">
             <X size={18} />
           </button>
         </header>
-        <div className="mt-1 max-h-[50vh] overflow-y-auto">
+        <div className="mt-1 max-h-[50vh] overflow-y-auto pb-1">
           {items.map(item => {
             const active = isPathActive(item, pathname);
             const disabled = !!item.requiresOnline && isOffline;
@@ -98,19 +98,19 @@ const CategorySheet: React.FC<{
                 key={item.path}
                 disabled={disabled}
                 onClick={() => onSelect(item)}
-                className={`w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl transition-all text-left ${
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-left ${
                   disabled
                     ? 'opacity-30 cursor-not-allowed'
                     : active
-                      ? 'bg-red-50 text-primary shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-50'
+                      ? 'bg-primary/8 text-primary'
+                      : 'text-ink-soft active:bg-sunken'
                 }`}
               >
                 <span className="relative">
-                  <item.icon size={19} strokeWidth={active ? 2.3 : 1.8} className={active ? 'text-primary' : 'text-gray-400'} />
-                  {disabled && <WifiOff size={12} className="absolute -bottom-0.5 -right-1 text-gray-400" />}
+                  <item.icon size={18} strokeWidth={active ? 2.3 : 1.8} className={active ? 'text-primary' : 'text-ink-faint'} />
+                  {disabled && <WifiOff size={12} className="absolute -bottom-0.5 -right-1 text-ink-faint" />}
                 </span>
-                <span className={`text-sm ${active ? 'font-bold' : 'font-semibold'}`}>{item.label}</span>
+                <span className={`text-sm ${active ? 'font-semibold' : 'font-medium'}`}>{item.label}</span>
                 {active && <Check size={15} className="ml-auto text-primary" />}
               </button>
             );
@@ -222,7 +222,7 @@ export const MobileNavigation: React.FC = React.memo(() => {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-gray-200/60 z-50 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 4px)' }}>
+      <nav className="fixed bottom-0 left-0 right-0 bg-raised/95 backdrop-blur-xl border-t border-line z-50 md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 4px)' }}>
         <div className="flex items-stretch">
           {roots.map((root) => {
             const isActive = root.path !== undefined
@@ -237,30 +237,25 @@ export const MobileNavigation: React.FC = React.memo(() => {
                 key={root.id}
                 disabled={isDisabled}
                 onClick={() => isFolder ? setOpenGroup(root.id) : navigate(root.path!)}
-                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 relative transition-all duration-200 ${
+                className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 relative transition-colors duration-150 ${
                   isDisabled
                     ? 'opacity-30 cursor-not-allowed'
                     : isActive
                       ? 'text-primary'
-                      : 'text-gray-400 active:text-gray-600'
+                      : 'text-ink-faint active:text-ink-soft'
                 }`}
               >
-                {/* Active top accent line */}
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-[3px] rounded-full bg-gradient-to-r from-primary to-red-400 shadow-sm" />
-                )}
-
                 {/* Icon with badge */}
-                <span className={`relative flex items-center justify-center w-10 h-8 rounded-2xl transition-all duration-200 ${isActive ? 'bg-primary/10 scale-105' : ''}`}>
-                  <root.icon size={19} strokeWidth={isActive ? 2.5 : 1.8} />
+                <span className={`relative flex items-center justify-center w-11 h-7 rounded-lg transition-colors duration-150 ${isActive ? 'bg-primary/10' : ''}`}>
+                  <root.icon size={18} strokeWidth={isActive ? 2.3 : 1.8} />
                   {!isFolder && showingBadge && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] font-bold ring-2 ring-white shadow-sm">
+                    <span className="absolute -top-1 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white flex items-center justify-center text-[9px] font-bold ring-2 ring-white">
                       {root.badge! > 99 ? '99+' : root.badge}
                     </span>
                   )}
                 </span>
 
-                <span className={`text-[9px] tracking-wide leading-none ${isActive ? 'font-extrabold' : 'font-semibold'}`}>{root.label}</span>
+                <span className={`text-[9px] tracking-wide leading-none ${isActive ? 'font-bold' : 'font-medium'}`}>{root.label}</span>
               </button>
             );
           })}

@@ -103,19 +103,19 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
   };
 
   const btnCls = "w-full flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-colors";
-  const inputCls = "w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
+  const inputCls = "w-full bg-sunken border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg flex flex-col" style={{ height: 'min(80vh, 640px)' }} onClick={e => e.stopPropagation()}>
+      <div className="bg-raised rounded-3xl shadow-2xl w-full max-w-lg flex flex-col" style={{ height: 'min(80vh, 640px)' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-line-soft">
           {view !== 'list' && (
-            <button onClick={goList} className="p-1.5 hover:bg-gray-100 rounded-full text-gray-500"><ArrowLeft size={18} /></button>
+            <button onClick={goList} className="p-1.5 hover:bg-sunken rounded-full text-ink-soft"><ArrowLeft size={18} /></button>
           )}
           <LifeBuoy size={20} className="text-primary" />
-          <h2 className="text-lg font-bold text-gray-800 flex-1">Soporte de la app</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:bg-gray-100 rounded-full"><X size={20} /></button>
+          <h2 className="text-lg font-bold text-ink flex-1">Soporte de la app</h2>
+          <button onClick={onClose} className="p-2 text-ink-faint hover:bg-sunken rounded-full"><X size={20} /></button>
         </div>
 
         {/* Body */}
@@ -130,11 +130,11 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
               </button>
 
               {ticketsLoading && (
-                <div className="flex items-center justify-center gap-2 text-gray-400 py-8"><Loader2 className="animate-spin" size={22} /><span>Cargando soportes...</span></div>
+                <div className="flex items-center justify-center gap-2 text-ink-faint py-8"><Loader2 className="animate-spin" size={22} /><span>Cargando soportes...</span></div>
               )}
               {ticketsError && <p className="text-center text-sm text-red-500 font-bold py-6">Error: {ticketsError}</p>}
               {!ticketsLoading && !ticketsError && (tickets || []).length === 0 && (
-                <p className="text-center text-sm text-gray-400 py-10">No tienes consultas de soporte aún. Crea una "Nueva consulta".</p>
+                <p className="text-center text-sm text-ink-faint py-10">No tienes consultas de soporte aún. Crea una "Nueva consulta".</p>
               )}
 
               {(tickets || []).map(t => {
@@ -143,12 +143,12 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
                   <button
                     key={t.id}
                     onClick={() => { setSelectedId(t.id); setView('detail'); }}
-                    className="w-full text-left p-4 rounded-2xl border border-gray-100 hover:border-primary/30 hover:bg-gray-50/60 transition-colors flex items-start gap-3"
+                    className="w-full text-left p-4 rounded-2xl border border-line-soft hover:border-primary/30 hover:bg-sunken/60 transition-colors flex items-start gap-3"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-800 truncate">{t.subject}</p>
-                      <p className="text-xs text-gray-400 font-medium truncate">{t.message}</p>
-                      <span className="text-[10px] text-gray-300 font-semibold">{formatDateTime(t.createdAt)}</span>
+                      <p className="text-sm font-bold text-ink truncate">{t.subject}</p>
+                      <p className="text-xs text-ink-faint font-medium truncate">{t.message}</p>
+                      <span className="text-[10px] text-ink-faint font-semibold">{formatDateTime(t.createdAt)}</span>
                     </div>
                     <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${meta.cls} flex-shrink-0`}>{meta.label}</span>
                   </button>
@@ -174,7 +174,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
           {view === 'detail' && selected && (
             <div className="flex flex-col h-full min-h-[300px]">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="font-bold text-gray-800 truncate">{selected.subject}</h3>
+                <h3 className="font-bold text-ink truncate">{selected.subject}</h3>
                 <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).cls}`}>
                   {(STATUS_META[selected.status] || STATUS_META[SupportTicketStatus.OPEN]).label}
                 </span>
@@ -189,7 +189,7 @@ const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) => {
               {selected.status !== SupportTicketStatus.CLOSED && (
                 <div className="mt-3 flex items-end gap-2">
                   <input
-                    className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm text-gray-800 placeholder:text-gray-300 focus:outline-none"
+                    className="flex-1 bg-sunken border border-line rounded-xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none"
                     placeholder="Escribe un mensaje..."
                     value={reply}
                     onChange={e => setReply(e.target.value)}

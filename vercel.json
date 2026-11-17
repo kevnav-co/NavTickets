@@ -61,7 +61,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://cdn.onesignal.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://onesignal.com https://cdn.onesignal.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr https://images.unsplash.com https://onesignal.com https://*.onesignal.com; connect-src 'self' data: https://*.supabase.co wss://*.supabase.co https://onesignal.com https://*.onesignal.com https://nominatim.openstreetmap.org; frame-src https:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://*.tile.openstreetmap.fr; connect-src 'self' data: https://*.supabase.co wss://*.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com https://nominatim.openstreetmap.org; frame-src https:; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         }
       ]
     }
@@ -70,10 +70,6 @@
     {
       "source": "/api/cuenti/clients",
       "destination": "/api/edge/cuenti-proxy"
-    },
-    {
-      "source": "/api/admin/send-test-notification",
-      "destination": "/api/edge/send-test-notification"
     },
     {
       "source": "/((?!api/).*)",

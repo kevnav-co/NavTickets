@@ -32,21 +32,21 @@ export const UserMovementsModal: React.FC<UserMovementsModalProps> = ({ user, mo
 
   return (
     <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast">
-      <div className="bg-gray-100 rounded-2xl p-6 w-full max-w-2xl h-[90vh] m-auto shadow-2xl relative flex flex-col">
+      <div className="bg-sunken rounded-2xl p-6 w-full max-w-2xl h-[90vh] m-auto shadow-2xl relative flex flex-col">
         <div className="flex justify-between items-start mb-4">
             <div>
-                <h2 className="text-2xl font-bold text-gray-800">Movimientos de {user.name}</h2>
-                <p className="text-sm text-gray-500">Historial de todas las transacciones.</p>
+                <h2 className="text-2xl font-bold text-ink">Movimientos de {user.name}</h2>
+                <p className="text-sm text-ink-soft">Historial de todas las transacciones.</p>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button onClick={onClose} className="text-ink-faint hover:text-ink-soft">
                 <X size={24} />
             </button>
         </div>
 
         <div className="flex justify-center mb-4">
-            <div className="flex items-center gap-1 bg-gray-200 p-1 rounded-lg">
+            <div className="flex items-center gap-1 bg-line p-1 rounded-lg">
                 {RANGES.map(r => (
-                  <button key={r.id} onClick={() => setTimeRange(r.id)} className={`px-4 py-1.5 text-sm font-bold rounded-md ${timeRange === r.id ? 'bg-white shadow-sm' : 'text-gray-500'}`}>{r.label}</button>
+                  <button key={r.id} onClick={() => setTimeRange(r.id)} className={`px-4 py-1.5 text-sm font-bold rounded-md ${timeRange === r.id ? 'bg-raised shadow-sm' : 'text-ink-soft'}`}>{r.label}</button>
                 ))}
             </div>
         </div>
@@ -55,8 +55,8 @@ export const UserMovementsModal: React.FC<UserMovementsModalProps> = ({ user, mo
             {Object.keys(groups).length > 0 ? (
                 Object.entries(groups).map(([date, { movements: dayMovements, dailyBalance }]) => (
                     <div key={date}>
-                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-gray-200">
-                            <h4 className="font-bold text-gray-600 capitalize text-sm">{formatGroupDate(date)}</h4>
+                        <div className="flex justify-between items-center mb-3 pb-2 border-b border-line">
+                            <h4 className="font-bold text-ink-soft capitalize text-sm">{formatGroupDate(date)}</h4>
                             <p className={`font-bold text-sm ${dailyBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCOP(dailyBalance, 'always')}</p>
                         </div>
                         <div className="space-y-2">
@@ -79,10 +79,10 @@ export const UserMovementsModal: React.FC<UserMovementsModalProps> = ({ user, mo
                     </div>
                 ))
             ) : (
-                <div className="text-center py-10 px-4 bg-white rounded-2xl shadow-sm mt-10">
-                    <Wallet size={40} className="mx-auto text-gray-300"/>
-                    <p className="mt-4 font-bold text-gray-700">Sin Movimientos</p>
-                    <p className="text-sm text-gray-500">Este usuario no tiene movimientos en el período seleccionado.</p>
+                <div className="text-center py-10 px-4 bg-raised rounded-2xl shadow-sm mt-10">
+                    <Wallet size={40} className="mx-auto text-ink-faint"/>
+                    <p className="mt-4 font-bold text-ink-soft">Sin Movimientos</p>
+                    <p className="text-sm text-ink-soft">Este usuario no tiene movimientos en el período seleccionado.</p>
                 </div>
             )}
         </div>

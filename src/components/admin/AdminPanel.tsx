@@ -70,7 +70,7 @@ const AdminPanel: React.FC = () => {
   };
 
   if (!currentUser) {
-    return <div className="p-6 text-sm text-gray-400">Cargando sesión...</div>;
+    return <div className="p-6 text-sm text-ink-faint">Cargando sesión...</div>;
   }
 
   return (
@@ -80,17 +80,17 @@ const AdminPanel: React.FC = () => {
         {isSuperAdmin && view !== 'list' && (
           <button
             onClick={handleBackToList}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            className="p-2 hover:bg-sunken rounded-xl transition-colors"
           >
-            <ArrowLeft size={20} className="text-gray-500" />
+            <ArrowLeft size={20} className="text-ink-soft" />
           </button>
         )}
         {isSuperAdmin ? <Shield size={28} className="text-primary" /> : <Building2 size={28} className="text-primary" />}
         <div>
-          <h1 className="text-xl font-black text-gray-900">
+          <h1 className="text-xl font-black text-ink">
             {isSuperAdmin ? 'Panel de Administración' : 'Configuración de mi empresa'}
           </h1>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-ink-soft">
             {isSuperAdmin ? 'Gestión multi-tenant del sistema' : 'Personaliza el branding de tu empresa'}
           </p>
         </div>

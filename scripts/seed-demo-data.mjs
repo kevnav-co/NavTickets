@@ -450,24 +450,49 @@ async function generate(company, entry, force) {
   let roleByUser = {};
   for (const u of entry.users ?? []) roleByUser[u.username] = u.role;
   if (!(entry.users?.length)) {
+    // Las empresas ya existentes no traen roster en el catálogo, así que sus
+    // identificadores salen de la base; sin poblar umap aquí, más abajo no habría
+    // con qué resolver al técnico ni al administrador.
     const { data } = await svc.from("users").select("id,username,role").eq("company_id", company.id);
-    for (const r of data || []) roleByUser[r.username] = r.role;
+    for (const r of data || []) { roleByUser[r.username] = r.role; umap[r.username] = r.id; }
   }
-  const techIds = Object.entries(roleByUser).filter(([, r]) => r === "technician").map(([, id]) => id);
-  const adminUser = (entry.users ?? []).find((u) => u.role === "admin");
-  const adminId = adminUser ? umap[adminUser.username] ?? null : null;
+  // roleByUser va de usuario a rol: el identificador se resuelve contra umap. Al
+  // tomarlo del propio par se colaba el rol en technician_id y el insert de la
+  // orden lo rechazaba por no ser un UUID.
+  const techIds = Object.keys(roleByUser)
+    .filter((name) => roleByUser[name] === "technician")
+    .map((name) => umap[name])
+    .filter(Boolean);
+  const adminName = (entry.users ?? []).find((u) => u.role === "admin")?.username
+    ?? Object.keys(roleByUser).find((name) => roleByUser[name] === "admin");
+  const adminId = adminName ? umap[adminName] ?? null : null;
   console.log(`  usuarios: ${Object.keys(roleByUser).length} (roles: ${Object.values(roleByUser).join(",")})`);
 
   const rng = seedRng(company.slug || company.name);
 
-  // ── catálogo nuevo (solo si no sembrado) ──
-  if (invCount === 0) {
+  // ── catálogo nuevo ──
+  // Cada colección mira su propio contador en lugar de regirse toda por el del
+  // inventario: si una falla y las demás no, una reejecución repara solo la que
+  // falta en vez de saltarse el bloque entero o duplicar lo ya sembrado.
+  const [cliCount, eqCount] = await Promise.all([
+    gCount(company.id, "clients"),
+    gCount(company.id, "equipment"),
+  ]);
+  if (cliCount === 0) {
     for (const c of entry.clients ?? []) {
-      const { error } = await svc.from("clients").insert({ ...c, company_id: company.id }); if (error) console.error("  client", c.name, error.message);
+      // El catálogo de arriba nombra las coordenadas lat/lng; la tabla las llama
+      // latitude/longitude, así que sin esta traducción el insert falla entero y
+      // la empresa queda sin clientes (y por tanto sin órdenes).
+      const { lat, lng, ...rest } = c;
+      const { error } = await svc.from("clients").insert({ ...rest, latitude: lat, longitude: lng, company_id: company.id }); if (error) console.error("  client", c.name, error.message);
     }
+  }
+  if (eqCount === 0) {
     for (const e of entry.equipment ?? []) {
       const { error } = await svc.from("equipment").insert({ ...e, company_id: company.id }); if (error) console.error("  equipment", e.name, error.message);
     }
+  }
+  if (invCount === 0) {
     for (const it of entry.inventory ?? []) {
       const { error } = await svc.from("inventory_items").insert({ ...it, company_id: company.id }); if (error) console.error("  inventory", it.sku, error.message);
     }
@@ -513,16 +538,18 @@ async function generate(company, entry, force) {
       ord.warranty_period = warranty_period; ord.warranty_expiration = warranty_expiration;
       ord.is_under_warranty_review = warranty_period > 0 && rng() < 0.25;
     }
-    const { data: ordRow, error } = await svc.from("orders").insert(ord).select("id").single();
-    if (error) { console.error("  order", ord.name, error.message); continue; }
-    created++;
-    const eqBatch = [];
+    // Las máquinas de una orden viven en la columna equipment_ids desde la
+    // migración 033; equipment_orders es la tabla legado que ya nadie lee, así
+    // que sembrando solo allí la aplicación mostraba "N/A" en cada orden.
     for (let m = 0; m < nEq; m++) {
       const e = equip[Math.floor(rng() * equip.length)];
       if (usedEq.has(e.id)) continue; usedEq.add(e.id);
-      eqBatch.push({ equipment_id: e.id, order_id: ordRow.id });
     }
-    if (eqBatch.length) { const r = await svc.from("equipment_orders").insert(eqBatch); if (!r.error) eqLinks += eqBatch.length; }
+    ord.equipment_ids = [...usedEq];
+    const { data: ordRow, error } = await svc.from("orders").insert(ord).select("id").single();
+    if (error) { console.error("  order", ord.name, error.message); continue; }
+    created++;
+    eqLinks += usedEq.size;
     if (inv?.length && rng() < 0.5) {
       const nn = 1 + Math.floor(rng() * 3), lines = [];
       for (let m = 0; m < nn; m++) {
@@ -535,35 +562,50 @@ async function generate(company, entry, force) {
   console.log(`  órdenes: ${created} (vinculos equipo ${eqLinks}, líneas repuesto ${invLines})`);
 
   // ── TASKS ──
+  // Estos tres bloques se insertaban en cada pasada, así que una reejecución
+  // acumulaba tareas, notificaciones y tickets repetidos pese a que el script se
+  // documenta como idempotente. El flag --force-data busca más órdenes, no más
+  // de esto, de modo que el guardia no depende de él.
+  const taskCount = await gCount(company.id, "tasks");
   let tasks = 0;
-  for (const t of entry.tasks ?? []) {
-    const { error } = await svc.from("tasks").insert({
-      company_id: company.id, title: t.title, important: !!t.important, due_date: t.due,
-      category: t.category, assigned_to: umap[t.assigned] ?? null, created_by: adminId,
-    });
-    if (!error) tasks++; else console.error("  task", t.title, error.message);
+  if (taskCount === 0) {
+    for (const t of entry.tasks ?? []) {
+      const { error } = await svc.from("tasks").insert({
+        company_id: company.id, title: t.title, important: !!t.important, due_date: t.due,
+        category: t.category, assigned_to: umap[t.assigned] ?? null, created_by: adminId,
+      });
+      if (!error) tasks++; else console.error("  task", t.title, error.message);
+    }
   }
-  console.log(`  tareas: ${tasks}`);
+  console.log(`  tareas: ${taskCount === 0 ? tasks : `${taskCount} (ya sembradas)`}`);
 
   // ── NOTIFICATIONS (muestra) ──
+  // umap guarda el identificador; roleByUser solo el rol, que la columna user_id
+  // rechazaba por no ser un UUID y dejaba el contador siempre en cero.
+  const notifCount = await gCount(company.id, "notifications");
   let notifs = 0;
-  for (const uid of Object.values(roleByUser)) {
-    if (!uid) continue;
-    const { error } = await svc.from("notifications").insert({ company_id: company.id, user_id: uid, title: "Seed demo", body: "Datos ficticios sembrados", text: "Seed", type: "info", read: true, path: "/dashboard" });
-    if (!error) notifs++;
+  if (notifCount === 0) {
+    for (const uid of Object.values(umap)) {
+      if (!uid) continue;
+      const { error } = await svc.from("notifications").insert({ company_id: company.id, user_id: uid, title: "Seed demo", body: "Datos ficticios sembrados", text: "Seed", type: "info", read: true, path: "/dashboard" });
+      if (!error) notifs++; else console.error("  notification", uid, error.message);
+    }
   }
-  console.log(`  notificaciones: ${notifs}`);
+  console.log(`  notificaciones: ${notifCount === 0 ? notifs : `${notifCount} (ya sembradas)`}`);
 
   // ── SUPPORT (tenants con soportes) ──
+  const supportCount = await gCount(company.id, "support_tickets");
   let support = 0;
-  for (const s of entry.support ?? []) {
-    const { data, error } = await svc.from("support_tickets").insert({ company_id: company.id, user_id: adminId, subject: s.subject, message: s.message, status: s.status }).select("id").single();
-    if (!error) {
-      support++;
-      if (adminId) await svc.from("support_messages").insert({ ticket_id: data.id, user_id: adminId, role: "empresa", message: s.message });
-    } else console.error("  support", s.subject, error.message);
+  if (supportCount === 0) {
+    for (const s of entry.support ?? []) {
+      const { data, error } = await svc.from("support_tickets").insert({ company_id: company.id, user_id: adminId, subject: s.subject, message: s.message, status: s.status }).select("id").single();
+      if (!error) {
+        support++;
+        if (adminId) await svc.from("support_messages").insert({ ticket_id: data.id, user_id: adminId, role: "empresa", message: s.message });
+      } else console.error("  support", s.subject, error.message);
+    }
   }
-  console.log(`  soportes: ${support}`);
+  console.log(`  soportes: ${supportCount === 0 ? support : `${supportCount} (ya sembrados)`}`);
 }
 
 console.log(`\n== Seed demo NavTicket — ${SEED.length} tenants; force-data=${FORCE_DATA} ==`);

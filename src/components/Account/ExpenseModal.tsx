@@ -83,46 +83,46 @@ export const ExpenseModal: React.FC = () => {
 
   return (
     <div className="fixed inset-0 bg-gray-900/75 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in-fast">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md m-auto shadow-2xl relative">
-        <button onClick={close} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600">
+      <div className="bg-raised rounded-2xl p-6 w-full max-w-md m-auto shadow-2xl relative">
+        <button onClick={close} className="absolute top-3 right-3 text-ink-faint hover:text-ink-soft">
           <X size={24} />
         </button>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">{allowIncome ? 'Registrar Movimiento' : 'Agregar Gasto'}</h2>
+        <h2 className="text-2xl font-bold text-ink mb-6">{allowIncome ? 'Registrar Movimiento' : 'Agregar Gasto'}</h2>
 
         {success ? (
           <div className="text-center py-8">
             <CheckCircle className="mx-auto text-green-500 w-16 h-16 animate-pulse" />
-            <p className="text-lg font-semibold text-gray-700 mt-4">¡Movimiento Guardado!</p>
+            <p className="text-lg font-semibold text-ink-soft mt-4">¡Movimiento Guardado!</p>
           </div>
         ) : (
           <form onSubmit={handleSave} className="space-y-5">
             {allowIncome && (
-              <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-lg">
-                <button type="button" onClick={() => setMovementType('expense')} className={`py-2 px-4 rounded-md text-sm font-bold transition ${movementType === 'expense' ? 'bg-white shadow' : 'text-gray-500'}`}>Gasto</button>
-                <button type="button" onClick={() => setMovementType('income')} className={`py-2 px-4 rounded-md text-sm font-bold transition ${movementType === 'income' ? 'bg-white shadow' : 'text-gray-500'}`}>Ingreso</button>
+              <div className="grid grid-cols-2 gap-2 p-1 bg-sunken rounded-lg">
+                <button type="button" onClick={() => setMovementType('expense')} className={`py-2 px-4 rounded-md text-sm font-bold transition ${movementType === 'expense' ? 'bg-raised shadow' : 'text-ink-soft'}`}>Gasto</button>
+                <button type="button" onClick={() => setMovementType('income')} className={`py-2 px-4 rounded-md text-sm font-bold transition ${movementType === 'income' ? 'bg-raised shadow' : 'text-ink-soft'}`}>Ingreso</button>
               </div>
             )}
 
             <div>
-              <label htmlFor="concept" className="block text-sm font-bold text-gray-600 mb-2">Concepto</label>
-              <input id="concept" type="text" value={concept} onChange={(e) => setConcept(e.target.value)} placeholder={movementType === 'expense' ? 'Ej: Repuestos pantalla' : 'Ej: Abono inicial'} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg" required />
+              <label htmlFor="concept" className="block text-sm font-bold text-ink-soft mb-2">Concepto</label>
+              <input id="concept" type="text" value={concept} onChange={(e) => setConcept(e.target.value)} placeholder={movementType === 'expense' ? 'Ej: Repuestos pantalla' : 'Ej: Abono inicial'} className="w-full p-3 bg-sunken border border-line rounded-lg" required />
             </div>
 
             <div>
-              <label htmlFor="datetime" className="block text-sm font-bold text-gray-600 mb-2">Fecha y Hora</label>
-              <input id="datetime" type="datetime-local" value={dateTime} onChange={(e) => setDateTime(e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg" required />
+              <label htmlFor="datetime" className="block text-sm font-bold text-ink-soft mb-2">Fecha y Hora</label>
+              <input id="datetime" type="datetime-local" value={dateTime} onChange={(e) => setDateTime(e.target.value)} className="w-full p-3 bg-sunken border border-line rounded-lg" required />
             </div>
 
             <div>
-              <label htmlFor="amount" className="block text-sm font-bold text-gray-600 mb-2">Valor</label>
-              <CurrencyInput id="amount" name="amount" placeholder="$ 0" value={amount} decimalsLimit={0} onValueChange={(v) => setAmount(v ? parseFloat(v) : undefined)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-xl font-bold" intlConfig={{ locale: 'es-CO', currency: 'COP' }} required />
+              <label htmlFor="amount" className="block text-sm font-bold text-ink-soft mb-2">Valor</label>
+              <CurrencyInput id="amount" name="amount" placeholder="$ 0" value={amount} decimalsLimit={0} onValueChange={(v) => setAmount(v ? parseFloat(v) : undefined)} className="w-full p-3 bg-sunken border border-line rounded-lg text-xl font-bold" intlConfig={{ locale: 'es-CO', currency: 'COP' }} required />
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-gray-600 mb-2">{movementType === 'expense' ? 'Origen del Dinero' : 'Cuenta de Destino'}</label>
+              <label className="block text-sm font-bold text-ink-soft mb-2">{movementType === 'expense' ? 'Origen del Dinero' : 'Cuenta de Destino'}</label>
               <div className="grid grid-cols-2 gap-2">
                 {(['Efectivo', 'Transferencia'] as AccountType[]).map(a => (
-                  <button key={a} type="button" onClick={() => setOrigin(a)} className={`py-3 px-4 rounded-lg text-sm font-bold transition ${origin === a ? 'bg-primary text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{a}</button>
+                  <button key={a} type="button" onClick={() => setOrigin(a)} className={`py-3 px-4 rounded-lg text-sm font-bold transition ${origin === a ? 'bg-primary text-white shadow-md' : 'bg-sunken text-ink-soft hover:bg-line'}`}>{a}</button>
                 ))}
               </div>
             </div>

@@ -17,13 +17,13 @@ import SeguimientoTimeline from './SeguimientoTimeline';
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm">
-    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center text-center">
+    <div className="bg-raised w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl flex flex-col items-center text-center">
       <div className="w-20 h-20 bg-yellow-50 text-yellow-500 rounded-3xl flex items-center justify-center mb-6"><Hourglass size={40} /></div>
       <h3 className="text-xl font-black uppercase">Confirmar Acción</h3>
-      <p className="text-xs text-gray-500 mb-8 font-medium">{message}</p>
+      <p className="text-xs text-ink-soft mb-8 font-medium">{message}</p>
       <div className="w-full space-y-3">
         <button onClick={onConfirm} className="w-full py-5 bg-primary text-white rounded-2xl font-black text-xs uppercase flex items-center justify-center gap-2"><Play size={16} fill="currentColor" />Confirmar</button>
-        <button onClick={onCancel} className="w-full py-4 bg-gray-50 text-gray-400 rounded-2xl font-black text-[10px] uppercase">Volver</button>
+        <button onClick={onCancel} className="w-full py-4 bg-sunken text-ink-faint rounded-2xl font-black text-[10px] uppercase">Volver</button>
       </div>
     </div>
   </div>
@@ -531,16 +531,16 @@ const OrderDetail: React.FC<Props> = ({
   };
 
   return (
-    <div className="bg-gray-50/50 min-h-screen pb-40">
+    <div className="bg-sunken/50 min-h-screen pb-40">
       {order.status !== OrderStatus.OPEN && (
-        <header className="sticky top-0 bg-gray-50/90 backdrop-blur-sm z-20 flex items-center justify-between p-4">
-            <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm"><ChevronLeft size={20} /></button>
+        <header className="sticky top-0 bg-sunken/90 backdrop-blur-sm z-20 flex items-center justify-between p-4">
+            <button onClick={() => navigate(-1)} className="p-2 bg-raised rounded-full shadow-sm"><ChevronLeft size={20} /></button>
             <div className="text-center">
                 <p className="text-xs font-bold uppercase">Expediente</p>
                 <div className="flex items-center gap-2">
                     <h1 className="text-lg font-black">#{order.orderNumber} • {order.serviceName}</h1>
                     {currentUser?.role === 'admin' && (
-                        <button onClick={handleEditServiceName} className="text-gray-400 hover:text-blue-500 transition-colors">
+                        <button onClick={handleEditServiceName} className="text-ink-faint hover:text-blue-500 transition-colors">
                             <PenLine size={16} />
                         </button>
                     )}
@@ -554,8 +554,8 @@ const OrderDetail: React.FC<Props> = ({
       {renderContent()}
 
       {/* ─── Seguimiento (historial del tiquete) ─── */}
-      <section className="mx-4 mt-4 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+      <section className="mx-4 mt-4 bg-raised rounded-2xl shadow-sm border border-line-soft p-5">
+        <h3 className="font-bold text-ink mb-4 flex items-center gap-2">
           <History size={18} className="text-primary" /> Seguimiento
         </h3>
         <SeguimientoTimeline seguimientos={seguimientos} users={users} />

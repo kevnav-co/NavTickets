@@ -4,6 +4,7 @@ import { useSupabaseQuery } from '../hooks/useSupabaseQuery';
 import { useSupabaseActions } from '../hooks/useSupabaseActions';
 import { useSupabaseStorage } from '../hooks/useSupabaseStorage';
 import { useSyncManager } from '../hooks/useSyncManager';
+import { hasPersistedSession } from '../services/supabase';
 import { useAuth } from './AuthContext';
 
 interface DataContextType {
@@ -49,23 +50,35 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isNotificationsLoaded, setIsNotificationsLoaded] = useState(false);
 
   // ─── Queries críticas: cargar inmediato (necesarias para render inicial) ───
+  // `currentUser` queda en nulo en dos casos muy distintos: ante el formulario de
+  // entrada, y cuando alguien que ya entró se queda sin cobertura, porque el
+  // perfil se pide por red. En el segundo hay que leer de la caché local, que es
+  // de lo que vive la aplicación en campo; en el primero no, y así la pantalla de
+  // entrada no abre IndexedDB ni descarga Dexie. La sesión guardada distingue uno
+  // de otro sin tocar la red.
   const hasSession = !!currentUser;
+  const hasStoredSession = useMemo(() => hasPersistedSession(), []);
+  const canReadData = hasSession || hasStoredSession;
+
   const clientsQuery = useSupabaseQuery<Client>('clients', {
     table: 'clients',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
+    enabled: canReadData,
     forceOffline: !hasSession,
   });
   const ordersQuery = useSupabaseQuery<ServiceOrder>('orders', {
     table: 'orders',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
+    enabled: canReadData,
     forceOffline: !hasSession,
   });
   const usersQuery = useSupabaseQuery<User>('users', {
     table: 'users',
     filters: companyId ? [{ column: 'company_id', operator: 'eq', value: companyId }] : [],
     realtime: true,
+    enabled: canReadData,
     forceOffline: !hasSession,
   });
 
@@ -99,7 +112,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // ─── CRUD con cola offline ─────────────────────────────────────────────
   const { addItem: addItemRaw, updateItem: updateItemRaw, deleteItem: deleteItemRaw } = useSupabaseActions();
   const { uploadFile: uploadFileRaw, isUploading } = useSupabaseStorage({ bucket: 'order-photos' });
-  const { pendingCount, isSyncing } = useSyncManager();
+  const { pendingCount, isSyncing } = useSyncManager(canReadData);
 
   // ─── Loading combinado: SOLO queries críticas ──────────────────────────
   const loading = hasSession && (

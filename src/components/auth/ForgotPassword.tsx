@@ -39,31 +39,37 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full flex bg-white overflow-hidden font-sans">
+    <div className="min-h-[100dvh] w-full flex bg-raised overflow-hidden font-sans">
       <div className="hidden lg:flex lg:w-1/2 xl:w-5/12 relative flex-col justify-between p-16 xl:p-20 z-10 overflow-hidden bg-primary">
-        <div className="absolute inset-0 z-0">
-          <img
-            src="https://images.unsplash.com/photo-1513828583688-c52646db42da?auto=format&fit=crop&q=80"
-            alt="Fondo Industrial"
-            className="w-full h-full object-cover opacity-40 mix-blend-luminosity"
+        {/* Fondo decorativo en CSS puro: sin descarga externa, no se rompe sin red. */}
+        <div className="absolute inset-0 z-0" aria-hidden="true">
+          <div
+            className="absolute inset-0 opacity-[0.07]"
+            style={{
+              backgroundImage:
+                'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+            }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/90 to-primary/40 mix-blend-multiply"></div>
+          <div className="absolute -top-32 -right-24 w-[26rem] h-[26rem] rounded-full bg-raised/[0.06] blur-3xl" />
+          <div className="absolute -bottom-40 -left-20 w-[30rem] h-[30rem] rounded-full bg-black/20 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/[0.04]" />
         </div>
         <div className="relative z-10">
           <img src="/assets/logo-blanco.png?v=fondoblanco4" alt="Logo de la empresa" className="w-full h-auto object-contain" />
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto bg-white relative">
+      <div className="flex-1 overflow-y-auto bg-raised relative">
         <div className="min-h-full flex flex-col justify-center px-8 py-10 sm:px-12 md:px-20 lg:px-24 xl:px-32 w-full max-w-3xl mx-auto">
-          <button onClick={() => navigate('/')} className="mb-10 inline-flex items-center gap-1 text-sm font-bold text-gray-500 hover:text-gray-800 transition-colors">
+          <button onClick={() => navigate('/')} className="mb-10 inline-flex items-center gap-1 text-sm font-bold text-ink-soft hover:text-ink transition-colors">
             <ChevronLeft size={18} /> Volver al inicio de sesión
           </button>
 
           <div className="w-full">
             <div className="mb-8 text-center lg:text-left">
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight mb-3">Recupera tu contraseña</h2>
-              <p className="text-gray-500">Ingresa tu usuario y te enviaremos un enlace de reseteo a tu correo de recuperación.</p>
+              <h2 className="text-3xl font-bold text-ink tracking-tight mb-3">Recupera tu contraseña</h2>
+              <p className="text-ink-soft">Ingresa tu usuario y te enviaremos un enlace de reseteo a tu correo de recuperación.</p>
             </div>
 
             {sent ? (
@@ -81,15 +87,15 @@ const ForgotPassword: React.FC = () => {
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-900 uppercase tracking-wide">Usuario</label>
-                  <div className="flex items-center border-b-2 border-gray-100 focus-within:border-primary transition-colors">
-                    <UserIcon size={20} className="ml-2 text-gray-400" />
+                  <label className="text-xs font-bold text-ink uppercase tracking-wide">Usuario</label>
+                  <div className="flex items-center border-b-2 border-line-soft focus-within:border-primary transition-colors">
+                    <UserIcon size={20} className="ml-2 text-ink-faint" />
                     <input
                       type="text"
                       placeholder="Ej: usuario"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
-                      className="w-full bg-transparent py-3 pl-3 pr-4 text-base text-gray-900 placeholder:text-gray-300 focus:outline-none rounded-none"
+                      className="w-full bg-transparent py-3 pl-3 pr-4 text-base text-ink placeholder:text-ink-faint focus:outline-none rounded-none"
                       autoCapitalize="none"
                       autoCorrect="off"
                       autoFocus

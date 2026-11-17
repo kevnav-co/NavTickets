@@ -25,7 +25,13 @@ interface SyncManagerResult {
  * 3. Elimina las operaciones exitosas de la cola
  * 4. Reintenta las fallidas (máximo 3 intentos)
  */
-export function useSyncManager(): SyncManagerResult {
+/**
+ * @param enabled Sin sesión no hay nada que drenar: las escrituras pendientes van
+ *   a Supabase y las reglas RLS exigen un usuario. Mantenerlo apagado en la
+ *   pantalla de inicio de sesión evita además abrir la base local y descargar
+ *   Dexie antes de que alguien entre.
+ */
+export function useSyncManager(enabled: boolean = true): SyncManagerResult {
   const { isOnline, text: connectionText } = useConnectivityStatus();
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -133,6 +139,8 @@ export function useSyncManager(): SyncManagerResult {
   // ─── Efecto: detectar reconexión ───────────────────────────────────────────
 
   useEffect(() => {
+    if (!enabled) return;
+
     if (!wasOfflineRef.current && !isOnline) {
       wasOfflineRef.current = true;
     }
@@ -143,25 +151,27 @@ export function useSyncManager(): SyncManagerResult {
       const timer = setTimeout(() => triggerSync(), 3000); // Esperar 3s para estabilizar
       return () => clearTimeout(timer);
     }
-  }, [isOnline, triggerSync]);
+  }, [enabled, isOnline, triggerSync]);
 
   // ─── Efecto: conteo inicial y polling ──────────────────────────────────────
 
   useEffect(() => {
+    if (!enabled) return;
     updatePendingCount();
     const interval = setInterval(updatePendingCount, 30000); // Cada 30s
     return () => clearInterval(interval);
-  }, [updatePendingCount]);
+  }, [enabled, updatePendingCount]);
 
   // ─── Sincronizar también cuando cambia connectionText ───────────────────────
 
   useEffect(() => {
+    if (!enabled) return;
     if (connectionText === 'Online' && pendingCount > 0 && !syncingRef.current) {
       const timer = setTimeout(() => triggerSync(), 5000);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionText]);
+  }, [enabled, connectionText]);
 
   return {
     isSyncing,
