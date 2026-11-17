@@ -23,7 +23,8 @@ nunca debe considerarse una barrera de seguridad.
 |---|---|---|---|
 | `WEBHOOK_SECRET` | Supabase (`supabase secrets`) | Autentica las Edge Functions que llaman los triggers (`on-*-assigned`, `support-*`, `service-request-notify`) y `send-push`. Sin él rechazan todo | Secreto `webhook_secret` de Vault |
 | `webhook_secret` (Vault) | Base de datos, Supabase Vault (`vault.create_secret` / `vault.update_secret`) | Lo envían los triggers a través de `public.webhook_secret()` (migración 044). En Supabase no se puede usar `ALTER DATABASE … SET app.webhook_secret` (permiso denegado) | `WEBHOOK_SECRET` |
-| `CRON_SECRET` | Supabase (`supabase secrets`) y Vault (`cron_secret`) | Autentica `task-scheduler` y `daily-expiration-check` | Valor guardado en Vault |
+| `CRON_SECRET` | Supabase (`supabase secrets`) | Autentica `task-scheduler` y `daily-expiration-check` | Secreto `cron_secret` de Vault |
+| `cron_secret` (Vault) | Base de datos, Supabase Vault | Lo envían los jobs de `pg_cron` como `x-cron-secret` a través de `public.cron_secret()` (migración 047) | `CRON_SECRET` |
 | `SUPABASE_SERVICE_ROLE_KEY` | Vercel (env); automático en Edge Functions | Acceso administrativo desde el servidor | Supabase → Settings → API |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | Supabase (`supabase secrets`) | Envío de Web Push (VAPID) | Generados con `web-push generate-vapid-keys` |
 | `CUENTI_API_TOKEN`, `CUENTI_EMPRESA_ID`, `CUENTI_USER_ID` | Vercel (env) | Proxy al ERP Cuenti | Cuenta Cuenti de la empresa |
@@ -65,7 +66,9 @@ Rotar al menos una vez al año, al salir una persona con acceso o ante sospecha 
   escritura). Para comprobar que coinciden sin ver el valor: la API de secretos de Supabase devuelve el
   SHA-256 del valor, que se compara con `encode(extensions.digest(decrypted_secret, 'sha256'), 'hex')`
   de `vault.decrypted_secrets`. El valor no se guarda en ningún otro sitio: si se pierde, se rota.
-- `CRON_SECRET`: actualizar `supabase secrets` y el valor en Vault (`vault.update_secret`).
+- `CRON_SECRET`: actualizar `supabase secrets set CRON_SECRET=…` y Vault
+  (`select vault.update_secret(id, '<nuevo>') from vault.secrets where name = 'cron_secret';`). Se
+  comprueba igual que `WEBHOOK_SECRET`, comparando los SHA-256.
 - Service role de Supabase: regenerar en Supabase → Settings → API y actualizar Vercel.
 - VAPID keys: regenerar con `npx web-push generate-vapid-keys` y actualizar en Supabase secrets.
 - Cuenti: regenerar en el proveedor y actualizar las variables.
@@ -77,8 +80,21 @@ Rotar al menos una vez al año, al salir una persona con acceso o ante sospecha 
 | `task-scheduler` | `*/5 * * * *` | Recordatorios, vencimientos y tareas recurrentes |
 | `daily-expiration-check` | `0 13 * * *` (08:00 Colombia) | Mantenimientos y garantías por vencer |
 
-Ambas funciones rechazan (401) cualquier llamada sin `x-cron-secret` válido o la service role.
-Los jobs de `pg_cron` leen el secreto desde Vault. Comprobación:
+Los programa `pg_cron` (migración 047, jobs `task-scheduler` y `daily-expiration-check` en
+`cron.job`). Cada job ejecuta `public.invoke_scheduled_function('<nombre>')`, que llama a la Edge
+Function vía pg_net con `x-cron-secret` tomado de Vault; esa función solo admite estos dos nombres y
+no es ejecutable desde la API. Las dos Edge Functions tienen `verify_jwt = false` y rechazan (401)
+cualquier llamada sin `x-cron-secret` válido o la service role.
+
+Para lanzar una ejecución a mano: `select public.invoke_scheduled_function('daily-expiration-check');`.
+
+Historia: hasta el 17/11/2026 nunca se habían ejecutado en producción (pg_cron sin instalar, sin
+jobs ni `CRON_SECRET`; la clave `schedule` de `config.toml` no la aplica la CLI). Además
+`daily-expiration-check` pedía columnas inexistentes (`companies.whatsapp_number`,
+`orders.equipment_name`). La primera ejecución avisó a los administradores de lo acumulado
+(9 mantenimientos y 13 garantías). El correo y el WhatsApp a clientes siguen simulados.
+
+Comprobación:
 
 ```sql
 select status, return_message, start_time from cron.job_run_details order by start_time desc limit 10;

@@ -1,5 +1,6 @@
-// Guard para funciones programadas (verify_jwt=true solo exige un JWT válido, y la anon
-// key lo es): solo se aceptan llamadas con la service_role key o el secreto del cron.
+// Guard para funciones programadas. Tienen verify_jwt = false (las llama pg_cron vía pg_net,
+// migración 047, sin JWT), así que este control es el único: fail-closed, solo se aceptan
+// llamadas con la service_role key o el secreto del cron.
 //   Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>   ó   x-cron-secret: <CRON_SECRET>
 export function isAuthorizedCronCall(req: Request): boolean {
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

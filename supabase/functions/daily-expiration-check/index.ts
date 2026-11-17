@@ -76,14 +76,15 @@ async function loadAllCompanyBrandings(): Promise<Record<string, CompanyBranding
   try {
     const { data: companies, error } = await supabase
       .from("companies")
-      .select("id, name, theme, whatsapp_number");
+      // whatsapp_number no es una columna de companies: el número sale de theme si existe.
+      .select("id, name, theme");
     if (error) throw error;
     for (const company of companies || []) {
       brandings[company.id] = {
         name: company.name || "Empresa",
         primaryColor: company.theme?.primaryColor || "#7b1113",
         logoUrl: company.theme?.logoUrl || "/assets/logo-inicio.png",
-        whatsappNumber: company.whatsapp_number || "573117142337",
+        whatsappNumber: company.theme?.whatsappNumber || "573117142337",
       };
     }
   } catch (e) {
@@ -265,7 +266,8 @@ Deno.serve(async (req: Request) => {
     // --- 2. CHECK WARRANTY EXPIRATIONS ---
     const { data: orders, error: orderError } = await supabase
       .from("orders")
-      .select("id, order_number, warranty_expiration, client_id, company_id, equipment_name, warranty_notification_sent")
+      // orders no tiene equipment_name: se usa el nombre del servicio (name).
+      .select("id, order_number, name, warranty_expiration, client_id, company_id, warranty_notification_sent")
       .eq("status", "Cerrado")
       .eq("warranty_notification_sent", false);
 
@@ -312,7 +314,7 @@ Deno.serve(async (req: Request) => {
             const expDateStr = expirationDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
             const clientBody = `Hola ${client.name}, te informamos que la garantía de tu servicio #${order.order_number} vence el ${expDateStr}.`;
             const clientHtmlBody = getWarrantyEmailHtml(
-              { clientName: client.name, orderNumber: order.order_number, machineName: order.equipment_name || "Equipo de Cocina", expirationDate: expDateStr },
+              { clientName: client.name, orderNumber: order.order_number, machineName: order.name || "el equipo atendido", expirationDate: expDateStr },
               branding,
             );
 
