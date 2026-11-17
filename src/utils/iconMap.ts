@@ -40,6 +40,7 @@ import {
   PieChart,
   TrendingUp,
   Wallet,
+  Inbox,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -85,6 +86,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   PieChart,
   TrendingUp,
   Wallet,
+  Inbox,
 };
 
 export function resolveIcon(iconName: string): LucideIcon {

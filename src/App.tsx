@@ -51,6 +51,7 @@ const ClientMap = React.lazy(() => import('./components/map/ClientMap'));
 const AdminPanel = React.lazy(() => import('./components/admin/AdminPanel'));
 const CompanyStats = React.lazy(() => import('./components/admin/CompanyStats'));
 const SupportAdmin = React.lazy(() => import('./components/admin/SupportAdmin'));
+const ServiceRequestInbox = React.lazy(() => import('./components/requests/ServiceRequestInbox'));
 
 // --- CONSTANTS AND INTERFACES ---
 const GPS_UPDATE_INTERVAL = 10 * 60 * 1000; // 10 minutes
@@ -278,6 +279,14 @@ function AppContent({
                           <Route path="/inventory/new" element={<RouteWithLayout title="Nuevo Repuesto"><InventoryForm /></RouteWithLayout>} />
                           <Route path="/inventory/:id" element={<RouteWithLayout title="Detalle de Repuesto"><InventoryDetail /></RouteWithLayout>} />
                           <Route path="/inventory/:id/edit" element={<RouteWithLayout title="Editar Repuesto"><InventoryForm /></RouteWithLayout>} />
+                      </>
+                  )}
+
+                  {/* Solicitudes del asistente: permiso MANAGE_SERVICE_REQUESTS + features.aiAssistant */}
+                  {currentUser && isTabVisible('requests', currentUser.role, company?.features).visible && (
+                      <>
+                          <Route path="/requests" element={<RouteWithLayout title="Solicitudes"><ServiceRequestInbox /></RouteWithLayout>} />
+                          <Route path="/requests/:id" element={<RouteWithLayout title="Solicitud"><ServiceRequestInbox /></RouteWithLayout>} />
                       </>
                   )}
 

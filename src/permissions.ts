@@ -188,12 +188,14 @@ export const TAB_PERMISSION_MAP: Record<string, string> = {
   accounting: PERMISSIONS.VIEW_ACCOUNTING,
   inventory: PERMISSIONS.VIEW_INVENTORY,
   reports: PERMISSIONS.VIEW_REPORTS,
+  requests: PERMISSIONS.MANAGE_SERVICE_REQUESTS,
 };
 
 export const TAB_FEATURE_MAP: Record<string, keyof CompanyFeatures> = {
   equipment: 'equipmentManagement',
   map: 'maps',
   accounting: 'accounting',
+  requests: 'aiAssistant',
 };
 
 // Dado un tab built-in, ¿es visible para este rol con estas features?

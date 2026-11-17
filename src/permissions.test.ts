@@ -86,3 +86,15 @@ describe('MANAGE_SERVICE_REQUESTS (asistente, migraciones 042/043)', () => {
     expect(hasPermission(undefined, PERMISSIONS.MANAGE_SERVICE_REQUESTS)).toBe(false);
   });
 });
+
+describe('pestaña «Solicitudes» (asistente, migración 044)', () => {
+  it('la ven los gestores solo con la bandera aiAssistant', () => {
+    for (const role of ['admin', 'supervisor', 'aux_admin', 'developer'] as const) {
+      expect(isTabVisible('requests', role, { aiAssistant: true }).visible).toBe(true);
+      expect(isTabVisible('requests', role, { aiAssistant: false }).visible).toBe(false);
+    }
+  });
+  it('el técnico no la ve aunque la empresa tenga el asistente', () => {
+    expect(isTabVisible('requests', 'technician', { aiAssistant: true }).visible).toBe(false);
+  });
+});

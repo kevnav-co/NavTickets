@@ -128,8 +128,8 @@ Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `
 
 ## 10. Asistente de ventas y servicio técnico
 
-Estado: fase 1 (datos y reglas) en la rama `feature/asistente-ventas-servicio`, **sin aplicar en
-producción**. Plan completo: documento «Asistente de ventas y servicio técnico» en Claude Docs.
+Estado: fases 1 (datos y reglas) y 2 (bandeja del administrador) en la rama
+`feature/asistente-ventas-servicio`, **sin aplicar en producción**. Plan completo: documento «Asistente de ventas y servicio técnico» en Claude Docs.
 
 ### 10.1 Qué agrega la fase 1
 
@@ -142,6 +142,8 @@ producción**. Plan completo: documento «Asistente de ventas y servicio técnic
 | `confirm_service_request(solicitud, fecha, hora, duración, técnico)` | 043 | Crea la orden en una sola transacción y marca la solicitud como confirmada |
 | `reject_service_request(solicitud, motivo)` | 043 | Rechaza con motivo obligatorio |
 | `purge_assistant_transcripts()` | 042 | Borra transcripciones vencidas (solo service role) |
+| Pestaña «Solicitudes» (`/requests`) | 044 | Bandeja para gestores; visible con el permiso `MANAGE_SERVICE_REQUESTS` y la bandera `aiAssistant` |
+| Trigger `trg_service_request_notify_webhook` + Edge Function `service-request-notify` | 044 | Push a admin, supervisor y aux_admin cuando una solicitud queda pendiente |
 
 ### 10.2 Controles de seguridad
 
@@ -162,14 +164,30 @@ producción**. Plan completo: documento «Asistente de ventas y servicio técnic
 - **Configuración:** solo admin y developer de la empresa la cambian; horario, servicios y zona
   horaria se validan en la base de datos.
 
-### 10.3 Aplicar en producción (cuando se apruebe)
+### 10.3 Bandeja del administrador (fase 2)
+
+- Pestaña «Solicitudes»: lista por estado (pendientes, confirmadas, rechazadas, en curso), detalle
+  con los datos recogidos y la conversación con el asistente.
+- Confirmar: el gestor elige técnico, fecha, hora y duración (puede abrir la agenda del técnico) y
+  pulsa «Confirmar y crear la orden». La app avisa antes si el técnico ya tiene una orden en ese
+  horario; la base de datos lo vuelve a comprobar. Al terminar abre la orden creada.
+- Rechazar: exige motivo.
+- «Nueva»: registra una solicitud recibida por teléfono, que queda pendiente.
+- Confirmar, rechazar y registrar requieren conexión.
+- La Edge Function `service-request-notify` recibe del trigger solo el id de la solicitud y la relee
+  con la service role; no confía en el contenido de la petición.
+
+### 10.4 Aplicar en producción (cuando se apruebe)
 
 1. Respaldo (sección 3, paso 1) y comprobar que la última migración aplicada es la 041:
    `select version from supabase_migrations.schema_migrations order by version desc limit 3;`
-2. Aplicar 042 y luego 043 (`npx supabase db push` con el proyecto enlazado y comprobado, o el SQL
-   Editor en ese orden). Ambas son idempotentes y aditivas: no modifican tablas ni funciones
-   existentes.
-3. Verificar:
+2. Aplicar 042, 043 y 044 en ese orden (`npx supabase db push` con el proyecto enlazado y
+   comprobado, o el SQL Editor). Son idempotentes y aditivas; la 044 solo redefine
+   `default_built_in_tabs()` para añadir la pestaña.
+3. Desplegar las Edge Functions con la configuración de `supabase/config.toml`:
+   `npx supabase functions deploy service-request-notify on-order-assigned on-task-assigned`.
+4. Resolver los avisos por webhook (10.5); sin eso no llega ningún push que salga de un trigger.
+5. Verificar:
 
 ```sql
 -- Tablas con RLS activa
@@ -184,3 +202,27 @@ select has_function_privilege('service_role', 'public.confirm_service_request(uu
 Reversión: las tablas nuevas están vacías hasta que se active la bandera `aiAssistant` de una
 empresa; para retirar la función basta con dejar la bandera apagada. Borrarlas no afecta a órdenes
 ya creadas (la orden no depende de la solicitud).
+
+### 10.5 Avisos por webhook: corrección pendiente en producción (17/11/2026)
+
+Revisión de solo lectura del proyecto `hvysnxvuyexacktlwsbm`:
+
+- `app.webhook_secret` **no está configurado** en la base de datos (ni por base ni por rol). Los
+  triggers de las migraciones 024–029 lo leen para firmar las llamadas a las Edge Functions, así que
+  envían la cabecera vacía y las funciones, que son fail-closed, responden 401. El secreto
+  `WEBHOOK_SECRET` sí existe en las Edge Functions.
+- `on-order-assigned` y `on-task-assigned` están desplegadas con `verify_jwt = true`. El trigger
+  envía el secreto, que no es un JWT, y el gateway lo rechaza antes de llegar a la función.
+
+Efecto: no llegan los avisos de asignación de órdenes y tareas (ni la notificación interna ni el
+push) ni los push de soporte que salen de triggers. Corrección (requiere aprobación):
+
+1. Generar un secreto nuevo con `openssl rand -hex 32` y guardarlo en el gestor de contraseñas.
+2. `npx supabase secrets set WEBHOOK_SECRET=<valor>`.
+3. En el SQL Editor: `ALTER DATABASE postgres SET app.webhook_secret = '<valor>';` (aplica a las
+   conexiones nuevas). Si Supabase lo rechaza, se prepara una migración que lea el secreto de Vault.
+4. Redesplegar `on-order-assigned` y `on-task-assigned` (ya tienen `verify_jwt = false` en
+   `supabase/config.toml`), junto con `service-request-notify`.
+5. Comprobar: asignar una orden de prueba en la empresa demo y revisar
+   `select status_code, created from net._http_response order by created desc limit 5;`
+   (debe responder 200) y que el técnico reciba el push.
