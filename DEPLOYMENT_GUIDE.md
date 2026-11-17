@@ -3,7 +3,7 @@
 ## Pre-requisitos
 - Cuenta en [Supabase](https://supabase.com)
 - Cuenta en [Vercel](https://vercel.com)
-- Cuenta en [OneSignal](https://onesignal.com) para push notifications
+- Un par de claves VAPID para push notifications (se generan localmente, ver §3; no hace falta cuenta en ningún proveedor)
 
 ---
 
@@ -76,15 +76,13 @@ En **Settings → API**:
 | `CRON_SECRET` | `openssl rand -hex 32` | All |
 | `WEBHOOK_SECRET` | **Mismo que en Supabase** | All |
 | `VERCEL_API_BASE` | `https://tu-proyecto.vercel.app` | All |
-| `ONESIGNAL_APP_ID` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` | All |
-| `ONESIGNAL_API_KEY` | `YWNiYz...` (REST API Key) | All |
 
 ### 2.3 Variables de Supabase para Frontend (prefijo VITE_)
 | Variable | Valor |
 |----------|-------|
 | `VITE_SUPABASE_URL` | `https://xxxx.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOi...` (anon key) |
-| `VITE_ONESIGNAL_APP_ID` | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| `VITE_VAPID_PUBLIC_KEY` | Clave pública VAPID (la misma que `VAPID_PUBLIC_KEY` en Supabase, ver §3) |
 
 > **NOTA**: Las variables con prefijo `VITE_` se exponen al bundle del cliente.
 
@@ -95,28 +93,31 @@ vercel --prod
 
 ---
 
-## 3. CONFIGURACIÓN DE ONESIGNAL
+## 3. CONFIGURACIÓN DE PUSH (WEB PUSH CON VAPID)
 
-### 3.1 Crear App
-1. [OneSignal Dashboard](https://dashboard.onesignal.com) → "New App"
-2. Nombre: `NavTicket`
-3. Platform: **Web Push** (Chrome, Firefox, Safari, Edge)
-4. Configurar Site URL: `https://tu-proyecto.vercel.app`
-5. Copiar **App ID** y **REST API Key** (Settings → Keys & IDs)
+El push usa el estándar Web Push firmado con claves VAPID, sin proveedor intermedio. Las
+suscripciones se guardan en la tabla `push_subscriptions` (migración 040) y todos los avisos
+salen por la Edge Function `send-push`. El flujo completo está en
+`directivas/directiva_notificaciones_fcm.md`.
 
-### 3.2 Configurar secrets de OneSignal
-Los secrets que los **edges de Supabase** necesitan para mandar push (`support-notify`) viven
-a nivel de proyecto Supabase:
+### 3.1 Generar las claves
+Una sola vez, en local:
 ```bash
-npx supabase secrets set ONESIGNAL_APP_ID=<App ID> ONESIGNAL_API_KEY=<REST API Key os_v2_app_…>
+npx web-push generate-vapid-keys
 ```
-En Vercel solo se requieren `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` **si** usas el botón de push
-de prueba (`send-test-notification`, edge Vercel).
+Guarda la pública y la privada; la privada no debe salir de los secrets de Supabase.
+
+### 3.2 Configurar secrets en Supabase
+`send-push` firma los envíos con estas tres, a nivel de proyecto Supabase:
+```bash
+npx supabase secrets set VAPID_PUBLIC_KEY=<pública> VAPID_PRIVATE_KEY=<privada> VAPID_SUBJECT=mailto:<correo de contacto>
+```
 
 ### 3.3 Configurar en Frontend
-En `src/services/oneSignal.ts`, el `appId` se toma de `import.meta.env.VITE_ONESIGNAL_APP_ID`
-(se hornea al buildar; setearla como env var en Vercel). Sin ella, el cliente no se suscribe y
-`support-notify` responde `NO_SUPER_ADMIN_PLAYER_IDS` (notified: 0).
+`src/utils/webPush.ts` suscribe el navegador con `import.meta.env.VITE_VAPID_PUBLIC_KEY`, que se
+incrusta al compilar: configúrala en Vercel con **el mismo valor** que `VAPID_PUBLIC_KEY` y vuelve a
+desplegar. Si las dos públicas no coinciden, el navegador acepta la suscripción pero rechaza los
+envíos.
 
 ---
 
@@ -205,9 +206,9 @@ VALUES ('xxx', 9999, 'Test', '<user-id>', ...);
 | `daily-expiration-check` (mantenimiento/garantías) | Diaria 08:00 | Supabase Edge | Dashboard → Edge Functions → Invoke |
 
 Los webhooks por eventos (`on-order-assigned`, `on-task-assigned`, `support-notify`) se disparan
-desde triggers de la BD (pg_net), no son crons. `support-notify` necesita los secrets de proyecto
-Supabase `ONESIGNAL_APP_ID`/`ONESIGNAL_API_KEY` (ver §3.2) y solo entrega a super_admins con
-`onesignal_player_id` guardado (PWA instalada + permiso concedido).
+desde triggers de la BD (pg_net), no son crons. Todos entregan el push vía `send-push`, que
+necesita los secrets VAPID del proyecto Supabase (ver §3.2) y solo alcanza a usuarios con una
+fila en `push_subscriptions` (permiso concedido en ese navegador; en iOS, PWA instalada).
 
 ---
 
@@ -245,4 +246,3 @@ Si algo falla:
 
 - Supabase: https://supabase.com/support
 - Vercel: https://vercel.com/support
-- OneSignal: https://onesignal.com/support
