@@ -4,19 +4,10 @@ import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 import {
   ChevronLeft, AtSign, Shield, Trash2, Edit, IdCard, Mail,
-  AlertTriangle, Loader2, UserCheck, Code, Send,
-  CheckCircle2, XCircle, Smartphone, Wifi, WifiOff
+  AlertTriangle, Loader2, UserCheck, Code,
+  Smartphone, Wifi, WifiOff
 } from 'lucide-react';
 import PERMISSIONS, { hasPermission } from '../../permissions';
-import { authAccessToken } from '../../services/supabase';
-
-interface TestResult {
-  success: boolean;
-  error?: string;
-  message: string;
-  userName?: string;
-  tokenPreview?: string;
-}
 
 const UserDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,10 +17,6 @@ const UserDetail: React.FC = () => {
   
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // --- Push Diagnostics State ---
-  const [isSendingTest, setIsSendingTest] = useState(false);
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   const user = users.find(u => u.id === id);
 
@@ -64,43 +51,6 @@ const UserDetail: React.FC = () => {
       console.error(error);
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  // --- Push Diagnostics Handler ---
-  const handleSendTestPush = async () => {
-    setIsSendingTest(true);
-    setTestResult(null);
-    try {
-      // Llamar al edge Vercel (rewrite /api/admin/send-test-notification →
-      // /api/edge/send-test-notification) con el access_token real de la sesión.
-      // El edge exige rol admin/developer/super_admin; la anon key no sirve de
-      // identidad (auth.getUser la rechaza).
-      const token = await authAccessToken();
-      const response = await fetch('/api/admin/send-test-notification', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token ?? ''}`,
-        },
-        body: JSON.stringify({ userId: user.id }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const result = await response.json();
-      setTestResult(result as TestResult);
-    } catch (error: any) {
-      setTestResult({
-        success: false,
-        error: 'CALL_FAILED',
-        message: error.message || 'Error al llamar la Edge Function de Supabase.',
-      });
-    } finally {
-      setIsSendingTest(false);
     }
   };
 
@@ -199,54 +149,6 @@ const UserDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
-
-              {/* Send Test Push Button */}
-              <button
-                onClick={handleSendTestPush}
-                disabled={isSendingTest}
-                className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold text-sm transition-all disabled:opacity-60 disabled:cursor-wait bg-purple-600 text-white hover:bg-purple-700 active:scale-[0.98] shadow-lg shadow-purple-600/20"
-              >
-                {isSendingTest ? (
-                  <><Loader2 size={16} className="animate-spin" /> Enviando Push de Prueba...</>
-                ) : (
-                  <><Send size={16} /> Enviar Push de Prueba</>
-                )}
-              </button>
-
-              {/* Test Result */}
-              {testResult && (
-                <div className={`rounded-xl p-4 border-2 transition-all animate-in fade-in slide-in-from-bottom-2 ${
-                  testResult.success 
-                    ? 'bg-green-50 border-green-200' 
-                    : 'bg-red-50 border-red-200'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    {testResult.success ? (
-                      <CheckCircle2 size={20} className="text-green-500 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <XCircle size={20} className="text-red-500 mt-0.5 flex-shrink-0" />
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-bold ${testResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                        {testResult.success ? '✅ Push Enviado Correctamente' : '❌ Error en el Envío'}
-                      </p>
-                      <p className={`text-xs mt-1 ${testResult.success ? 'text-green-600' : 'text-red-600'}`}>
-                        {testResult.message}
-                      </p>
-                      {testResult.error && (
-                        <p className="text-[10px] font-mono text-ink-faint mt-2">
-                          Código: {testResult.error}
-                        </p>
-                      )}
-                      {testResult.tokenPreview && (
-                        <p className="text-[10px] font-mono text-ink-faint mt-1">
-                          Token: {testResult.tokenPreview}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
             </section>
           )}
           {/* ======= END DEVELOPER PANEL ======= */}

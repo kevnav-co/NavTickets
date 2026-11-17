@@ -53,7 +53,6 @@ root = "."
 # Vercel, NO despliegue local de Supabase:
 #  - cuenti-proxy                (proxy ERP)
 #  - updateUserPassword          (self-service clave)
-#  - sendTestNotification        (admin panel, prueba push)
 #  - onOrderAssigned             (stub muerto, redirigido a Supabase)
 #  - onTaskAssigned              (stub muerto, redirigido a Supabase)
 

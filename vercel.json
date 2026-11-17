@@ -72,10 +72,6 @@
       "destination": "/api/edge/cuenti-proxy"
     },
     {
-      "source": "/api/admin/send-test-notification",
-      "destination": "/api/edge/send-test-notification"
-    },
-    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
