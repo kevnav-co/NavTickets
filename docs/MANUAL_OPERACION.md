@@ -248,6 +248,47 @@ iPhone, con la app instalada en la pantalla de inicio), porque hasta hoy ninguna
 guardaba. Después, `select count(*) from push_subscriptions;` debe crecer y el siguiente aviso llegará
 al teléfono.
 
+### 10.6 Chat web público (fase 3)
+
+Estado: código en la rama `feature/asistente-fase3` (migración 050 y Edge Function `assistant-chat`),
+**sin aplicar ni desplegar en producción**.
+
+- **Enlace para clientes:** `https://navtickets.vercel.app/#/asistente/<slug>`. Solo responde para
+  empresas con `features.aiAssistant = true`; para las demás muestra «Asistente no disponible», sin
+  revelar si la empresa existe. La página se monta fuera de la sesión de la app.
+- **Aviso de datos personales** antes del primer mensaje (Ley 1581 de 2012), con la retención de la
+  empresa. **Pendiente: revisión del texto por quien lleve lo legal.**
+- **Herramientas del modelo:** `consultar_disponibilidad` (solo fechas y horas libres, máximo 14 días),
+  `identificar_cliente` (solo con correo verificado; devuelve el nombre del cliente y sus equipos) y
+  `guardar_solicitud` (borrador o pendiente; nunca crea órdenes; una propuesta de hueco se vuelve a
+  comprobar contra `available_slots`). La empresa y el cliente los fija el servidor.
+- **Verificación de correo:** código de 6 dígitos por correo, guardado con hash (tabla
+  `assistant_verification_codes`, sin acceso desde la API), 10 minutos de vigencia, 3 envíos por
+  conversación y 5 intentos por código. Sin `GMAIL_USER`/`GMAIL_APP_PASSWORD` el correo queda en
+  modo simulado y el código solo aparece en los logs de la función.
+- **Límites:** 2.000 caracteres por mensaje; 30 mensajes y 300.000 tokens por conversación; 10
+  conversaciones nuevas por IP y 300 por empresa en 24 horas; 4 rondas de herramientas por turno. La
+  IP se guarda solo como hash con sal.
+- **Retención:** pg_cron ejecuta `purge_assistant_transcripts()` a diario (09:00 UTC) y borra las
+  conversaciones más antiguas que la retención de la empresa y los códigos vencidos.
+
+Secretos y variables de la Edge Function (Supabase):
+
+| Nombre | Uso |
+|---|---|
+| `ANTHROPIC_API_KEY` | Clave de la API de Anthropic. Sin ella, las empresas reales reciben «no disponible» (503) |
+| `LLM_MODEL` | Opcional; por defecto `claude-haiku-5-5` |
+| `ASSISTANT_SALT` | Sal para el hash de IP y de los códigos (`openssl rand -hex 32`). Si falta se usa `WEBHOOK_SECRET` |
+| `ASSISTANT_ALLOWED_ORIGINS` | Orígenes extra permitidos por CORS, separados por comas (además de `APP_URL`) |
+| `LLM_TEST_COMPANY_IDS` | Ids de empresas de prueba (separados por comas) |
+| `LLM_TEST_PROVIDER` | `mock` (simulado, sin costo) u `openai-compatible`, solo para esas empresas. Una empresa real nunca usa un proveedor de pruebas |
+| `LLM_TEST_BASE_URL`, `LLM_TEST_API_KEY`, `LLM_TEST_MODEL` | Solo con `openai-compatible` |
+
+Para desplegar: aplicar la 050, `npx supabase functions deploy assistant-chat --no-verify-jwt` y
+desplegar el frontend. Pendiente para fases siguientes: captcha invisible, respuestas en streaming,
+la sección «Asistente» en la configuración de la empresa (horario, servicios, enlace y QR) y el correo
+al cliente al confirmar o rechazar.
+
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
 `supabase_migrations.schema_migrations` no es una fuente fiable del esquema real: varias migraciones

@@ -29,6 +29,13 @@ root = "."
   verify_jwt = false
 
 [[edge_functions]]
+  id = "assistant-chat"
+  path = "supabase/functions/assistant-chat"
+  main = "index.ts"
+  schedule = ""
+  verify_jwt = false
+
+[[edge_functions]]
   id = "service-request-notify"
   path = "supabase/functions/service-request-notify"
   main = "index.ts"

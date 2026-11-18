@@ -73,3 +73,44 @@ export async function sendRecoveryEmail(
     return { ok: false, stub: true };
   }
 }
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+/**
+ * Código de un solo uso del asistente (fase 3). Mismo comportamiento que la
+ * recuperación de clave: sin GMAIL_USER/GMAIL_APP_PASSWORD queda en stub y el
+ * código solo aparece en los logs de la función (accesibles a los administradores
+ * del proyecto), para poder probar el flujo antes de configurar el correo.
+ */
+export async function sendVerificationCodeEmail(
+  to: string,
+  code: string,
+  companyName: string,
+): Promise<SendResult> {
+  const user = Deno.env.get("GMAIL_USER");
+  const pass = Deno.env.get("GMAIL_APP_PASSWORD");
+  const company = escapeHtml(companyName.slice(0, 120));
+
+  if (!user || !pass) {
+    console.log(`[Email] (stub) Código del asistente de ${companyName} para ${to}: ${code}`);
+    return { ok: true, stub: true };
+  }
+
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
+      <p>Tu código para verificar el correo en el asistente de <strong>${company}</strong> es:</p>
+      <p style="font-size:32px;font-weight:bold;letter-spacing:6px;text-align:center;margin:24px 0;">${code}</p>
+      <p style="font-size:13px;color:#777;">Vence en 10 minutos. Si no lo pediste, ignora este correo.</p>
+    </body></html>`;
+
+  try {
+    const nodemailer = await import("npm:nodemailer@6");
+    const transporter = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user, pass } });
+    await transporter.sendMail({ from: `${companyName.slice(0, 60)} <${user}>`, to, subject: `Tu código de verificación (${companyName.slice(0, 60)})`, html });
+    return { ok: true, stub: false };
+  } catch (err: unknown) {
+    console.error("[Email] Fallo al enviar el código del asistente:", err instanceof Error ? err.message : err);
+    return { ok: false, stub: false };
+  }
+}
