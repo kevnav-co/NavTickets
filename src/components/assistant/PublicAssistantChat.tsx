@@ -6,7 +6,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, Loader2, MailCheck, Send, ShieldCheck, Wrench, X } from 'lucide-react';
 import {
-  AssistantApiError, initAssistant, sendAssistantMessage, sendVerificationCode, verifyCode,
+  AssistantApiError, initAssistant, sendAssistantMessageStream, sendVerificationCode, verifyCode,
   type AssistantCompany,
 } from '../../services/assistantChat';
 import { safeUrl } from '../../utils/html';
@@ -89,16 +89,26 @@ const PublicAssistantChat: React.FC<{ slug: string }> = ({ slug }) => {
     if (!clean || !conversationId || sending) return;
     setInput('');
     setSending(true);
+    // El globo del asistente se crea con el primer trozo de texto y se va
+    // llenando; al terminar lo reemplaza la respuesta definitiva del servidor.
+    const reply = msg('assistant', '');
     setMessages((prev) => [...prev, msg('user', clean)]);
+    const upsertReply = (text: string) =>
+      setMessages((prev) => (prev.some((m) => m.id === reply.id)
+        ? prev.map((m) => (m.id === reply.id ? { ...m, text } : m))
+        : [...prev, { ...reply, text }]));
     try {
-      const res = await sendAssistantMessage(slug, conversationId, clean);
-      setMessages((prev) => [...prev, msg('assistant', res.reply)]);
+      const res = await sendAssistantMessageStream(slug, conversationId, clean, upsertReply);
+      upsertReply(res.reply);
       if (res.request) setRequestInfo(res.request);
     } catch (e) {
       const status = e instanceof AssistantApiError ? e.status : 0;
       // Conversación perdida (p. ej. purgada): se descarta para abrir una nueva al recargar.
       if (status === 404) storage.remove(convKey);
-      setMessages((prev) => [...prev, msg('assistant', e instanceof Error ? e.message : 'Ocurrió un error.', 'error')]);
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== reply.id),
+        msg('assistant', e instanceof Error ? e.message : 'Ocurrió un error.', 'error'),
+      ]);
     } finally {
       setSending(false);
     }
@@ -189,7 +199,7 @@ const PublicAssistantChat: React.FC<{ slug: string }> = ({ slug }) => {
                   {m.text}
                 </div>
               ))}
-              {sending && (
+              {sending && messages[messages.length - 1]?.role === 'user' && (
                 <div className="self-start bg-raised border border-line-soft rounded-2xl rounded-bl-md px-3.5 py-2.5 text-sm text-ink-faint inline-flex items-center gap-2">
                   <Loader2 size={14} className="animate-spin" aria-hidden="true" /> Escribiendo…
                 </div>

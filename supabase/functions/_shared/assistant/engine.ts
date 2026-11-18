@@ -22,6 +22,12 @@ export interface TurnOptions {
   executeTool: ToolExecutor;
   maxIterations: number;
   maxTokens: number;
+  /**
+   * Texto que el modelo va escribiendo, para mostrarlo mientras llega. Es solo
+   * una vista previa: la respuesta definitiva es `reply` del resultado, que
+   * reemplaza lo transmitido (un rechazo o una respuesta cortada la cambian).
+   */
+  onText?: (delta: string) => void;
 }
 
 export type TurnEnd = "ok" | "refusal" | "max_tokens" | "iterations";
@@ -52,6 +58,7 @@ export async function runTurn(opts: TurnOptions): Promise<TurnResult> {
       messages,
       tools: opts.tools,
       maxTokens: opts.maxTokens,
+      onText: opts.onText,
     });
     usage.inputTokens += res.usage.inputTokens;
     usage.outputTokens += res.usage.outputTokens;

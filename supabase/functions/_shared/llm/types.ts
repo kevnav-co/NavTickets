@@ -49,6 +49,12 @@ export interface LlmRequest {
   messages: LlmMessage[];
   tools: LlmTool[];
   maxTokens: number;
+  /**
+   * Recibe el texto visible a medida que el modelo lo escribe (streaming). Es
+   * opcional: un proveedor que no transmite simplemente no lo llama, y la
+   * respuesta completa sigue llegando en LlmResponse.
+   */
+  onText?: (delta: string) => void;
 }
 
 export type LlmStopReason = "end_turn" | "tool_use" | "max_tokens" | "refusal" | "other";

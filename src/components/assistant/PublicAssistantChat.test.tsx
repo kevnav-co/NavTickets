@@ -5,7 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 
 const api = vi.hoisted(() => ({
   initAssistant: vi.fn(),
-  sendAssistantMessage: vi.fn(),
+  sendAssistantMessageStream: vi.fn(),
   sendVerificationCode: vi.fn(),
   verifyCode: vi.fn(),
 }));
@@ -63,20 +63,56 @@ describe('PublicAssistantChat', () => {
 
   it('envía el mensaje y muestra la respuesta y la solicitud registrada', async () => {
     sessionStorage.setItem('nt_asistente_consent_plasticos-del-sur', '1');
-    api.sendAssistantMessage.mockResolvedValue({ reply: 'Registré tu solicitud.', request: { status: 'pendiente', reference: 'abcd1234' } });
+    api.sendAssistantMessageStream.mockResolvedValue({ reply: 'Registré tu solicitud.', request: { status: 'pendiente', reference: 'abcd1234' } });
     await render();
     setValue(host.querySelector('textarea')!, 'La nevera no enfría');
     await act(async () => { button('').closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
     await flush();
-    expect(api.sendAssistantMessage).toHaveBeenCalledWith('plasticos-del-sur', 'c1', 'La nevera no enfría');
+    expect(api.sendAssistantMessageStream).toHaveBeenCalledWith('plasticos-del-sur', 'c1', 'La nevera no enfría', expect.any(Function));
     expect(host.textContent).toContain('La nevera no enfría');
     expect(host.textContent).toContain('Registré tu solicitud.');
     expect(host.textContent).toContain('Solicitud registrada (ref. abcd1234)');
   });
 
+  it('muestra el texto mientras llega y lo reemplaza por la respuesta definitiva', async () => {
+    sessionStorage.setItem('nt_asistente_consent_plasticos-del-sur', '1');
+    let release!: (v: unknown) => void;
+    let onText!: (t: string) => void;
+    api.sendAssistantMessageStream.mockImplementation((_s: string, _c: string, _m: string, cb: (t: string) => void) => {
+      onText = cb;
+      return new Promise((r) => { release = r; });
+    });
+    await render();
+    setValue(host.querySelector('textarea')!, '¿Tienen cita mañana?');
+    await act(async () => { host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    expect(host.textContent).toContain('Escribiendo…');
+    await act(async () => onText('Tengo disponibilidad'));
+    expect(host.textContent).toContain('Tengo disponibilidad');
+    expect(host.textContent).not.toContain('Escribiendo…');
+    await act(async () => onText('Tengo disponibilidad mañana a las'));
+    await act(async () => { release({ reply: 'Tengo disponibilidad mañana a las 08:00.', request: null }); });
+    await flush();
+    const bubbles = Array.from(host.querySelectorAll('main div > div')).map((d) => d.textContent);
+    expect(bubbles.filter((t) => t?.startsWith('Tengo disponibilidad'))).toEqual(['Tengo disponibilidad mañana a las 08:00.']);
+  });
+
+  it('si el turno falla a mitad, quita el texto parcial y muestra el error', async () => {
+    sessionStorage.setItem('nt_asistente_consent_plasticos-del-sur', '1');
+    api.sendAssistantMessageStream.mockImplementation(async (_s: string, _c: string, _m: string, cb: (t: string) => void) => {
+      cb('Déjame revisar');
+      throw new AssistantApiError(503, 'El asistente no está disponible en este momento.');
+    });
+    await render();
+    setValue(host.querySelector('textarea')!, 'hola');
+    await act(async () => { host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
+    await flush();
+    expect(host.textContent).not.toContain('Déjame revisar');
+    expect(host.textContent).toContain('El asistente no está disponible en este momento.');
+  });
+
   it('muestra el motivo cuando se alcanza un límite', async () => {
     sessionStorage.setItem('nt_asistente_consent_plasticos-del-sur', '1');
-    api.sendAssistantMessage.mockRejectedValue(new AssistantApiError(429, 'Esta conversación llegó a su límite.'));
+    api.sendAssistantMessageStream.mockRejectedValue(new AssistantApiError(429, 'Esta conversación llegó a su límite.'));
     await render();
     setValue(host.querySelector('textarea')!, 'hola');
     await act(async () => { host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });

@@ -30,7 +30,7 @@ export async function createProvider(env: EnvGetter, companyId: string): Promise
   const useTest = testProvider !== "" && testProvider !== "anthropic" && isTestCompany(env, companyId);
 
   if (useTest) {
-    if (testProvider === "mock") return createMockProvider();
+    if (testProvider === "mock") return createMockProvider({ chunkDelayMs: 25 });
     if (testProvider === "openai-compatible") {
       const baseUrl = env("LLM_TEST_BASE_URL");
       const apiKey = env("LLM_TEST_API_KEY");

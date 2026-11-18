@@ -53,7 +53,18 @@ export function createAnthropicProvider(apiKey: string, model: string): LlmProvi
           output_config: { effort: "low" },
           messages: withCacheBreakpoint(request.messages),
         };
-        const res = await client.messages.create(params);
+        // Con onText se usa el stream del SDK: los deltas de texto salen al
+        // cliente mientras llegan y finalMessage() trae la respuesta completa
+        // (bloques de razonamiento y llamadas a herramientas incluidos).
+        let res;
+        if (request.onText) {
+          const stream = client.messages.stream(params);
+          const onText = request.onText;
+          stream.on("text", (delta: string) => onText(delta));
+          res = await stream.finalMessage();
+        } else {
+          res = await client.messages.create(params);
+        }
         const u = res.usage ?? {};
         return {
           content: res.content as unknown as LlmBlock[],

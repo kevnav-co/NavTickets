@@ -27,6 +27,7 @@ import { ASSISTANT_TOOLS, cleanText, isToolName, validateDisponibilidad, validat
 import { LIMITS, turnBlockedReason } from "../_shared/assistant/limits.ts";
 import { generateCode, hashCode, isValidEmail, normalizeEmail, safeEqual, sha256Hex } from "../_shared/assistant/codes.ts";
 import { sendVerificationCodeEmail } from "../_shared/email.ts";
+import { createTurnStream, NDJSON_CONTENT_TYPE } from "../_shared/assistant/stream.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -404,39 +405,65 @@ async function actionMessage(req: Request, body: Record<string, unknown>) {
     verifiedEmail: !!conv.verified_email, clientName,
   });
 
-  let result;
-  try {
-    result = await runTurn({
-      provider, system, tools: ASSISTANT_TOOLS, history, userText: text,
-      executeTool: toolExecutor({ company, conv, services, today }),
-      maxIterations: LIMITS.maxToolIterations, maxTokens: LIMITS.maxOutputTokens,
-    });
-  } catch (error) {
-    if (error instanceof LlmUnavailableError || error instanceof LlmNotAllowedError) {
-      throw new HttpError(503, "El asistente no está disponible en este momento. Intenta más tarde.");
+  const turn = async (onText?: (delta: string) => void) => {
+    let result;
+    try {
+      result = await runTurn({
+        provider, system, tools: ASSISTANT_TOOLS, history, userText: text,
+        executeTool: toolExecutor({ company, conv, services, today }),
+        maxIterations: LIMITS.maxToolIterations, maxTokens: LIMITS.maxOutputTokens,
+        onText,
+      });
+    } catch (error) {
+      if (error instanceof LlmUnavailableError || error instanceof LlmNotAllowedError) {
+        throw new HttpError(503, "El asistente no está disponible en este momento. Intenta más tarde.");
+      }
+      throw error;
     }
-    throw error;
+
+    // El turno se guarda completo al final: nunca queda una llamada sin su resultado.
+    const { error: insertError } = await db.from("assistant_messages").insert(
+      result.toStore.map((m) => ({ conversation_id: conv.id, company_id: company.id, role: m.role, content: m.content })),
+    );
+    if (insertError) throw insertError;
+    await db.from("assistant_conversations").update({
+      turn_count: conv.turn_count + 1,
+      input_tokens: conv.input_tokens + result.usage.inputTokens,
+      output_tokens: conv.output_tokens + result.usage.outputTokens,
+      last_message_at: new Date().toISOString(),
+      provider: provider.name,
+      model: provider.model,
+    }).eq("id", conv.id);
+
+    const { data: request } = await db.from("service_requests").select("status, id")
+      .eq("conversation_id", conv.id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
+    return {
+      type: "done" as const,
+      reply: result.reply,
+      request: request ? { status: request.status as string, reference: String(request.id).slice(0, 8) } : null,
+    };
+  };
+
+  if (body.stream !== true) {
+    const { reply, request } = await turn();
+    return json(req, { reply, request });
   }
 
-  // El turno se guarda completo al final: nunca queda una llamada sin su resultado.
-  const { error: insertError } = await db.from("assistant_messages").insert(
-    result.toStore.map((m) => ({ conversation_id: conv.id, company_id: company.id, role: m.role, content: m.content })),
-  );
-  if (insertError) throw insertError;
-  await db.from("assistant_conversations").update({
-    turn_count: conv.turn_count + 1,
-    input_tokens: conv.input_tokens + result.usage.inputTokens,
-    output_tokens: conv.output_tokens + result.usage.outputTokens,
-    last_message_at: new Date().toISOString(),
-    provider: provider.name,
-    model: provider.model,
-  }).eq("id", conv.id);
-
-  const { data: request } = await db.from("service_requests").select("status, id")
-    .eq("conversation_id", conv.id).order("updated_at", { ascending: false }).limit(1).maybeSingle();
-  return json(req, {
-    reply: result.reply,
-    request: request ? { status: request.status, reference: String(request.id).slice(0, 8) } : null,
+  // Streaming (NDJSON): los errores de antes de empezar ya salieron como JSON con
+  // su código HTTP; los del turno llegan como evento "error".
+  const stream = createTurnStream((emit) => turn(emit), (error) => {
+    if (error instanceof HttpError) return { status: error.status, message: error.message };
+    console.error("[assistant-chat] Error en el turno:", error);
+    return { status: 500, message: "Ocurrió un error. Intenta de nuevo en un momento." };
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders(req),
+      "Content-Type": NDJSON_CONTENT_TYPE,
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }
 

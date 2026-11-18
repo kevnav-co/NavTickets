@@ -331,8 +331,29 @@ Para pasar al modelo real: guardar `ANTHROPIC_API_KEY` como secreto de Supabase 
 también debe usarlo, quitar su id de `LLM_TEST_COMPANY_IDS`. No hace falta redesplegar: la función lee
 los secretos en cada arranque.
 
-Pendiente para fases siguientes: captcha invisible y respuestas en streaming. La configuración y el
-correo al cliente son la fase 4 (§10.7).
+**Respuestas en streaming** (rama `feature/asistente-streaming`, sin desplegar). El chat pide
+`stream: true` y la respuesta llega por partes, en NDJSON (un objeto JSON por línea,
+`Content-Type: application/x-ndjson`):
+
+| Evento | Significado |
+|---|---|
+| `{"type":"delta","text":"…"}` | Texto que el modelo va escribiendo (vista previa) |
+| `{"type":"done","reply":"…","request":…}` | Respuesta definitiva; **reemplaza** lo transmitido (un rechazo, una respuesta cortada o el texto previo a una herramienta cambian el resultado) |
+| `{"type":"error","status":503,"error":"…"}` | El turno falló; el chat quita el texto parcial y muestra el error |
+
+- Cada respuesta termina con exactamente un `done` o un `error`.
+- Los errores anteriores al turno (límites, conversación cerrada, proveedor no disponible) siguen llegando como JSON normal con su código HTTP.
+- Si el cliente cierra la página a mitad, el turno termina y se guarda igual.
+- Las peticiones sin `stream` reciben el JSON de siempre, así que el cambio es compatible con versiones anteriores.
+- **Anthropic:** `messages.stream` del SDK.
+- **Simulado:** emite por palabras, con 25 ms entre una y otra, para que se vea en la demo.
+- **Proveedor compatible con OpenAI:** no transmite y entrega la respuesta completa al final.
+
+Despliegue: redesplegar `assistant-chat` (`--no-verify-jwt`) y el frontend. No hay migración. Después,
+comprobar con `curl -N` que los `delta` llegan separados en el tiempo; si el gateway los agrupa, el
+chat sigue funcionando, solo que sin el efecto de escritura.
+
+Pendiente para fases siguientes: captcha invisible. La configuración y el correo al cliente son la fase 4 (§10.7).
 
 ### 10.7 Configuración del asistente y aviso al cliente (fase 4)
 
