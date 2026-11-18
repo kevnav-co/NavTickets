@@ -22,7 +22,7 @@ nunca debe considerarse una barrera de seguridad.
 | Nombre | Dónde se configura | Uso | Debe coincidir con |
 |---|---|---|---|
 | `WEBHOOK_SECRET` | Supabase (`supabase secrets`) | Autentica las Edge Functions que llaman los triggers (`on-*-assigned`, `support-*`, `service-request-notify`, `service-request-customer-notify`) y `send-push`. Sin él rechazan todo | Secreto `webhook_secret` de Vault |
-| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Supabase (`supabase secrets`) | Correo saliente: recuperación de clave, códigos del chat y aviso al cliente al confirmar o rechazar. **Sin configurar en producción**: las funciones quedan en modo simulado | Cuenta de Gmail con verificación en dos pasos y contraseña de aplicación |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Supabase (`supabase secrets`) | Correo saliente: recuperación de clave, códigos del chat y aviso al cliente al confirmar o rechazar. **Configurados en producción el 18/11/2026** (envío real comprobado); sin ellos las funciones quedan en modo simulado | Cuenta de Gmail con verificación en dos pasos y contraseña de aplicación |
 | `webhook_secret` (Vault) | Base de datos, Supabase Vault (`vault.create_secret` / `vault.update_secret`) | Lo envían los triggers a través de `public.webhook_secret()` (migración 044). En Supabase no se puede usar `ALTER DATABASE … SET app.webhook_secret` (permiso denegado) | `WEBHOOK_SECRET` |
 | `CRON_SECRET` | Supabase (`supabase secrets`) | Autentica `task-scheduler` y `daily-expiration-check` | Secreto `cron_secret` de Vault |
 | `cron_secret` (Vault) | Base de datos, Supabase Vault | Lo envían los jobs de `pg_cron` como `x-cron-secret` a través de `public.cron_secret()` (migración 047) | `CRON_SECRET` |
@@ -363,7 +363,7 @@ Estado: **en producción desde el 18/11/2026**:
 - `service-request-customer-notify` desplegada con `verify_jwt = false`;
 - frontend publicado.
 
-Falta configurar `GMAIL_USER`/`GMAIL_APP_PASSWORD`. Hasta entonces los correos quedan en modo simulado y el gestor recibe el aviso en la campana.
+`GMAIL_USER`/`GMAIL_APP_PASSWORD` configurados el 18/11/2026: los correos salen de verdad. Prueba: una solicitud rechazada como `pl_admin` devolvió `sent: true, stub: false`. Si faltan, los correos quedan en modo simulado y el gestor recibe el aviso en la campana.
 
 **Sección «Asistente»** (Configuración de mi empresa → pestaña «Asistente», o el engranaje de la
 bandeja de solicitudes; enlace directo `/#/admin?seccion=asistente`). Solo la ven admin y developer
