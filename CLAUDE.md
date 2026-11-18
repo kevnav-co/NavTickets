@@ -139,7 +139,7 @@ SUPABASE_URL=                          # Backend (edges/functions)
 EMAIL_DOMAIN=navas.com                 # Dominio de login (username@dominio). Fallback "navas.com"
 VITE_EMAIL_DOMAIN=navas.com            # Mismo dominio, expose al cliente
 APP_URL=https://navtickets.vercel.app  # URL pública para deep-links de push
-WEBHOOK_SECRET=                        # Mismo valor en .env y Supabase settings → app.webhook_secret
+WEBHOOK_SECRET=                        # Secreto de Supabase (Edge Functions); mismo valor que `webhook_secret` en Vault
 VITE_GOOGLE_MAPS_API_KEY=              # For Maps JavaScript API (currently unused — using Leaflet)
 ```
 
@@ -147,9 +147,10 @@ Push **Web Push (VAPID)**: los secrets `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` 
 `VAPID_SUBJECT` están seteados a nivel de **proyecto Supabase**
 (`npx supabase secrets set …`) — los lee `send-push`; las demás funciones
 (`support-notify`, `on-order-assigned`, `on-task-assigned`, `support-reply-notify`,
-`support-chat-notify`) delegan a `send-push` vía `_shared/push.ts`. `WEBHOOK_SECRET`
-también es secreto de Supabase (Session settings) y se usa como `app.webhook_secret`
-en las migrations 024/027/028/029 para autenticar los webhooks de pg_net.
+`support-chat-notify`, `service-request-notify`) delegan a `send-push` vía `_shared/push.ts`.
+`WEBHOOK_SECRET` es secreto de las Edge Functions y su mismo valor vive en Vault
+(`webhook_secret`), de donde lo leen los triggers de pg_net con `public.webhook_secret()`
+(migración 044). `CRON_SECRET` sigue el mismo esquema con `cron_secret` (migración 047).
 `SUPABASE_SERVICE_ROLE_KEY` se configura como secreto de Supabase
 (`npx supabase secrets set`) — NO en .env.
 

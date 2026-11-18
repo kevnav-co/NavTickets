@@ -245,3 +245,18 @@ Pendiente: que cada usuario vuelva a activar las notificaciones (botón de campa
 iPhone, con la app instalada en la pantalla de inicio), porque hasta hoy ninguna suscripción se
 guardaba. Después, `select count(*) from push_subscriptions;` debe crecer y el siguiente aviso llegará
 al teléfono.
+
+## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
+
+`supabase_migrations.schema_migrations` no es una fuente fiable del esquema real: varias migraciones
+constan como aplicadas sin que existan sus objetos, y hay objetos que no crea ninguna migración del
+repositorio. Antes de cualquier cambio de esquema, comprobar el objeto concreto en la base, no solo la
+tabla de migraciones.
+
+| Diferencia | Estado |
+|---|---|
+| La 040 constaba como aplicada pero `push_subscriptions` no existía | Corregido el 17/11/2026 (se volvió a aplicar la 040) |
+| La 035 consta como aplicada (39 sentencias) pero no existen `transactions`, `expenses`, `incomes` ni las funciones `accounting_*` | **Pendiente de decisión.** Por eso no hay pestaña «Contable»: abrirla llevaría a una página sin datos ni permisos. Las empresas con `features.accounting = true` (Hoteles Caribe, Metalmecánica Andina, Plásticos del Sur) no pueden usar la contabilidad |
+| Existen `expense_vat`, `invoices`, `tax_parameters` y `tax_profiles` (vacías, con RLS, columnas en camelCase y terminología fiscal de IVA/IRPF/RUT) que no crea ninguna migración ni usa ningún archivo del repositorio | **Pendiente de decisión.** Parecen de otro proyecto (posiblemente Dual-Balance, `vhcvcbpfeiivwepdtkvu`) aplicadas a esta base por error. No se han tocado |
+| `orders.equipment_ids` es `text[]` (033 local) en vez de `jsonb` (036 del repositorio) | El código nuevo admite ambos tipos (migración 045) |
+| `default_built_in_tabs()` no incluye la entrada `accounting` | Se resolverá junto con la contabilidad |

@@ -105,7 +105,7 @@ const SupportAdmin: React.FC = () => {
   }
 
   return (
-    <div className="grid lg:grid-cols-[360px,1fr] gap-6">
+    <div className="grid lg:grid-cols-[360px_1fr] gap-6">
       {/* ─── Lista de soportes ─────────────────────────────────────────────── */}
       <div className={`bg-raised rounded-3xl shadow-sm border border-line-soft p-4 max-h-[80vh] overflow-y-auto ${viewingChat ? 'hidden lg:block' : ''}`}>
         <div className="flex items-center gap-2 mb-3">
