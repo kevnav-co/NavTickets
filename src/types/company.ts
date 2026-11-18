@@ -94,5 +94,6 @@ export const DEFAULT_BUILT_IN_TABS: TabConfig[] = [
   { id: 'map', label: 'Mapa', icon: 'Map', route: '/map', type: 'built-in', builtInComponent: 'map', enabled: true, order: 6, roles: ['technician', 'supervisor', 'admin', 'aux_admin', 'developer'] },
   { id: 'inventory', label: 'Inventario', icon: 'Package', route: '/inventory', type: 'built-in', builtInComponent: 'inventory', enabled: true, order: 7, roles: ['technician', 'supervisor', 'admin', 'aux_admin', 'developer'] },
   { id: 'reports', label: 'Informes', icon: 'BarChart3', route: '/reports', type: 'built-in', builtInComponent: 'reports', enabled: true, order: 8, roles: ['admin', 'developer'] },
+  { id: 'accounting', label: 'Contable', icon: 'Wallet', route: '/accounting', type: 'built-in', builtInComponent: 'accounting', enabled: true, order: 9, roles: ['technician', 'supervisor', 'admin', 'aux_admin', 'developer'] },
   { id: 'requests', label: 'Solicitudes', icon: 'Inbox', route: '/requests', type: 'built-in', builtInComponent: 'requests', enabled: true, order: 10, roles: ['supervisor', 'admin', 'aux_admin', 'developer'], requiresOnline: true },
 ];
