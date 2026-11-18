@@ -150,9 +150,11 @@ Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `
 ## 10. Asistente de ventas y servicio técnico
 
 Estado: fases 1 (datos y reglas) y 2 (bandeja del administrador) **en producción desde el 17/11/2026**
-(migraciones 042–046 y frontend `dpl_AjsxiV4ioTaZAAKCktafiqLgMKoF`, desplegado desde la rama
-`feature/asistente-ventas-servicio`, aún sin mergear). La pestaña solo se ve en empresas con
-`features.aiAssistant = true` (hoy, Plásticos del Sur). Plan completo: documento «Asistente de ventas y servicio técnico» en Claude Docs.
+(migraciones 042–046); fase 3 (chat web público, §10.6) **en producción desde el 18/11/2026** con el
+proveedor simulado (migración 050, Edge Function `assistant-chat` y frontend
+`dpl_DB3ZK2o1UEJJkc2NfMn6hgtmiJLq`). Todo el código está en `main`. La pestaña y el chat solo
+funcionan en empresas con `features.aiAssistant = true` (hoy, Plásticos del Sur). Plan completo:
+documento «Asistente de ventas y servicio técnico» en Claude Docs.
 
 ### 10.1 Qué agrega la fase 1
 
@@ -250,8 +252,11 @@ al teléfono.
 
 ### 10.6 Chat web público (fase 3)
 
-Estado: código en la rama `feature/asistente-fase3` (migración 050 y Edge Function `assistant-chat`),
-**sin aplicar ni desplegar en producción**.
+Estado: **en producción desde el 18/11/2026 con el proveedor simulado** (sin costo de modelo) para
+Plásticos del Sur. La migración 050 está aplicada, `assistant-chat` desplegada con `verify_jwt = false`
+y el frontend publicado (`dpl_DB3ZK2o1UEJJkc2NfMn6hgtmiJLq`; el anterior, para revertir, es
+`dpl_AjsxiV4ioTaZAAKCktafiqLgMKoF`). Falta `ANTHROPIC_API_KEY`: hasta que se configure, cualquier
+empresa que no sea de prueba recibe «no disponible» (503).
 
 - **Enlace para clientes:** `https://navtickets.vercel.app/#/asistente/<slug>`. Solo responde para
   empresas con `features.aiAssistant = true`; para las demás muestra «Asistente no disponible», sin
@@ -284,10 +289,49 @@ Secretos y variables de la Edge Function (Supabase):
 | `LLM_TEST_PROVIDER` | `mock` (simulado, sin costo) u `openai-compatible`, solo para esas empresas. Una empresa real nunca usa un proveedor de pruebas |
 | `LLM_TEST_BASE_URL`, `LLM_TEST_API_KEY`, `LLM_TEST_MODEL` | Solo con `openai-compatible` |
 
-Para desplegar: aplicar la 050, `npx supabase functions deploy assistant-chat --no-verify-jwt` y
-desplegar el frontend. Pendiente para fases siguientes: captcha invisible, respuestas en streaming,
-la sección «Asistente» en la configuración de la empresa (horario, servicios, enlace y QR) y el correo
-al cliente al confirmar o rechazar.
+Configuración en producción (18/11/2026), comprobada comparando el SHA-256 de cada valor con el que
+devuelve la API de secretos, sin mostrar los valores:
+
+| Nombre | Valor configurado |
+|---|---|
+| `LLM_TEST_COMPANY_IDS` | `bb08edb1-3b01-4dcd-9ef5-03c7260883b5` (Plásticos del Sur) |
+| `LLM_TEST_PROVIDER` | `mock` |
+| `ASSISTANT_SALT` | Generada con `openssl rand -hex 32` dentro del contenedor; solo existe en Supabase |
+| `APP_URL` | `https://navtickets.vercel.app` (ya existía; es el origen permitido por CORS) |
+| `ANTHROPIC_API_KEY` | **Sin configurar** |
+
+Procedimiento de despliegue seguido (repetible):
+
+1. Comprobar que producción está en la 049 y que no existe `assistant_verification_codes`.
+2. Aplicar la 050 en una sola transacción junto con
+   `INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('050','assistant_web')`.
+3. Verificar: RLS activo y sin políticas en `assistant_verification_codes`, `anon` sin `EXECUTE` sobre
+   `purge_assistant_transcripts()`, job `assistant-purge` (`0 9 * * *`) en `cron.job` y los 3 índices.
+4. Fijar los secretos de la tabla anterior (`npx supabase secrets set …` o la API de secretos).
+5. `npx supabase functions deploy assistant-chat --project-ref hvysnxvuyexacktlwsbm --no-verify-jwt`.
+6. Desplegar el frontend (`npm run deploy`) y comprobar que se sirve el chunk
+   `assets/js/PublicAssistantChat-*.js`.
+
+Verificación de extremo a extremo hecha en producción:
+
+| Prueba | Resultado |
+|---|---|
+| `init` con un slug inexistente | 404 «El asistente no está disponible» |
+| Preflight CORS desde un origen ajeno | Sin `Access-Control-Allow-Origin` (el navegador bloquea) |
+| `init` con `plasticos-del-sur` | 200, marca de la empresa y aviso de datos |
+| «¿Qué disponibilidad tienen?» | Huecos reales de `available_slots` (solo fecha y hora) |
+| Mensaje con nombre, teléfono y descripción | Solicitud en `pendiente`; `service-request-notify` respondió 200 y avisó a 3 gestores |
+| IP de la conversación | Guardada solo como hash de 64 caracteres |
+| Rechazo como `pl_admin` con `reject_service_request` | Solicitud de prueba en `rechazada` |
+| Página `/#/asistente/plasticos-del-sur` en un iPhone emulado | Aviso, envío y respuesta correctos, sin errores de consola |
+
+Para pasar al modelo real: guardar `ANTHROPIC_API_KEY` como secreto de Supabase y, si Plásticos del Sur
+también debe usarlo, quitar su id de `LLM_TEST_COMPANY_IDS`. No hace falta redesplegar: la función lee
+los secretos en cada arranque.
+
+Pendiente para fases siguientes: captcha invisible, respuestas en streaming, la sección «Asistente» en
+la configuración de la empresa (horario, servicios, enlace y QR) y el correo al cliente al confirmar o
+rechazar.
 
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
