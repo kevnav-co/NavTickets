@@ -1,6 +1,7 @@
 -- =============================================================================
 -- Prueba del secreto de los webhooks pg_net (migración 044), del aviso de
--- solicitudes (046) y de las tareas programadas (047). Requiere
+-- solicitudes (046), de las tareas programadas (047) y del aviso al cliente
+-- al confirmar o rechazar (051). Requiere
 -- supabase_stubs.sql + migraciones.
 --   psql -d nt -f supabase/tests/webhooks_rls.sql
 -- Sustituye net.http_post por una versión que guarda lo que envían los triggers
@@ -9,10 +10,10 @@
 \set ON_ERROR_STOP 1
 GRANT USAGE ON SCHEMA public TO authenticated;
 
-CREATE TABLE net.captured (url text, headers jsonb, at timestamptz DEFAULT clock_timestamp());
+CREATE TABLE net.captured (url text, headers jsonb, body jsonb, at timestamptz DEFAULT clock_timestamp());
 CREATE OR REPLACE FUNCTION net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 1000)
 RETURNS bigint LANGUAGE plpgsql AS $$
-BEGIN INSERT INTO net.captured (url, headers) VALUES (url, headers); RETURN 1; END $$;
+BEGIN INSERT INTO net.captured (url, headers, body) VALUES (url, headers, body); RETURN 1; END $$;
 
 INSERT INTO companies (id, name, slug) VALUES ('b6000000-0000-0000-0000-00000000000a', 'Webhooks', 'webhooks');
 INSERT INTO users (id, company_id, name, role, username, supabase_auth_id) VALUES
@@ -70,6 +71,25 @@ SELECT pg_temp.expect_eq($q$select headers ->> 'Authorization' from net.captured
 SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-notify'$q$, '1', 'un solo aviso por solicitud');
 UPDATE service_requests SET contact_name = 'Webhook editada' WHERE contact_name = 'Webhook';
 SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-notify'$q$, '1', 'editar una pendiente no repite el aviso');
+
+-- 5b) Aviso al cliente al confirmar o rechazar (051): solo esas transiciones, una vez, firmado
+SELECT pg_temp.expect_eq($q$select has_function_privilege('authenticated', 'public.webhook_service_request_customer_notify()', 'EXECUTE')::text$q$,
+  'false', 'authenticated ejecuta el trigger del aviso al cliente');
+UPDATE service_requests SET status = 'borrador' WHERE contact_name = 'Webhook editada';
+UPDATE service_requests SET status = 'pendiente' WHERE contact_name = 'Webhook editada';
+SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-customer-notify'$q$, '0', 'volver a borrador o a pendiente no avisa al cliente');
+SET app.service_request_review = 'on';
+UPDATE service_requests SET status = 'rechazada', rejection_reason = 'Fuera de la zona de servicio', reviewed_at = now()
+ WHERE contact_name = 'Webhook editada';
+RESET app.service_request_review;
+SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-customer-notify'$q$, '1', 'un aviso al rechazar');
+SELECT pg_temp.expect_eq($q$select headers ->> 'Authorization' from net.captured where url like '%/service-request-customer-notify'$q$,
+  'Bearer desde-vault', 'firma del aviso al cliente');
+SELECT pg_temp.expect_eq($q$select (body -> 'record' ->> 'status') || '/' || (body -> 'record' ?| array['contact_email', 'rejection_reason'])::text
+  from net.captured where url like '%/service-request-customer-notify'$q$, 'rechazada/false', 'el webhook solo lleva id, empresa y estado');
+INSERT INTO service_requests (company_id, status, contact_name) VALUES ('b6000000-0000-0000-0000-00000000000a', 'borrador', 'Cancelable');
+UPDATE service_requests SET status = 'cancelada' WHERE contact_name = 'Cancelable';
+SELECT pg_temp.expect_eq($q$select count(*)::text from net.captured where url like '%/service-request-customer-notify'$q$, '1', 'cancelar no avisa al cliente');
 
 -- 6) Tareas programadas (047): firma con el secreto del cron y solo funciones permitidas
 SET ROLE authenticated;

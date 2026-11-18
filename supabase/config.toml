@@ -433,6 +433,11 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# Correo al cliente al confirmar o rechazar su solicitud (trigger 051, pg_net).
+[functions.service-request-customer-notify]
+enabled = true
+verify_jwt = false
+
 # Assistant Chat — chat público del asistente (fase 3). Lo usan clientes sin
 # cuenta desde /#/asistente/<slug>, así que no lleva JWT de sesión. La empresa
 # la fija el servidor por el slug (solo con features.aiAssistant), con límites

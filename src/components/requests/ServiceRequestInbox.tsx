@@ -5,7 +5,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Inbox, Loader2, Plus, Phone, Globe, MessageSquare, Search } from 'lucide-react';
+import { Inbox, Loader2, Plus, Phone, Globe, MessageSquare, Search, Settings } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useCollection } from '../../hooks/useCollection';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
@@ -35,6 +35,10 @@ const ServiceRequestInbox: React.FC = () => {
   const { currentUser } = useAuth();
   const { isOnline } = useConnectivityStatus();
   const companyId = currentUser?.companyId;
+  // Quien puede editar la configuración (can_configure_assistant, migración 042).
+  // El super_admin en vista previa ya actúa como admin; fuera de ella, /admin es
+  // su panel multi-tenant y no tiene la pestaña «Asistente».
+  const canConfigure = ['admin', 'developer'].includes(currentUser?.role ?? '');
 
   const filters = useMemo(
     () => (companyId ? [{ column: 'company_id', operator: 'eq' as const, value: companyId }] : []),
@@ -79,12 +83,23 @@ const ServiceRequestInbox: React.FC = () => {
           <div className="flex items-center gap-2 mb-3">
             <Inbox size={18} className="text-primary" />
             <h2 className="text-base font-bold text-ink">Solicitudes de servicio</h2>
+            {canConfigure && (
+              <button
+                type="button"
+                onClick={() => navigate('/admin?seccion=asistente')}
+                title="Configurar el asistente: horario, servicios y enlace"
+                aria-label="Configurar el asistente"
+                className="ml-auto p-2 rounded-lg text-ink-soft hover:bg-sunken hover:text-ink transition-colors"
+              >
+                <Settings size={16} />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setShowManual(true)}
               disabled={!isOnline}
               title={isOnline ? 'Registrar una solicitud recibida por teléfono' : 'Requiere conexión'}
-              className="ml-auto inline-flex items-center gap-1.5 btn-primary !px-3 !py-1.5 disabled:opacity-50 disabled:pointer-events-none"
+              className={`${canConfigure ? '' : 'ml-auto '}inline-flex items-center gap-1.5 btn-primary !px-3 !py-1.5 disabled:opacity-50 disabled:pointer-events-none`}
             >
               <Plus size={14} /> Nueva
             </button>
