@@ -305,5 +305,26 @@ SELECT pg_temp.expect_eq($q$select o.equipment_ids::text from orders o join serv
   '{a5000000-0000-0000-0003-000000000001}', 'equipos guardados como text[]');
 ROLLBACK;
 
+-- ═════════════════════════════════════════════════════════════════════════════
+-- 8) Fase 3 (migración 050): códigos de verificación del chat público
+-- ═════════════════════════════════════════════════════════════════════════════
+INSERT INTO assistant_conversations (id, company_id) VALUES ('a5000000-0000-0000-0004-000000000009','a5000000-0000-0000-0000-00000000000a');
+INSERT INTO assistant_verification_codes (company_id, conversation_id, email, code_hash, expires_at) VALUES
+ ('a5000000-0000-0000-0000-00000000000a','a5000000-0000-0000-0004-000000000009','a@b.co', repeat('a', 64), now() - interval '2 days'),
+ ('a5000000-0000-0000-0000-00000000000a','a5000000-0000-0000-0004-000000000009','a@b.co', repeat('b', 64), now() + interval '10 minutes');
+SELECT pg_temp.expect_fail($q$insert into assistant_verification_codes (company_id, conversation_id, email, code_hash, expires_at) values ('a5000000-0000-0000-0000-00000000000a','a5000000-0000-0000-0004-000000000009','a@b.co','123456', now())$q$, 'código guardado sin hash');
+SET ROLE authenticated;
+SELECT pg_temp.as_user('a5000000-0000-0000-00a0-000000000001');   -- Admin A
+SELECT pg_temp.expect_eq($q$select count(*)::text from assistant_verification_codes$q$, '0', 'admin lee códigos de verificación');
+SELECT pg_temp.expect_fail($q$insert into assistant_verification_codes (company_id, conversation_id, email, code_hash, expires_at) values ('a5000000-0000-0000-0000-00000000000a','a5000000-0000-0000-0004-000000000009','a@b.co', repeat('c', 64), now())$q$, 'admin crea un código');
+RESET ROLE;
+SET ROLE anon;
+SELECT pg_temp.expect_fail($q$select count(*) from assistant_verification_codes$q$, 'anon lee códigos de verificación');
+RESET ROLE;
+SET ROLE service_role;
+SELECT purge_assistant_transcripts();
+RESET ROLE;
+SELECT pg_temp.expect_eq($q$select count(*)::text from assistant_verification_codes where conversation_id = 'a5000000-0000-0000-0004-000000000009'$q$, '1', 'la purga borra solo los códigos vencidos');
+
 RESET request.jwt.claim.sub;
 RESET request.jwt.claim.role;

@@ -150,9 +150,11 @@ Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `
 ## 10. Asistente de ventas y servicio técnico
 
 Estado: fases 1 (datos y reglas) y 2 (bandeja del administrador) **en producción desde el 17/11/2026**
-(migraciones 042–046 y frontend `dpl_AjsxiV4ioTaZAAKCktafiqLgMKoF`, desplegado desde la rama
-`feature/asistente-ventas-servicio`, aún sin mergear). La pestaña solo se ve en empresas con
-`features.aiAssistant = true` (hoy, Plásticos del Sur). Plan completo: documento «Asistente de ventas y servicio técnico» en Claude Docs.
+(migraciones 042–046); fase 3 (chat web público, §10.6) **en producción desde el 18/11/2026** con el
+proveedor simulado (migración 050, Edge Function `assistant-chat` y frontend
+`dpl_DB3ZK2o1UEJJkc2NfMn6hgtmiJLq`). Todo el código está en `main`. La pestaña y el chat solo
+funcionan en empresas con `features.aiAssistant = true` (hoy, Plásticos del Sur). Plan completo:
+documento «Asistente de ventas y servicio técnico» en Claude Docs.
 
 ### 10.1 Qué agrega la fase 1
 
@@ -247,6 +249,89 @@ Pendiente: que cada usuario vuelva a activar las notificaciones (botón de campa
 iPhone, con la app instalada en la pantalla de inicio), porque hasta hoy ninguna suscripción se
 guardaba. Después, `select count(*) from push_subscriptions;` debe crecer y el siguiente aviso llegará
 al teléfono.
+
+### 10.6 Chat web público (fase 3)
+
+Estado: **en producción desde el 18/11/2026 con el proveedor simulado** (sin costo de modelo) para
+Plásticos del Sur. La migración 050 está aplicada, `assistant-chat` desplegada con `verify_jwt = false`
+y el frontend publicado (`dpl_DB3ZK2o1UEJJkc2NfMn6hgtmiJLq`; el anterior, para revertir, es
+`dpl_AjsxiV4ioTaZAAKCktafiqLgMKoF`). Falta `ANTHROPIC_API_KEY`: hasta que se configure, cualquier
+empresa que no sea de prueba recibe «no disponible» (503).
+
+- **Enlace para clientes:** `https://navtickets.vercel.app/#/asistente/<slug>`. Solo responde para
+  empresas con `features.aiAssistant = true`; para las demás muestra «Asistente no disponible», sin
+  revelar si la empresa existe. La página se monta fuera de la sesión de la app.
+- **Aviso de datos personales** antes del primer mensaje (Ley 1581 de 2012), con la retención de la
+  empresa. **Pendiente: revisión del texto por quien lleve lo legal.**
+- **Herramientas del modelo:** `consultar_disponibilidad` (solo fechas y horas libres, máximo 14 días),
+  `identificar_cliente` (solo con correo verificado; devuelve el nombre del cliente y sus equipos) y
+  `guardar_solicitud` (borrador o pendiente; nunca crea órdenes; una propuesta de hueco se vuelve a
+  comprobar contra `available_slots`). La empresa y el cliente los fija el servidor.
+- **Verificación de correo:** código de 6 dígitos por correo, guardado con hash (tabla
+  `assistant_verification_codes`, sin acceso desde la API), 10 minutos de vigencia, 3 envíos por
+  conversación y 5 intentos por código. Sin `GMAIL_USER`/`GMAIL_APP_PASSWORD` el correo queda en
+  modo simulado y el código solo aparece en los logs de la función.
+- **Límites:** 2.000 caracteres por mensaje; 30 mensajes y 300.000 tokens por conversación; 10
+  conversaciones nuevas por IP y 300 por empresa en 24 horas; 4 rondas de herramientas por turno. La
+  IP se guarda solo como hash con sal.
+- **Retención:** pg_cron ejecuta `purge_assistant_transcripts()` a diario (09:00 UTC) y borra las
+  conversaciones más antiguas que la retención de la empresa y los códigos vencidos.
+
+Secretos y variables de la Edge Function (Supabase):
+
+| Nombre | Uso |
+|---|---|
+| `ANTHROPIC_API_KEY` | Clave de la API de Anthropic. Sin ella, las empresas reales reciben «no disponible» (503) |
+| `LLM_MODEL` | Opcional; por defecto `claude-haiku-5-5` |
+| `ASSISTANT_SALT` | Sal para el hash de IP y de los códigos (`openssl rand -hex 32`). Si falta se usa `WEBHOOK_SECRET` |
+| `ASSISTANT_ALLOWED_ORIGINS` | Orígenes extra permitidos por CORS, separados por comas (además de `APP_URL`) |
+| `LLM_TEST_COMPANY_IDS` | Ids de empresas de prueba (separados por comas) |
+| `LLM_TEST_PROVIDER` | `mock` (simulado, sin costo) u `openai-compatible`, solo para esas empresas. Una empresa real nunca usa un proveedor de pruebas |
+| `LLM_TEST_BASE_URL`, `LLM_TEST_API_KEY`, `LLM_TEST_MODEL` | Solo con `openai-compatible` |
+
+Configuración en producción (18/11/2026), comprobada comparando el SHA-256 de cada valor con el que
+devuelve la API de secretos, sin mostrar los valores:
+
+| Nombre | Valor configurado |
+|---|---|
+| `LLM_TEST_COMPANY_IDS` | `bb08edb1-3b01-4dcd-9ef5-03c7260883b5` (Plásticos del Sur) |
+| `LLM_TEST_PROVIDER` | `mock` |
+| `ASSISTANT_SALT` | Generada con `openssl rand -hex 32` dentro del contenedor; solo existe en Supabase |
+| `APP_URL` | `https://navtickets.vercel.app` (ya existía; es el origen permitido por CORS) |
+| `ANTHROPIC_API_KEY` | **Sin configurar** |
+
+Procedimiento de despliegue seguido (repetible):
+
+1. Comprobar que producción está en la 049 y que no existe `assistant_verification_codes`.
+2. Aplicar la 050 en una sola transacción junto con
+   `INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ('050','assistant_web')`.
+3. Verificar: RLS activo y sin políticas en `assistant_verification_codes`, `anon` sin `EXECUTE` sobre
+   `purge_assistant_transcripts()`, job `assistant-purge` (`0 9 * * *`) en `cron.job` y los 3 índices.
+4. Fijar los secretos de la tabla anterior (`npx supabase secrets set …` o la API de secretos).
+5. `npx supabase functions deploy assistant-chat --project-ref hvysnxvuyexacktlwsbm --no-verify-jwt`.
+6. Desplegar el frontend (`npm run deploy`) y comprobar que se sirve el chunk
+   `assets/js/PublicAssistantChat-*.js`.
+
+Verificación de extremo a extremo hecha en producción:
+
+| Prueba | Resultado |
+|---|---|
+| `init` con un slug inexistente | 404 «El asistente no está disponible» |
+| Preflight CORS desde un origen ajeno | Sin `Access-Control-Allow-Origin` (el navegador bloquea) |
+| `init` con `plasticos-del-sur` | 200, marca de la empresa y aviso de datos |
+| «¿Qué disponibilidad tienen?» | Huecos reales de `available_slots` (solo fecha y hora) |
+| Mensaje con nombre, teléfono y descripción | Solicitud en `pendiente`; `service-request-notify` respondió 200 y avisó a 3 gestores |
+| IP de la conversación | Guardada solo como hash de 64 caracteres |
+| Rechazo como `pl_admin` con `reject_service_request` | Solicitud de prueba en `rechazada` |
+| Página `/#/asistente/plasticos-del-sur` en un iPhone emulado | Aviso, envío y respuesta correctos, sin errores de consola |
+
+Para pasar al modelo real: guardar `ANTHROPIC_API_KEY` como secreto de Supabase y, si Plásticos del Sur
+también debe usarlo, quitar su id de `LLM_TEST_COMPANY_IDS`. No hace falta redesplegar: la función lee
+los secretos en cada arranque.
+
+Pendiente para fases siguientes: captcha invisible, respuestas en streaming, la sección «Asistente» en
+la configuración de la empresa (horario, servicios, enlace y QR) y el correo al cliente al confirmar o
+rechazar.
 
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 

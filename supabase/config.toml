@@ -433,6 +433,14 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# Assistant Chat — chat público del asistente (fase 3). Lo usan clientes sin
+# cuenta desde /#/asistente/<slug>, así que no lleva JWT de sesión. La empresa
+# la fija el servidor por el slug (solo con features.aiAssistant), con límites
+# por mensaje, conversación, IP y empresa. Ver docs/MANUAL_OPERACION.md §10.6.
+[functions.assistant-chat]
+enabled = true
+verify_jwt = false
+
 # Request Password Reset — público (usuario olvidó la clave, no hay sesión).
 # verify_jwt=false; no revela si el username existe. Genera el token y manda el
 # link al correo de recuperación (users.email).
