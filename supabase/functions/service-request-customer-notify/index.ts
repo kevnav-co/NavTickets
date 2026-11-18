@@ -48,11 +48,11 @@ async function notifyReviewerNotSent(
 ) {
   if (!request.reviewed_by) return;
   const who = (request.contact_name ?? "").trim().slice(0, 60) || "El cliente";
-  const what = request.status === "confirmada" ? "la cita" : "el rechazo";
+  const what = request.status === "confirmada" ? "de la cita" : "del rechazo";
   const { error } = await supabase.from("notifications").insert({
     company_id: request.company_id,
     user_id: request.reviewed_by,
-    title: `Avisa al cliente de ${what}`,
+    title: `Avisa al cliente ${what}`,
     body: `${who} ${NOT_SENT_TEXT[reason]}. Avísale por teléfono.`,
     text: `${who}: avísale por teléfono`,
     type: "alert",

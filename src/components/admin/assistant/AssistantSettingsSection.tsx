@@ -38,6 +38,8 @@ const TIMEZONES = [
 const field =
   'h-10 px-3 bg-raised border border-line rounded-xl text-sm text-ink focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60';
 
+const ROLE_LABEL: Record<string, string> = { technician: 'Técnico', supervisor: 'Supervisor', admin: 'Administrador' };
+
 const Card: React.FC<{ icon: React.ReactNode; title: string; hint?: string; children: React.ReactNode }> = ({ icon, title, hint, children }) => (
   <section className="card p-5">
     <h2 className="font-bold text-ink mb-1 flex items-center gap-2">{icon} {title}</h2>
@@ -286,7 +288,7 @@ const AssistantSettingsSection: React.FC<Props> = ({ onSaved }) => {
                 />
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-ink truncate">{t.name}</span>
-                  <span className="block text-[11px] text-ink-faint capitalize">{t.role === 'technician' ? 'técnico' : t.role}</span>
+                  <span className="block text-[11px] text-ink-faint">{ROLE_LABEL[t.role] ?? t.role}</span>
                 </span>
               </label>
             ))}

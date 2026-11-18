@@ -152,8 +152,9 @@ Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `
 
 Estado: fases 1 (datos y reglas) y 2 (bandeja del administrador) **en producción desde el 17/11/2026**
 (migraciones 042–046); fase 3 (chat web público, §10.6) **en producción desde el 18/11/2026** con el
-proveedor simulado (migración 050, Edge Function `assistant-chat` y frontend
-`dpl_DB3ZK2o1UEJJkc2NfMn6hgtmiJLq`). Todo el código está en `main`. La pestaña y el chat solo
+proveedor simulado (migración 050 y Edge Function `assistant-chat`); fase 4 (configuración del
+asistente y aviso al cliente, §10.7) **en producción desde el 18/11/2026** (migración 051 y Edge
+Function `service-request-customer-notify`). Todo el código está en `main`. La pestaña y el chat solo
 funcionan en empresas con `features.aiAssistant = true` (hoy, Plásticos del Sur). Plan completo:
 documento «Asistente de ventas y servicio técnico» en Claude Docs.
 
@@ -335,8 +336,13 @@ correo al cliente son la fase 4 (§10.7).
 
 ### 10.7 Configuración del asistente y aviso al cliente (fase 4)
 
-Estado: código en la rama `feature/asistente-fase4` (migración 051, Edge Function
-`service-request-customer-notify` y frontend), **sin aplicar ni desplegar en producción**.
+Estado: **en producción desde el 18/11/2026**:
+
+- migración 051 aplicada;
+- `service-request-customer-notify` desplegada con `verify_jwt = false`;
+- frontend publicado.
+
+Falta configurar `GMAIL_USER`/`GMAIL_APP_PASSWORD`. Hasta entonces los correos quedan en modo simulado y el gestor recibe el aviso en la campana.
 
 **Sección «Asistente»** (Configuración de mi empresa → pestaña «Asistente», o el engranaje de la
 bandeja de solicitudes; enlace directo `/#/admin?seccion=asistente`). Solo la ven admin y developer
@@ -387,8 +393,22 @@ Para desplegar (en este orden):
    rechazar una solicitud de prueba con correo y revisar `net._http_response` (200, `stub: true` mientras
    no haya Gmail) y la notificación en la campana.
 
+Verificación de extremo a extremo hecha en producción (18/11/2026, Plásticos del Sur):
+
+| Prueba | Resultado |
+|---|---|
+| Producción antes del despliegue | En la 050, sin el trigger de la 051 |
+| Trigger de la 051 | Activo, `search_path` fijo, firma con `public.webhook_secret()`; `anon` y `authenticated` no lo ejecutan |
+| `service-request-customer-notify` sin secreto / con GET | 401 / 405 |
+| Un técnico (`pl_tec1`) intenta cambiar la configuración | 0 filas: no la ve ni la modifica |
+| `pl_admin` deja el horario en «solo sábado 14:00–18:00» | El chat pasa de ofrecer el jueves 19 a las 08:00 a ofrecer el sábado 21 desde las 14:00, sin redesplegar (salida de la fase 4) |
+| Solicitud de prueba con correo `@example.com`, rechazada como `pl_admin` | La función respondió 200 con `stub: true` y `pl_admin` recibió en la campana «Avisa al cliente del rechazo… Avísale por teléfono» |
+| Horario original restaurado | El chat vuelve a ofrecer el jueves 19 a las 08:00 |
+| Pestaña «Asistente» entrando como `pl_admin` | Pestañas Empresa/Asistente, enlace `https://navtickets.vercel.app/#/asistente/plasticos-del-sur`, QR, técnicos reales y huecos reales en la vista previa, sin errores de consola |
+
 Para enviar correos de verdad: guardar `GMAIL_USER` y `GMAIL_APP_PASSWORD` (contraseña de aplicación de
 Google) como secretos de Supabase. Sirven también para la recuperación de clave y los códigos del chat.
+No hace falta redesplegar: las funciones leen los secretos en cada arranque.
 
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
