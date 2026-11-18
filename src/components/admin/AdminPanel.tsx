@@ -3,24 +3,42 @@
 //  - super_admin → gestión multi-tenant (lista de empresas, crear/editar/usuarios)
 //  - admin/developer → configuración del branding de SU propia empresa (CompanyForm
 //    con su companyId; las secciones de identidad quedan ocultas y el DB bloquea
-//    name/slug/auth vía trigger migración 012).
+//    name/slug/auth vía trigger migración 012). Con features.aiAssistant aparece
+//    además la pestaña «Asistente» (horario, servicios, enlace y QR), enlazable
+//    como /admin?seccion=asistente.
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Shield, ArrowLeft, Building2 } from 'lucide-react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Shield, ArrowLeft, Building2, Bot } from 'lucide-react';
 import CompanyList from './CompanyList';
 import CompanyForm from './CompanyForm';
 import CompanyUserManager from './CompanyUserManager';
 import Toast from '../ui/Toast';
 import { useAuth } from '../../context/AuthContext';
+import { useCompany } from '../../context/CompanyContext';
+
+// Solo lo cargan las empresas con el asistente activado.
+const AssistantSettingsSection = lazy(() => import('./assistant/AssistantSettingsSection'));
 
 type AdminView = 'list' | 'form' | 'users';
+type SelfSection = 'empresa' | 'asistente';
 
 const AdminPanel: React.FC = () => {
   const { currentUser, startImpersonation } = useAuth();
+  const { company } = useCompany();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isSuperAdmin = currentUser?.role === 'super_admin';
   const ownCompanyId = currentUser?.companyId ?? null;
+  // Self-serve: la pestaña «Asistente» aparece solo con features.aiAssistant.
+  const assistantEnabled = !isSuperAdmin && !!company?.features?.aiAssistant;
+  const selfSection: SelfSection = assistantEnabled && searchParams.get('seccion') === 'asistente' ? 'asistente' : 'empresa';
+  const setSelfSection = (s: SelfSection) =>
+    setSearchParams(s === 'asistente' ? { seccion: 'asistente' } : {}, { replace: true });
+  const [assistantVisited, setAssistantVisited] = useState(false);
+  useEffect(() => {
+    if (selfSection === 'asistente') setAssistantVisited(true);
+  }, [selfSection]);
 
   const [view, setView] = useState<AdminView>('list');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
@@ -91,10 +109,36 @@ const AdminPanel: React.FC = () => {
             {isSuperAdmin ? 'Panel de Administración' : 'Configuración de mi empresa'}
           </h1>
           <p className="text-xs text-ink-soft">
-            {isSuperAdmin ? 'Gestión multi-tenant del sistema' : 'Personaliza el branding de tu empresa'}
+            {isSuperAdmin
+              ? 'Gestión multi-tenant del sistema'
+              : selfSection === 'asistente'
+                ? 'Horario, servicios y enlace del asistente de servicio técnico'
+                : 'Personaliza el branding de tu empresa'}
           </p>
         </div>
       </div>
+
+      {assistantEnabled && (
+        <div className="max-w-4xl mx-auto mb-5 flex gap-1 p-1 bg-sunken rounded-xl w-fit" role="tablist" aria-label="Secciones de configuración">
+          {([
+            { id: 'empresa', label: 'Empresa', icon: Building2 },
+            { id: 'asistente', label: 'Asistente', icon: Bot },
+          ] as const).map(t => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={selfSection === t.id}
+              onClick={() => setSelfSection(t.id)}
+              className={`inline-flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-bold transition-colors ${
+                selfSection === t.id ? 'bg-raised text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              <t.icon size={15} /> {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {isSuperAdmin ? (
         <>
@@ -123,18 +167,31 @@ const AdminPanel: React.FC = () => {
           )}
         </>
       ) : (
-        // Self-serve: el admin/developer edita SOLO su propia empresa.
-        <CompanyForm
-          key={ownCompanyId ?? 'self'}
-          companyId={ownCompanyId}
-          onSaved={msg => {
-            setToast(msg);
-            // Tras guardar la configuración de la propia empresa, volver al
-            // inicio de la app (el toast alcanza a mostrarse ~un segundo).
-            setTimeout(() => navigate('/'), 900);
-          }}
-          onCancel={() => navigate('/')}
-        />
+        // Self-serve: el admin/developer edita SOLO su propia empresa. Las dos
+        // secciones quedan montadas (la inactiva, oculta) para no perder cambios
+        // sin guardar al cambiar de pestaña.
+        <>
+          <div hidden={selfSection !== 'empresa'}>
+            <CompanyForm
+              key={ownCompanyId ?? 'self'}
+              companyId={ownCompanyId}
+              onSaved={msg => {
+                setToast(msg);
+                // Tras guardar la configuración de la propia empresa, volver al
+                // inicio de la app (el toast alcanza a mostrarse ~un segundo).
+                setTimeout(() => navigate('/'), 900);
+              }}
+              onCancel={() => navigate('/')}
+            />
+          </div>
+          {assistantEnabled && (selfSection === 'asistente' || assistantVisited) && (
+            <div hidden={selfSection !== 'asistente'}>
+              <Suspense fallback={<div className="py-20 text-center text-sm text-ink-faint">Cargando…</div>}>
+                <AssistantSettingsSection key={ownCompanyId ?? 'self'} onSaved={setToast} />
+              </Suspense>
+            </div>
+          )}
+        </>
       )}
 
       {/* Toast de confirmación */}

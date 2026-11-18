@@ -21,7 +21,8 @@ nunca debe considerarse una barrera de seguridad.
 
 | Nombre | Dónde se configura | Uso | Debe coincidir con |
 |---|---|---|---|
-| `WEBHOOK_SECRET` | Supabase (`supabase secrets`) | Autentica las Edge Functions que llaman los triggers (`on-*-assigned`, `support-*`, `service-request-notify`) y `send-push`. Sin él rechazan todo | Secreto `webhook_secret` de Vault |
+| `WEBHOOK_SECRET` | Supabase (`supabase secrets`) | Autentica las Edge Functions que llaman los triggers (`on-*-assigned`, `support-*`, `service-request-notify`, `service-request-customer-notify`) y `send-push`. Sin él rechazan todo | Secreto `webhook_secret` de Vault |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Supabase (`supabase secrets`) | Correo saliente: recuperación de clave, códigos del chat y aviso al cliente al confirmar o rechazar. **Sin configurar en producción**: las funciones quedan en modo simulado | Cuenta de Gmail con verificación en dos pasos y contraseña de aplicación |
 | `webhook_secret` (Vault) | Base de datos, Supabase Vault (`vault.create_secret` / `vault.update_secret`) | Lo envían los triggers a través de `public.webhook_secret()` (migración 044). En Supabase no se puede usar `ALTER DATABASE … SET app.webhook_secret` (permiso denegado) | `WEBHOOK_SECRET` |
 | `CRON_SECRET` | Supabase (`supabase secrets`) | Autentica `task-scheduler` y `daily-expiration-check` | Secreto `cron_secret` de Vault |
 | `cron_secret` (Vault) | Base de datos, Supabase Vault | Lo envían los jobs de `pg_cron` como `x-cron-secret` a través de `public.cron_secret()` (migración 047) | `CRON_SECRET` |
@@ -151,8 +152,9 @@ Para ejecutar las pruebas SQL en local se sigue la cabecera de cada archivo de `
 
 Estado: fases 1 (datos y reglas) y 2 (bandeja del administrador) **en producción desde el 17/11/2026**
 (migraciones 042–046); fase 3 (chat web público, §10.6) **en producción desde el 18/11/2026** con el
-proveedor simulado (migración 050, Edge Function `assistant-chat` y frontend
-`dpl_DB3ZK2o1UEJJkc2NfMn6hgtmiJLq`). Todo el código está en `main`. La pestaña y el chat solo
+proveedor simulado (migración 050 y Edge Function `assistant-chat`); fase 4 (configuración del
+asistente y aviso al cliente, §10.7) **en producción desde el 18/11/2026** (migración 051 y Edge
+Function `service-request-customer-notify`). Todo el código está en `main`. La pestaña y el chat solo
 funcionan en empresas con `features.aiAssistant = true` (hoy, Plásticos del Sur). Plan completo:
 documento «Asistente de ventas y servicio técnico» en Claude Docs.
 
@@ -329,9 +331,84 @@ Para pasar al modelo real: guardar `ANTHROPIC_API_KEY` como secreto de Supabase 
 también debe usarlo, quitar su id de `LLM_TEST_COMPANY_IDS`. No hace falta redesplegar: la función lee
 los secretos en cada arranque.
 
-Pendiente para fases siguientes: captcha invisible, respuestas en streaming, la sección «Asistente» en
-la configuración de la empresa (horario, servicios, enlace y QR) y el correo al cliente al confirmar o
-rechazar.
+Pendiente para fases siguientes: captcha invisible y respuestas en streaming. La configuración y el
+correo al cliente son la fase 4 (§10.7).
+
+### 10.7 Configuración del asistente y aviso al cliente (fase 4)
+
+Estado: **en producción desde el 18/11/2026**:
+
+- migración 051 aplicada;
+- `service-request-customer-notify` desplegada con `verify_jwt = false`;
+- frontend publicado.
+
+Falta configurar `GMAIL_USER`/`GMAIL_APP_PASSWORD`. Hasta entonces los correos quedan en modo simulado y el gestor recibe el aviso en la campana.
+
+**Sección «Asistente»** (Configuración de mi empresa → pestaña «Asistente», o el engranaje de la
+bandeja de solicitudes; enlace directo `/#/admin?seccion=asistente`). Solo la ven admin y developer
+de empresas con `features.aiAssistant = true`, y el super_admin en vista previa. Edita la fila de
+`assistant_settings` (migración 042), que la Edge Function `assistant-chat` y `available_slots` leen en
+cada mensaje: **al guardar, el chat ofrece de inmediato el horario y los servicios nuevos**, sin
+redesplegar nada.
+
+| Bloque | Qué controla | Columna |
+|---|---|---|
+| Enlace para tus clientes | Enlace público `https://<app>/#/asistente/<slug>`, botón de copiar y código QR descargable en PNG | — (usa `companies.slug`) |
+| Mensaje de bienvenida | Primer mensaje del chat (hasta 1.000 caracteres) | `welcome_message` |
+| Horario de atención | Franjas por día (hasta 6 por día, sin cruces) y zona horaria | `working_hours`, `timezone` |
+| Servicios | Nombre, tipo de orden (Correctivo/Preventivo) y duración que se reserva (15 min a 12 h). Un servicio guardado conserva su identificador interno al renombrarlo | `service_types` |
+| Reglas de la agenda | Antelación mínima (0–720 h), intervalo entre huecos (15, 30 o 60 min), días hacia adelante (1–180) y días bloqueados | `min_lead_hours`, `slot_step_minutes`, `max_days_ahead`, `blocked_dates` |
+| Técnicos | Quiénes atienden solicitudes; sin ninguno marcado, todos los asignables | `technician_ids` |
+| Privacidad | Días que se conservan las conversaciones (7–730); aparece en el aviso de datos del chat | `retention_days` |
+| Vista previa | Huecos que ofrecería hoy el asistente para un servicio, con la configuración guardada (RPC `available_slots`) | — |
+
+La app valida lo mismo que los `CHECK` de la base antes de guardar (y algunas reglas más, como franjas
+que se cruzan o un servicio más largo que cualquier franja) y la base vuelve a validarlo. La RLS de la 042
+solo deja escribir a admin y developer de la empresa (`can_configure_assistant`).
+
+**Aviso al cliente por correo.** Cuando una solicitud pasa a `confirmada` o `rechazada`, el trigger
+`trg_service_request_customer_notify_webhook` (migración 051) llama por pg_net a
+`service-request-customer-notify`, firmado con el secreto de Vault como el resto de webhooks. La función
+relee la solicitud con la service role y envía al correo de la solicitud (o, si no lo tiene, al del
+cliente registrado):
+
+- al confirmar: servicio, fecha, hora de llegada, duración, técnico, número de orden y referencia;
+- al rechazar: el motivo que escribió el gestor (la bandeja avisa de que lo leerá el cliente) y la
+  referencia.
+
+Si el cliente no dejó correo, si `GMAIL_USER`/`GMAIL_APP_PASSWORD` no están configurados (modo simulado)
+o si el envío falla, deja una notificación en la campana a quien revisó la solicitud («Avisa al cliente
+de la cita / del rechazo… Avísale por teléfono»). La app nunca afirma que el correo salió. Los datos del
+correo se escapan y el asunto no admite saltos de línea; en los logs el correo aparece enmascarado.
+
+Para desplegar (en este orden):
+
+1. Comprobar que producción está en la 050 y que no existe el trigger
+   `trg_service_request_customer_notify_webhook`.
+2. Aplicar la 051 en una sola transacción con su `INSERT` en `supabase_migrations.schema_migrations`
+   (`'051', 'service_request_customer_notify'`).
+3. `npx supabase functions deploy service-request-customer-notify --project-ref hvysnxvuyexacktlwsbm --no-verify-jwt`.
+4. Desplegar el frontend (`npm run deploy`).
+5. Probar: cambiar el horario en la sección, ver la vista previa y preguntar disponibilidad en el chat;
+   rechazar una solicitud de prueba con correo y revisar `net._http_response` (200, `stub: true` mientras
+   no haya Gmail) y la notificación en la campana.
+
+Verificación de extremo a extremo hecha en producción (18/11/2026, Plásticos del Sur):
+
+| Prueba | Resultado |
+|---|---|
+| Producción antes del despliegue | En la 050, sin el trigger de la 051 |
+| Trigger de la 051 | Activo, `search_path` fijo, firma con `public.webhook_secret()`; `anon` y `authenticated` no lo ejecutan |
+| `service-request-customer-notify` sin secreto / con GET | 401 / 405 |
+| Un técnico (`pl_tec1`) intenta cambiar la configuración | 0 filas: no la ve ni la modifica |
+| `pl_admin` deja el horario en «solo sábado 14:00–18:00» | El chat pasa de ofrecer el jueves 19 a las 08:00 a ofrecer el sábado 21 desde las 14:00, sin redesplegar (salida de la fase 4) |
+| Solicitud de prueba con correo `@example.com`, rechazada como `pl_admin` | La función respondió 200 con `stub: true` y `pl_admin` recibió en la campana «Avisa al cliente del rechazo… Avísale por teléfono» |
+| Horario original restaurado | El chat vuelve a ofrecer el jueves 19 a las 08:00 |
+| Pestaña «Asistente» entrando como `pl_admin` | Pestañas Empresa/Asistente, enlace `https://navtickets.vercel.app/#/asistente/plasticos-del-sur`, QR, técnicos reales y huecos reales en la vista previa, sin errores de consola |
+
+Para enviar correos de verdad: guardar `GMAIL_USER` y `GMAIL_APP_PASSWORD` (contraseña de aplicación de
+Google) como secretos de Supabase. Sirven también para la recuperación de clave y los códigos del chat.
+No hace falta redesplegar: las funciones leen los secretos en cada arranque.
 
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 

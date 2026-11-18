@@ -299,11 +299,15 @@ const ServiceRequestDetail: React.FC<{ request: ServiceRequest; onBack: () => vo
             )}
           </div>
           {validation && !conflicts.length && <p className="text-xs text-ink-faint">{validation}</p>}
+          <p className="text-xs text-ink-faint">
+            Al confirmar o rechazar, el cliente recibe la cita o el motivo en su correo, si dejó uno. Si no se le puede
+            enviar, te llega un aviso en la campana para que lo llames.
+          </p>
 
           {rejecting && (
             <div className="border-t border-line-soft pt-4 space-y-2">
               <label className="block">
-                <span className="text-xs font-semibold text-ink-soft">Motivo del rechazo (lo verá quien revise la solicitud)</span>
+                <span className="text-xs font-semibold text-ink-soft">Motivo del rechazo (se envía al cliente por correo; escríbelo para él)</span>
                 <textarea className={`${inputCls} mt-1 min-h-20`} maxLength={1000} value={reason} onChange={e => setReason(e.target.value)} />
               </label>
               <div className="flex gap-2">

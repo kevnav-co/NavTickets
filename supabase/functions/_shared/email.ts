@@ -114,3 +114,44 @@ export async function sendVerificationCodeEmail(
     return { ok: false, stub: false };
   }
 }
+
+/** "cliente@dominio.co" → "c***@dominio.co", para no dejar correos completos en los logs. */
+export const maskEmail = (email: string) => {
+  const [user, domain] = email.split("@");
+  return domain ? `${(user ?? "").slice(0, 1)}***@${domain}` : "***";
+};
+
+/**
+ * Aviso al cliente de que su solicitud se confirmó o se rechazó (fase 4). El
+ * contenido lo arma _shared/assistant/customerEmail.ts. Sin GMAIL_USER /
+ * GMAIL_APP_PASSWORD queda en stub: solo registra que se habría enviado.
+ */
+export async function sendCustomerNoticeEmail(
+  to: string,
+  notice: { subject: string; html: string; text: string },
+  companyName: string,
+): Promise<SendResult> {
+  const user = Deno.env.get("GMAIL_USER");
+  const pass = Deno.env.get("GMAIL_APP_PASSWORD");
+
+  if (!user || !pass) {
+    console.log(`[Email] (stub) Aviso de solicitud para ${maskEmail(to)}: ${notice.subject}`);
+    return { ok: true, stub: true };
+  }
+
+  try {
+    const nodemailer = await import("npm:nodemailer@6");
+    const transporter = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user, pass } });
+    await transporter.sendMail({
+      from: `${companyName.replace(/[\r\n<>"]/g, " ").slice(0, 60)} <${user}>`,
+      to,
+      subject: notice.subject,
+      html: notice.html,
+      text: notice.text,
+    });
+    return { ok: true, stub: false };
+  } catch (err: unknown) {
+    console.error("[Email] Fallo al enviar el aviso de solicitud:", err instanceof Error ? err.message : err);
+    return { ok: false, stub: false };
+  }
+}
