@@ -30,6 +30,8 @@ nunca debe considerarse una barrera de seguridad.
 | `CUENTI_API_TOKEN`, `CUENTI_EMPRESA_ID`, `CUENTI_USER_ID` | Vercel (env) | Proxy al ERP Cuenti | Cuenta Cuenti de la empresa |
 | `CUENTI_COMPANY_ID` | Vercel (env) | Limita el proxy Cuenti a la empresa dueña | `companies.id` de esa empresa |
 
+Retirados el 18/11/2026 por no usarse (comprobado en el código y en los paquetes desplegados): `ONESIGNAL_API_KEY`, `ONESIGNAL_APP_ID` y las siete `VITE_FIREBASE_*` de los secretos de Supabase, y las inyecciones de `VITE_FIREBASE_*` y `VITE_VAPID_KEY` de `vite.config.ts`. `SUPABASE_SERVICE_ROLE_KEY` de Vercel **sí** se usa (proxy de Cuenti, `api/edge/cuenti-proxy.ts`).
+
 Reglas:
 - Los secretos se generan con un generador criptográfico (`openssl rand -hex 32`) y se guardan en el gestor de contraseñas.
 - Nunca se escriben en el repositorio, en tickets ni en chats. GitGuardian revisa cada PR.
@@ -256,7 +258,8 @@ tabla de migraciones.
 | Diferencia | Estado |
 |---|---|
 | La 040 constaba como aplicada pero `push_subscriptions` no existía | Corregido el 17/11/2026 (se volvió a aplicar la 040) |
-| La 035 consta como aplicada (39 sentencias) pero no existen `transactions`, `expenses`, `incomes` ni las funciones `accounting_*` | **Pendiente de decisión.** Por eso no hay pestaña «Contable»: abrirla llevaría a una página sin datos ni permisos. Las empresas con `features.accounting = true` (Hoteles Caribe, Metalmecánica Andina, Plásticos del Sur) no pueden usar la contabilidad |
-| Existen `expense_vat`, `invoices`, `tax_parameters` y `tax_profiles` (vacías, con RLS, columnas en camelCase y terminología fiscal de IVA/IRPF/RUT) que no crea ninguna migración ni usa ningún archivo del repositorio | **Pendiente de decisión.** Parecen de otro proyecto (posiblemente Dual-Balance, `vhcvcbpfeiivwepdtkvu`) aplicadas a esta base por error. No se han tocado |
+| La 035 consta como aplicada (39 sentencias) pero no existían `transactions`, `expenses`, `incomes` ni las funciones `accounting_*` | Corregido el 18/11/2026: la migración 048 crea el módulo y añade la pestaña «Contable» (visible con `features.accounting = true`: Hoteles Caribe, Metalmecánica Andina, Plásticos del Sur) |
+| Existían `expense_vat`, `invoices`, `tax_parameters` y `tax_profiles` (vacías, con RLS sin políticas, columnas en camelCase y terminología fiscal de IVA/IRPF/RUT) que no crea ninguna migración ni usa ningún archivo del repositorio | Borradas el 18/11/2026 con la migración 049 (solo si vacías y sin `CASCADE`), tras respaldar su definición. Parecían de otro proyecto (posiblemente Dual-Balance) |
 | `orders.equipment_ids` es `text[]` (033 local) en vez de `jsonb` (036 del repositorio) | El código nuevo admite ambos tipos (migración 045) |
-| `default_built_in_tabs()` no incluye la entrada `accounting` | Se resolverá junto con la contabilidad |
+| `default_built_in_tabs()` no incluía la entrada `accounting` | Corregido por la 048 (la añade a la lista existente) |
+| La versión desplegada de `support-reply-notify` todavía enviaba por OneSignal | Redesplegada desde el repositorio (Web Push vía `send-push`) el 18/11/2026 |
