@@ -378,6 +378,16 @@ Despliegue: redesplegar `assistant-chat` (`--no-verify-jwt`) y el frontend. No h
 comprobar con `curl -N` que los `delta` llegan separados en el tiempo; si el gateway los agrupa, el
 chat sigue funcionando, solo que sin el efecto de escritura.
 
+**Formato de las respuestas.** El chat muestra negrita, cursiva, viñetas y listas numeradas con
+`src/components/assistant/ChatMarkdown.tsx`:
+
+- construye nodos de React, nunca HTML, así que el texto del modelo no puede inyectar etiquetas;
+- los enlaces de Markdown se muestran como texto, no como enlaces;
+- quita las comillas invertidas;
+- convierte los títulos en una línea en negrita.
+
+El mensaje del cliente se sigue mostrando como texto plano. El prompt (reglas 8 y 9) pide ese formato y prohíbe mostrar al cliente los identificadores internos de los servicios.
+
 Pendiente para fases siguientes: captcha invisible. La configuración y el correo al cliente son la fase 4 (§10.7).
 
 ### 10.7 Configuración del asistente y aviso al cliente (fase 4)
