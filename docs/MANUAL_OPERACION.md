@@ -299,7 +299,7 @@ devuelve la API de secretos, sin mostrar los valores:
 | `LLM_TEST_COMPANY_IDS` | `bb08edb1-3b01-4dcd-9ef5-03c7260883b5` (Plásticos del Sur) |
 | `LLM_TEST_PROVIDER` | `openai-compatible` desde el 19/11/2026 (antes `mock`). Para volver al simulado: `mock` |
 | `LLM_TEST_BASE_URL` | `https://openrouter.ai/api/v1` |
-| `LLM_TEST_MODEL` | `openrouter/free` (OpenRouter elige en cada llamada un modelo gratuito) |
+| `LLM_TEST_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` desde el 19/11/2026 (antes `openrouter/free`, que elegía un modelo distinto en cada llamada) |
 | `LLM_TEST_API_KEY` | Clave de OpenRouter, guardada por el dueño directamente en Supabase |
 | `ASSISTANT_SALT` | Generada con `openssl rand -hex 32` dentro del contenedor; solo existe en Supabase |
 | `APP_URL` | `https://navtickets.vercel.app` (ya existía; es el origen permitido por CORS) |
@@ -314,6 +314,16 @@ devuelve la API de secretos, sin mostrar los valores:
 | Deja los datos de la solicitud | La primera vez agotó los 2.048 tokens de salida y el asistente respondió con su mensaje de «respuesta incompleta», sin guardar nada a medias. Al repetirlo guardó la solicitud `3a881e62` en `pendiente`, con el hueco validado |
 
 Esa variación se debe a que `openrouter/free` elige un modelo distinto en cada llamada. Para una demo más estable conviene fijar un modelo `:free` concreto que admita herramientas.
+
+**Prueba con `nvidia/nemotron-3-ultra-550b-a55b:free` (19/11/2026), el modelo que queda configurado.** Los mismos tres turnos salieron bien a la primera:
+
+| Turno | Resultado |
+|---|---|
+| Servicios | 5 s |
+| Disponibilidad | 15 s, con huecos reales vía `consultar_disponibilidad` |
+| Datos de la solicitud | 18 s. Guardó la solicitud `6086aee9` en `pendiente` con el hueco validado, y el resumen al cliente aclara que un administrador confirma la cita |
+
+La conversación entera usó unos 14.900 tokens de entrada y 1.900 de salida.
 
 Los modelos gratuitos pueden registrar o usar los mensajes, así que el código solo los permite en empresas de `LLM_TEST_COMPANY_IDS`. Con este proveedor la respuesta llega completa, sin streaming.
 
