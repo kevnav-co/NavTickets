@@ -9,6 +9,7 @@ import {
   AssistantApiError, initAssistant, sendAssistantMessageStream, sendVerificationCode, verifyCode,
   type AssistantCompany,
 } from '../../services/assistantChat';
+import ChatMarkdown from './ChatMarkdown';
 import { safeUrl } from '../../utils/html';
 
 type Msg = { id: number; role: 'user' | 'assistant'; text: string; kind?: 'error' | 'note' };
@@ -30,6 +31,8 @@ const storage = {
 
 let nextId = 1;
 const msg = (role: Msg['role'], text: string, kind?: Msg['kind']): Msg => ({ id: nextId++, role, text, kind });
+/** Solo las respuestas normales del asistente se muestran con formato; lo que escribe el cliente, siempre como texto. */
+const isRich = (m: Msg) => m.role === 'assistant' && !m.kind;
 
 const PublicAssistantChat: React.FC<{ slug: string }> = ({ slug }) => {
   const convKey = `nt_asistente_conv_${slug}`;
@@ -186,7 +189,9 @@ const PublicAssistantChat: React.FC<{ slug: string }> = ({ slug }) => {
               {messages.map((m) => (
                 <div
                   key={m.id}
-                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words ${
+                  className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm break-words ${
+                    isRich(m) ? '' : 'whitespace-pre-wrap'
+                  } ${
                     m.role === 'user'
                       ? 'self-end bg-primary text-white rounded-br-md'
                       : m.kind === 'error'
@@ -196,7 +201,7 @@ const PublicAssistantChat: React.FC<{ slug: string }> = ({ slug }) => {
                           : 'self-start bg-raised text-ink border border-line-soft rounded-bl-md'
                   }`}
                 >
-                  {m.text}
+                  {isRich(m) ? <ChatMarkdown text={m.text} /> : m.text}
                 </div>
               ))}
               {sending && messages[messages.length - 1]?.role === 'user' && (
