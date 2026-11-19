@@ -22,7 +22,7 @@ nunca debe considerarse una barrera de seguridad.
 | Nombre | Dónde se configura | Uso | Debe coincidir con |
 |---|---|---|---|
 | `WEBHOOK_SECRET` | Supabase (`supabase secrets`) | Autentica las Edge Functions que llaman los triggers (`on-*-assigned`, `support-*`, `service-request-notify`, `service-request-customer-notify`) y `send-push`. Sin él rechazan todo | Secreto `webhook_secret` de Vault |
-| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Supabase (`supabase secrets`) | Correo saliente: recuperación de clave, códigos del chat y aviso al cliente al confirmar o rechazar. **Sin configurar en producción**: las funciones quedan en modo simulado | Cuenta de Gmail con verificación en dos pasos y contraseña de aplicación |
+| `GMAIL_USER` / `GMAIL_APP_PASSWORD` | Supabase (`supabase secrets`) | Correo saliente: recuperación de clave, códigos del chat y aviso al cliente al confirmar o rechazar. **Configurados en producción el 18/11/2026** (envío real comprobado); sin ellos las funciones quedan en modo simulado | Cuenta de Gmail con verificación en dos pasos y contraseña de aplicación |
 | `webhook_secret` (Vault) | Base de datos, Supabase Vault (`vault.create_secret` / `vault.update_secret`) | Lo envían los triggers a través de `public.webhook_secret()` (migración 044). En Supabase no se puede usar `ALTER DATABASE … SET app.webhook_secret` (permiso denegado) | `WEBHOOK_SECRET` |
 | `CRON_SECRET` | Supabase (`supabase secrets`) | Autentica `task-scheduler` y `daily-expiration-check` | Secreto `cron_secret` de Vault |
 | `cron_secret` (Vault) | Base de datos, Supabase Vault | Lo envían los jobs de `pg_cron` como `x-cron-secret` a través de `public.cron_secret()` (migración 047) | `CRON_SECRET` |
@@ -297,10 +297,35 @@ devuelve la API de secretos, sin mostrar los valores:
 | Nombre | Valor configurado |
 |---|---|
 | `LLM_TEST_COMPANY_IDS` | `bb08edb1-3b01-4dcd-9ef5-03c7260883b5` (Plásticos del Sur) |
-| `LLM_TEST_PROVIDER` | `mock` |
+| `LLM_TEST_PROVIDER` | `openai-compatible` desde el 19/11/2026 (antes `mock`). Para volver al simulado: `mock` |
+| `LLM_TEST_BASE_URL` | `https://openrouter.ai/api/v1` |
+| `LLM_TEST_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` desde el 19/11/2026 (antes `openrouter/free`, que elegía un modelo distinto en cada llamada) |
+| `LLM_TEST_API_KEY` | Clave de OpenRouter, guardada por el dueño directamente en Supabase |
 | `ASSISTANT_SALT` | Generada con `openssl rand -hex 32` dentro del contenedor; solo existe en Supabase |
 | `APP_URL` | `https://navtickets.vercel.app` (ya existía; es el origen permitido por CORS) |
 | `ANTHROPIC_API_KEY` | **Sin configurar** |
+
+**Prueba con OpenRouter gratuito (19/11/2026).** Tres turnos en el chat de Plásticos del Sur:
+
+| Turno | Resultado |
+|---|---|
+| Pregunta por los servicios | Contestó con los servicios configurados |
+| Pide disponibilidad | Llamó a `consultar_disponibilidad` y ofreció los huecos reales de la agenda (8–17 s por turno) |
+| Deja los datos de la solicitud | La primera vez agotó los 2.048 tokens de salida y el asistente respondió con su mensaje de «respuesta incompleta», sin guardar nada a medias. Al repetirlo guardó la solicitud `3a881e62` en `pendiente`, con el hueco validado |
+
+Esa variación se debe a que `openrouter/free` elige un modelo distinto en cada llamada. Para una demo más estable conviene fijar un modelo `:free` concreto que admita herramientas.
+
+**Prueba con `nvidia/nemotron-3-ultra-550b-a55b:free` (19/11/2026), el modelo que queda configurado.** Los mismos tres turnos salieron bien a la primera:
+
+| Turno | Resultado |
+|---|---|
+| Servicios | 5 s |
+| Disponibilidad | 15 s, con huecos reales vía `consultar_disponibilidad` |
+| Datos de la solicitud | 18 s. Guardó la solicitud `6086aee9` en `pendiente` con el hueco validado, y el resumen al cliente aclara que un administrador confirma la cita |
+
+La conversación entera usó unos 14.900 tokens de entrada y 1.900 de salida.
+
+Los modelos gratuitos pueden registrar o usar los mensajes, así que el código solo los permite en empresas de `LLM_TEST_COMPANY_IDS`. Con este proveedor la respuesta llega completa, sin streaming.
 
 Procedimiento de despliegue seguido (repetible):
 
@@ -331,8 +356,29 @@ Para pasar al modelo real: guardar `ANTHROPIC_API_KEY` como secreto de Supabase 
 también debe usarlo, quitar su id de `LLM_TEST_COMPANY_IDS`. No hace falta redesplegar: la función lee
 los secretos en cada arranque.
 
-Pendiente para fases siguientes: captcha invisible y respuestas en streaming. La configuración y el
-correo al cliente son la fase 4 (§10.7).
+**Respuestas en streaming** (rama `feature/asistente-streaming`, sin desplegar). El chat pide
+`stream: true` y la respuesta llega por partes, en NDJSON (un objeto JSON por línea,
+`Content-Type: application/x-ndjson`):
+
+| Evento | Significado |
+|---|---|
+| `{"type":"delta","text":"…"}` | Texto que el modelo va escribiendo (vista previa) |
+| `{"type":"done","reply":"…","request":…}` | Respuesta definitiva; **reemplaza** lo transmitido (un rechazo, una respuesta cortada o el texto previo a una herramienta cambian el resultado) |
+| `{"type":"error","status":503,"error":"…"}` | El turno falló; el chat quita el texto parcial y muestra el error |
+
+- Cada respuesta termina con exactamente un `done` o un `error`.
+- Los errores anteriores al turno (límites, conversación cerrada, proveedor no disponible) siguen llegando como JSON normal con su código HTTP.
+- Si el cliente cierra la página a mitad, el turno termina y se guarda igual.
+- Las peticiones sin `stream` reciben el JSON de siempre, así que el cambio es compatible con versiones anteriores.
+- **Anthropic:** `messages.stream` del SDK.
+- **Simulado:** emite por palabras, con 25 ms entre una y otra, para que se vea en la demo.
+- **Proveedor compatible con OpenAI:** no transmite y entrega la respuesta completa al final.
+
+Despliegue: redesplegar `assistant-chat` (`--no-verify-jwt`) y el frontend. No hay migración. Después,
+comprobar con `curl -N` que los `delta` llegan separados en el tiempo; si el gateway los agrupa, el
+chat sigue funcionando, solo que sin el efecto de escritura.
+
+Pendiente para fases siguientes: captcha invisible. La configuración y el correo al cliente son la fase 4 (§10.7).
 
 ### 10.7 Configuración del asistente y aviso al cliente (fase 4)
 
@@ -342,7 +388,7 @@ Estado: **en producción desde el 18/11/2026**:
 - `service-request-customer-notify` desplegada con `verify_jwt = false`;
 - frontend publicado.
 
-Falta configurar `GMAIL_USER`/`GMAIL_APP_PASSWORD`. Hasta entonces los correos quedan en modo simulado y el gestor recibe el aviso en la campana.
+`GMAIL_USER`/`GMAIL_APP_PASSWORD` configurados el 18/11/2026: los correos salen de verdad. Prueba: una solicitud rechazada como `pl_admin` devolvió `sent: true, stub: false`. Si faltan, los correos quedan en modo simulado y el gestor recibe el aviso en la campana.
 
 **Sección «Asistente»** (Configuración de mi empresa → pestaña «Asistente», o el engranaje de la
 bandeja de solicitudes; enlace directo `/#/admin?seccion=asistente`). Solo la ven admin y developer

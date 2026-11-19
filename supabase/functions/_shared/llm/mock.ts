@@ -44,69 +44,94 @@ const reply = (content: LlmBlock[], stopReason: LlmResponse["stopReason"]): LlmR
   usage: { inputTokens: 0, outputTokens: 0 },
 });
 
-export function createMockProvider(): LlmProvider {
+/** Trozos de texto como los daría un stream real: cada palabra con su espacio. */
+export function streamChunks(text: string): string[] {
+  return text.match(/\S+\s*|\s+/g) ?? [];
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * `chunkDelayMs` solo hace visible el streaming en la demo; en las pruebas es 0.
+ */
+export function createMockProvider(opts: { chunkDelayMs?: number } = {}): LlmProvider {
+  const delay = Math.max(0, opts.chunkDelayMs ?? 0);
   return {
     name: "mock",
     model: "mock-1",
-    complete(request: LlmRequest): Promise<LlmResponse> {
-      const last = request.messages[request.messages.length - 1];
-      // 1) Resultados de herramientas → resumen
-      if (last && Array.isArray(last.content) && last.content.some(isToolResultBlock)) {
-        const results = last.content.filter(isToolResultBlock);
-        const summary = results.map((r) => {
-          if (r.is_error) return `No pude completar la consulta: ${r.content}`;
-          try {
-            const data = JSON.parse(r.content);
-            if (Array.isArray(data.huecos)) {
-              return data.huecos.length
-                ? `Tengo disponibilidad en: ${data.huecos.slice(0, 3).map((h: { fecha: string; hora: string }) => `${h.fecha} a las ${h.hora}`).join(", ")}.`
-                : "No encontré huecos libres en esas fechas.";
-            }
-            if (data.guardada) return `Registré tu solicitud (referencia ${data.referencia}). Un administrador confirmará la fecha y el técnico.`;
-            if ("verificado" in data) return data.verificado ? `Encontré tus datos como cliente${data.cliente ? ` (${data.cliente.nombre})` : ""}.` : "Tu correo aún no está verificado.";
-          } catch { /* resultado no JSON */ }
-          return r.content;
-        }).join(" ");
-        return Promise.resolve(reply([{ type: "text", text: summary }], "end_turn"));
+    async complete(request: LlmRequest): Promise<LlmResponse> {
+      const res = await respond(request);
+      if (request.onText) {
+        for (const block of res.content) {
+          if (!isTextBlock(block)) continue;
+          for (const chunk of streamChunks(block.text)) {
+            if (delay) await sleep(delay);
+            request.onText(chunk);
+          }
+        }
       }
-
-      const text = lastUserText(request.messages);
-      const lower = text.toLowerCase();
-      const today = DATE_RE.exec(request.system)?.[1] ?? new Date().toISOString().slice(0, 10);
-
-      const fields = parseFields(text);
-      if (fields.nombre && (fields.telefono || fields.correo)) {
-        return Promise.resolve(reply([toolUse("guardar_solicitud", {
-          nombre: fields.nombre,
-          telefono: fields.telefono ?? null,
-          correo: fields.correo ?? null,
-          identificacion: fields.identificacion ?? null,
-          direccion: fields.direccion ?? null,
-          ciudad: fields.ciudad ?? null,
-          tipo_servicio_id: fields.servicio ?? null,
-          descripcion: fields.descripcion ?? text.slice(0, 200),
-          equipos_ids: [],
-          descripcion_equipo: fields.equipo ?? null,
-          franjas_preferidas: [],
-          propuesta_fecha: fields.fecha ?? null,
-          propuesta_hora: fields.hora ?? null,
-          lista: /\blista\b/.test(lower),
-        })], "tool_use"));
-      }
-      if (/disponib|horario|cu[aá]ndo|cita/.test(lower)) {
-        return Promise.resolve(reply([toolUse("consultar_disponibilidad", {
-          tipo_servicio_id: null,
-          desde: addDays(today, 1),
-          hasta: addDays(today, 7),
-        })], "tool_use"));
-      }
-      if (/verifiqu/.test(lower)) {
-        return Promise.resolve(reply([toolUse("identificar_cliente", {})], "tool_use"));
-      }
-      return Promise.resolve(reply([{
-        type: "text",
-        text: "Soy el asistente de prueba. Puedo consultar la disponibilidad o registrar tu solicitud (escribe «nombre: …; telefono: …; descripcion: …»).",
-      }], "end_turn"));
+      return res;
     },
   };
+}
+
+function respond(request: LlmRequest): Promise<LlmResponse> {
+  const last = request.messages[request.messages.length - 1];
+  // 1) Resultados de herramientas → resumen
+  if (last && Array.isArray(last.content) && last.content.some(isToolResultBlock)) {
+    const results = last.content.filter(isToolResultBlock);
+    const summary = results.map((r) => {
+      if (r.is_error) return `No pude completar la consulta: ${r.content}`;
+      try {
+        const data = JSON.parse(r.content);
+        if (Array.isArray(data.huecos)) {
+          return data.huecos.length
+            ? `Tengo disponibilidad en: ${data.huecos.slice(0, 3).map((h: { fecha: string; hora: string }) => `${h.fecha} a las ${h.hora}`).join(", ")}.`
+            : "No encontré huecos libres en esas fechas.";
+        }
+        if (data.guardada) return `Registré tu solicitud (referencia ${data.referencia}). Un administrador confirmará la fecha y el técnico.`;
+        if ("verificado" in data) return data.verificado ? `Encontré tus datos como cliente${data.cliente ? ` (${data.cliente.nombre})` : ""}.` : "Tu correo aún no está verificado.";
+      } catch { /* resultado no JSON */ }
+      return r.content;
+    }).join(" ");
+    return Promise.resolve(reply([{ type: "text", text: summary }], "end_turn"));
+  }
+
+  const text = lastUserText(request.messages);
+  const lower = text.toLowerCase();
+  const today = DATE_RE.exec(request.system)?.[1] ?? new Date().toISOString().slice(0, 10);
+
+  const fields = parseFields(text);
+  if (fields.nombre && (fields.telefono || fields.correo)) {
+    return Promise.resolve(reply([toolUse("guardar_solicitud", {
+      nombre: fields.nombre,
+      telefono: fields.telefono ?? null,
+      correo: fields.correo ?? null,
+      identificacion: fields.identificacion ?? null,
+      direccion: fields.direccion ?? null,
+      ciudad: fields.ciudad ?? null,
+      tipo_servicio_id: fields.servicio ?? null,
+      descripcion: fields.descripcion ?? text.slice(0, 200),
+      equipos_ids: [],
+      descripcion_equipo: fields.equipo ?? null,
+      franjas_preferidas: [],
+      propuesta_fecha: fields.fecha ?? null,
+      propuesta_hora: fields.hora ?? null,
+      lista: /\blista\b/.test(lower),
+    })], "tool_use"));
+  }
+  if (/disponib|horario|cu[aá]ndo|cita/.test(lower)) {
+    return Promise.resolve(reply([toolUse("consultar_disponibilidad", {
+      tipo_servicio_id: null,
+      desde: addDays(today, 1),
+      hasta: addDays(today, 7),
+    })], "tool_use"));
+  }
+  if (/verifiqu/.test(lower)) {
+    return Promise.resolve(reply([toolUse("identificar_cliente", {})], "tool_use"));
+  }
+  return Promise.resolve(reply([{
+    type: "text",
+    text: "Soy el asistente de prueba. Puedo consultar la disponibilidad o registrar tu solicitud (escribe «nombre: …; telefono: …; descripcion: …»).",
+  }], "end_turn"));
 }
