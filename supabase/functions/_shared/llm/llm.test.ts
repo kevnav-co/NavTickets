@@ -14,7 +14,7 @@ describe('createProvider', () => {
     expect((await createProvider(env, demo)).name).toBe('mock');
   });
 
-  it('una empresa real nunca usa el proveedor de pruebas: exige la clave de Anthropic', async () => {
+  it('sin LLM_PROVIDER, una empresa real nunca usa el proveedor de pruebas: exige la clave de Anthropic', async () => {
     const env = envOf({ LLM_TEST_PROVIDER: 'mock', LLM_TEST_COMPANY_IDS: demo });
     await expect(createProvider(env, 'empresa-real')).rejects.toBeInstanceOf(LlmUnavailableError);
   });
@@ -22,6 +22,30 @@ describe('createProvider', () => {
   it('rechaza un proveedor de pruebas desconocido', async () => {
     const env = envOf({ LLM_TEST_PROVIDER: 'otro', LLM_TEST_COMPANY_IDS: demo });
     await expect(createProvider(env, demo)).rejects.toBeInstanceOf(LlmNotAllowedError);
+  });
+
+  it('LLM_PROVIDER=openai-compatible atiende a todas las empresas con la clave de pruebas como respaldo', async () => {
+    const env = envOf({
+      LLM_PROVIDER: 'openai-compatible', LLM_BASE_URL: 'https://openrouter.ai/api/v1',
+      LLM_MODEL: 'nvidia/nemotron-3-ultra-550b-a55b:free', LLM_TEST_API_KEY: 'sk-or-x',
+    });
+    const p = await createProvider(env, 'empresa-real');
+    expect(p.name).toBe('openai-compatible');
+    expect(p.model).toBe('nvidia/nemotron-3-ultra-550b-a55b:free');
+  });
+
+  it('el proveedor por defecto compatible con OpenAI exige URL, modelo y clave', async () => {
+    const env = envOf({ LLM_PROVIDER: 'openai-compatible', LLM_BASE_URL: 'https://x' });
+    await expect(createProvider(env, 'empresa-real')).rejects.toBeInstanceOf(LlmUnavailableError);
+  });
+
+  it('rechaza un proveedor por defecto desconocido', async () => {
+    await expect(createProvider(envOf({ LLM_PROVIDER: 'gratis' }), 'empresa-real')).rejects.toBeInstanceOf(LlmNotAllowedError);
+  });
+
+  it('las empresas de prueba conservan su proveedor aunque haya uno por defecto', async () => {
+    const env = envOf({ LLM_PROVIDER: 'openai-compatible', LLM_TEST_PROVIDER: 'mock', LLM_TEST_COMPANY_IDS: demo });
+    expect((await createProvider(env, demo)).name).toBe('mock');
   });
 
   it('openai-compatible exige su configuración completa', async () => {

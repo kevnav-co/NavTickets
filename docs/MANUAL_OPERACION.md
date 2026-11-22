@@ -252,6 +252,17 @@ iPhone, con la app instalada en la pantalla de inicio), porque hasta hoy ninguna
 guardaba. Después, `select count(*) from push_subscriptions;` debe crecer y el siguiente aviso llegará
 al teléfono.
 
+**Comprobación del 22/11/2026.** Solo había una suscripción, la del `superadmin`. Un push de prueba
+enviado con `send-push` a ese usuario respondió `sent: 1, failed: 0`, así que la cadena del servidor
+funciona. Para que el resto de usuarios se suscriba, la app muestra bajo el encabezado un aviso
+(`src/utils/pushPrompt.ts`):
+
+- Con el permiso sin pedir: «Activa las notificaciones…», con el botón **Activar**.
+- En iPhone o iPad desde Safari sin instalar: cómo añadir la app a la pantalla de inicio, que es el
+  único modo en que iOS admite push.
+- «Ahora no» lo oculta 7 días en ese navegador. Si el permiso ya está concedido o bloqueado, el aviso
+  no aparece; un bloqueo se revierte en los ajustes del navegador.
+
 ### 10.6 Chat web público (fase 3)
 
 Estado: **en producción desde el 18/11/2026 con el proveedor simulado** (sin costo de modelo) para
@@ -283,8 +294,10 @@ Secretos y variables de la Edge Function (Supabase):
 
 | Nombre | Uso |
 |---|---|
-| `ANTHROPIC_API_KEY` | Clave de la API de Anthropic. Sin ella, las empresas reales reciben «no disponible» (503) |
-| `LLM_MODEL` | Opcional; por defecto `claude-haiku-5-5` |
+| `LLM_PROVIDER` | Proveedor de todas las empresas: `anthropic` (si falta) u `openai-compatible` |
+| `LLM_BASE_URL`, `LLM_MODEL` | Con `openai-compatible`: URL del endpoint y modelo. Con `anthropic`, `LLM_MODEL` es opcional (por defecto `claude-haiku-5-5`) |
+| `LLM_API_KEY` | Clave del proveedor `openai-compatible`; si falta se usa `LLM_TEST_API_KEY` |
+| `ANTHROPIC_API_KEY` | Clave de la API de Anthropic, solo con `LLM_PROVIDER=anthropic`. Sin ella, esas empresas reciben «no disponible» (503) |
 | `ASSISTANT_SALT` | Sal para el hash de IP y de los códigos (`openssl rand -hex 32`). Si falta se usa `WEBHOOK_SECRET` |
 | `ASSISTANT_ALLOWED_ORIGINS` | Orígenes extra permitidos por CORS, separados por comas (además de `APP_URL`) |
 | `LLM_TEST_COMPANY_IDS` | Ids de empresas de prueba (separados por comas) |
@@ -304,6 +317,20 @@ devuelve la API de secretos, sin mostrar los valores:
 | `ASSISTANT_SALT` | Generada con `openssl rand -hex 32` dentro del contenedor; solo existe en Supabase |
 | `APP_URL` | `https://navtickets.vercel.app` (ya existía; es el origen permitido por CORS) |
 | `ANTHROPIC_API_KEY` | **Sin configurar** |
+
+**Nemotron para toda la app (decisión del dueño, 22/11/2026).** Mientras la app está en pruebas, todas
+las empresas usan Nemotron gratuito por OpenRouter:
+
+- `LLM_PROVIDER=openai-compatible`
+- `LLM_BASE_URL=https://openrouter.ai/api/v1`
+- `LLM_MODEL=nvidia/nemotron-3-ultra-550b-a55b:free`
+- La clave sale de `LLM_TEST_API_KEY`, la misma de OpenRouter.
+
+Plásticos del Sur sale de `LLM_TEST_COMPANY_IDS` y usa el proveedor por defecto, así que su chat
+prueba el camino que seguirá cualquier empresa. **Riesgo a revisar antes de atender clientes reales:**
+los modelos gratuitos pueden registrar o usar los mensajes para entrenar. Con nombres, teléfonos y
+direcciones reales eso afecta a la Ley 1581 de 2012: hay que actualizar el aviso de datos o pasar a un
+proveedor de pago. Para volver a Anthropic: `LLM_PROVIDER=anthropic` y `ANTHROPIC_API_KEY`.
 
 **Prueba con OpenRouter gratuito (19/11/2026).** Tres turnos en el chat de Plásticos del Sur:
 

@@ -10,6 +10,7 @@ import { NotificationsModal } from './NotificationsModal';
 import SupportModal from '../support/SupportModal';
 import { useConnectivityStatus } from '../../hooks/useConnectivityStatus';
 import { useWebPush } from '../../hooks/useWebPush';
+import { PUSH_PROMPT_SNOOZE_MS, pushPromptKind } from '../../utils/pushPrompt';
 
 interface HeaderProps {
   title: string;
@@ -62,6 +63,36 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
   // (antes toda falla se perdía en console y el botón parecía no hacer nada).
   const [dismissNotifError, setDismissNotifError] = useState(false);
   const notifError = dismissNotifError ? null : (actionError || initError);
+
+  // Aviso para activar las notificaciones (o instalar la app en iPhone). «Ahora no»
+  // lo pospone 7 días en este navegador; si el almacenamiento falla, solo esta sesión.
+  const snoozeKey = currentUser ? `nt_push_prompt_snooze_${currentUser.id}` : '';
+  const [promptSnoozedUntil, setPromptSnoozedUntil] = useState<number | null>(() => {
+    try {
+      const v = snoozeKey ? Number(localStorage.getItem(snoozeKey)) : 0;
+      return v > 0 ? v : null;
+    } catch {
+      return null;
+    }
+  });
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+  const pushPrompt = currentUser && !notifError
+    ? pushPromptKind({
+        isSupported,
+        permission,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        isStandalone,
+        dismissedUntil: promptSnoozedUntil,
+        now: Date.now(),
+      })
+    : null;
+  const snoozePushPrompt = () => {
+    const until = Date.now() + PUSH_PROMPT_SNOOZE_MS;
+    setPromptSnoozedUntil(until);
+    try { if (snoozeKey) localStorage.setItem(snoozeKey, String(until)); } catch { /* solo esta sesión */ }
+  };
 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -261,6 +292,31 @@ export const Header: React.FC<HeaderProps> = React.memo(({ title }) => {
          )}
       </div>
       </div>
+      {pushPrompt && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 bg-sky-50 border-t border-sky-200 text-sky-900 text-xs" role="status">
+          <Bell size={16} className="shrink-0 text-sky-600" aria-hidden="true" />
+          <p className="flex-1 min-w-[12rem]">
+            {pushPrompt === 'enable'
+              ? 'Activa las notificaciones para enterarte al momento de órdenes asignadas, tareas y solicitudes nuevas.'
+              : 'Para recibir notificaciones en iPhone, instala la app: toca Compartir y luego «Añadir a pantalla de inicio». Ábrela desde ese icono y actívalas.'}
+          </p>
+          <div className="flex gap-2 shrink-0">
+            {pushPrompt === 'enable' && (
+              <button
+                type="button"
+                onClick={handleEnableNotifications}
+                disabled={isLoading}
+                className="px-3 py-1.5 rounded-lg bg-sky-600 text-white font-bold hover:bg-sky-700 disabled:opacity-50"
+              >
+                {isLoading ? 'Activando…' : 'Activar'}
+              </button>
+            )}
+            <button type="button" onClick={snoozePushPrompt} className="px-3 py-1.5 rounded-lg font-bold text-sky-700 hover:bg-sky-100">
+              Ahora no
+            </button>
+          </div>
+        </div>
+      )}
       {notifError && (
         <div className="flex items-start gap-3 px-4 py-2 bg-orange-50 border-t border-orange-200 text-orange-800 text-xs">
           <div className="flex-1">
