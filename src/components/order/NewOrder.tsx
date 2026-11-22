@@ -12,6 +12,7 @@ import { Equipment } from '../../types';
 import ClientSearchModal from '../shared/ClientSearchModal';
 import AvailabilityModal from './AvailabilityModal';
 import PERMISSIONS, { hasPermission } from '../../permissions';
+import StorageImage from '../ui/StorageImage';
 
 const today = new Date().toISOString().split('T')[0];
 
@@ -457,7 +458,7 @@ const NewOrder: React.FC = () => {
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
               {initialEvidence.map((evidence: string | Blob, index: number) => (
                 <div key={index} className="aspect-square rounded-xl overflow-hidden border border-line relative group shadow-sm hover:shadow-md transition-shadow">
-                  <img src={getImageUrl(evidence)} alt={`evidence-${index}`} className="w-full h-full object-cover" />
+                  <StorageImage src={getImageUrl(evidence)} alt={`evidence-${index}`} className="w-full h-full object-cover" />
                   <button 
                     type="button" 
                     onClick={(e) => {

@@ -1,5 +1,5 @@
 -- =============================================================================
--- Prueba de las políticas de Storage (migración 052). Requiere supabase_stubs.sql
+-- Prueba de las políticas de Storage (migraciones 052 y 053). Requiere supabase_stubs.sql
 -- + migraciones.
 --   psql -d nt -f supabase/tests/storage_rls.sql
 -- =============================================================================
@@ -48,7 +48,7 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA pg_temp TO authenticated, anon;
 
 -- 0) Buckets
 SELECT pg_temp.expect_eq($q$select string_agg(id || ':' || public::text, ',' order by id) from storage.buckets$q$,
-  'company-assets:true,equipment-photos:true,order-photos:true', 'buckets públicos por enlace');
+  'company-assets:true,equipment-photos:false,order-photos:false', 'fotos privadas (053) y logos públicos');
 SELECT pg_temp.expect_eq($q$select count(*)::text from storage.buckets where 'image/svg+xml' = any(allowed_mime_types) or 'application/pdf' = any(allowed_mime_types)$q$,
   '0', 'ningún bucket admite SVG ni PDF');
 SELECT pg_temp.expect_eq($q$select count(*)::text from pg_policies where schemaname='storage' and tablename='objects' and 'public' = any(roles)$q$,

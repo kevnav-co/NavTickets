@@ -3,6 +3,9 @@ import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vites
 
 const saved: { name: string; pdf: string }[] = [];
 
+// Las fotos de la prueba son data: URLs; sin firmar (y sin cliente de Supabase en CI).
+vi.mock('../services/storageUrls', () => ({ resolveStorageUrl: async (url: string) => url }));
+
 vi.mock('jspdf', async (importOriginal) => {
   const mod = await importOriginal<typeof import('jspdf')>();
   class CapturingPDF extends mod.jsPDF {

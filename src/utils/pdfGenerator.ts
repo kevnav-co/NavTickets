@@ -7,6 +7,7 @@
  * los datos de la orden de servicio, cliente, técnico, y las evidencias fotográficas.
  */
 
+import { resolveStorageUrl } from '../services/storageUrls';
 import { ServiceOrder, Client, Equipment, User } from '../types';
 
 // --- Funciones de Ayuda (Helpers) para formateo de datos ---
@@ -73,7 +74,8 @@ const imageToDataUrl = (source: string | Blob): Promise<string> => {
         return resolve(source);
       }
       try {
-        const response = await fetch(source);
+        // Fotos privadas: pedir un enlace firmado antes de descargarlas.
+        const response = await fetch(await resolveStorageUrl(source));
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const blob = await response.blob();
         const reader = new FileReader();

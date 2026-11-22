@@ -526,7 +526,7 @@ no la empresa. Esas políticas venían de la 034 local, que nunca llegó al repo
 
 Una PWA instalada que aún no se haya actualizado sigue usando rutas sin empresa. Esas rutas se aceptan para órdenes ya guardadas, pero no para una orden nueva creada sin conexión: hay que actualizar la app (el aviso «Nueva versión» de la PWA).
 
-**Paso 2 (pendiente).** Buckets privados con URLs firmadas. Afecta a unos 13 componentes, al PDF y a la caché sin conexión, porque los enlaces firmados caducan.
+**Paso 2.** Buckets privados con URLs firmadas: hecho con la migración 053, ver §10.9.
 
 Prueba SQL: `supabase/tests/storage_rls.sql` (20 comprobaciones).
 
@@ -540,6 +540,55 @@ Prueba SQL: `supabase/tests/storage_rls.sql` (20 comprobaciones).
 | `pl_tec1` sube en la carpeta de otra empresa | — | Rechazado por RLS (403) |
 | Subir un SVG | — | Rechazado por el bucket (415) |
 | Políticas de `storage.objects` | 6, dos para el rol `public` | 5 `nt_storage_*`, solo para `authenticated` |
+
+## 10.9 Fotos privadas con enlaces firmados (migración 053, paso 2 de 2)
+
+**Objetivo.** Que una foto de orden o de equipo no se pueda abrir con solo conocer su enlace. Tras la 052
+nadie podía listar las fotos, pero quien tuviera la URL pública (por ejemplo, copiada de un PDF o de un
+correo) la abría sin iniciar sesión.
+
+**Qué cambia**
+
+- **Buckets.** `order-photos` y `equipment-photos` pasan a privados. `company-assets` (logos) sigue público porque la marca se ve en la pantalla de inicio de sesión.
+- **Datos.** No se migran: las columnas siguen guardando la URL pública de siempre (o la ruta). La app la convierte al mostrarla.
+- **Resolución en la app** (`src/services/storageUrls.ts`):
+  - reconoce URLs públicas, firmadas o rutas de los dos buckets de fotos (`privateStorageRef` en `src/utils/storageUrls.ts`); las demás (logos, `data:`, `blob:`, enlaces externos) se usan tal cual;
+  - pide los enlaces con `createSignedUrls`, una petición por bucket para todas las fotos de la pantalla;
+  - los enlaces duran 1 hora y se guardan en memoria; se renuevan 5 minutos antes de caducar;
+  - sin conexión, o si falla la firma, usa la dirección `/storage/v1/object/sign/…` sin token, que el service worker sirve desde su caché.
+- **Componentes.** `<StorageImage>` (`src/components/ui/StorageImage.tsx`) sustituye a `<img>` en las 11 vistas con fotos o firmas (órdenes, equipos, clientes, selector de equipos, visor de imágenes, firma).
+- **PDF.** `pdfGenerator.ts` descarga cada foto con su enlace firmado antes de incrustarla.
+- **Caché sin conexión** (`src/sw.ts`, caché `supabase-storage-signed`). La clave de caché es la dirección sin `token`, así que una foto vista una vez sigue disponible sin conexión aunque su enlace haya caducado. Guarda hasta 300 fotos durante 30 días.
+
+**Quién puede firmar.** Firmar un enlace exige leer el objeto, así que aplican las políticas de la 052: solo
+usuarios de la misma empresa, incluidas las rutas antiguas sin empresa si la orden o el equipo es suyo.
+
+**Despliegue, en este orden**
+
+1. Desplegar el frontend: funciona también con los buckets aún públicos.
+2. Aplicar la 053 en una transacción con su registro en `schema_migrations`.
+3. Verificar: la URL pública responde 400 y las fotos se ven con enlaces `/object/sign/…?token=…`.
+
+Una PWA instalada que no se haya actualizado sigue pidiendo la URL pública y no verá las fotos hasta
+actualizar (aviso «Nueva versión»).
+
+**Reversión.** `UPDATE storage.buckets SET public = true WHERE id IN ('order-photos','equipment-photos');`
+La app sigue funcionando con buckets públicos, así que no hace falta volver a desplegar.
+
+**Aplicada en producción el 22/11/2026.** Frontend `dpl_GU9iSHNFCeyfn9AaekUMz55WgMH5`, después la 053. Verificación:
+
+| Prueba | Resultado |
+|---|---|
+| Buckets | `company-assets` público; `equipment-photos` y `order-photos` privados |
+| URL pública de una foto | 400 (antes 200) |
+| `pl_admin` abre el equipo «Inyectora 180T Engel» con foto | Se ve; la pide por `/object/sign/` con token (200), sin errores en consola |
+| Objetos visibles para un usuario de Hoteles Caribe | Sus 7 fotos (4 de equipos, 3 en `order-photos` con rutas antiguas) |
+| Objetos visibles para `pl_admin` (Plásticos del Sur) | Solo su foto de prueba |
+
+La foto de prueba (`bb08edb1-…/equipment/4790a4c5-…/imageUrl/…_prueba.png`, un cuadro azul de 64 px) se
+dejó en la empresa demo. En `order-photos` queda un archivo huérfano
+(`orders/new_order_temp_id/initialPhotos/…_TVP-14-1_1.jpeg`) que ninguna orden referencia y que, por no
+tener empresa, ya solo puede leer la service role. Se puede borrar desde el panel de Storage.
 
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 

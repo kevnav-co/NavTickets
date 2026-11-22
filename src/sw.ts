@@ -3,6 +3,7 @@ import { registerRoute } from 'workbox-routing';
 import { NetworkFirst, StaleWhileRevalidate, CacheFirst, NetworkOnly } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import { ExpirationPlugin } from 'workbox-expiration';
+import { stripSignedToken } from './utils/storageUrls';
 
 declare let self: ServiceWorkerGlobalScope;
 
@@ -54,6 +55,22 @@ registerRoute(
 registerRoute(
   ({ url }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/realtime/v1/'),
   new NetworkOnly()
+);
+
+// Fotos privadas (enlaces firmados, migración 053): la clave de caché es la URL
+// SIN el token, que cambia en cada firma. Así una foto ya vista se sirve desde la
+// caché aunque su enlace haya caducado, y sin conexión la app pide la misma URL
+// sin token (src/services/storageUrls.ts → offlineStorageUrl).
+registerRoute(
+  ({ url, request }) => url.hostname.includes('supabase.co') && url.pathname.startsWith('/storage/v1/object/sign/') && request.method === 'GET',
+  new CacheFirst({
+    cacheName: 'supabase-storage-signed',
+    plugins: [
+      { cacheKeyWillBeUsed: async ({ request }) => stripSignedToken(request.url) },
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({ maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true }),
+    ],
+  })
 );
 
 // Supabase Storage - CacheFirst for images/files

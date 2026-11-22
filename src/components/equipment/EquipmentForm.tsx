@@ -17,6 +17,7 @@ import { SUGGESTED_EQUIPMENT_NAMES } from '../../constants';
 import ClientSearchModal from '../shared/ClientSearchModal';
 import { useFileHandler } from '../../hooks/useFileHandler';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
+import StorageImage from '../ui/StorageImage';
 
 const createInitialFormData = (): Partial<Equipment> => ({
   id: crypto.randomUUID(),
@@ -292,7 +293,7 @@ const EquipmentForm: React.FC = () => {
                     
                     {formData.imageUrl ? (
                       <>
-                        <img src={formData.imageUrl} alt="Preview" className="w-full h-full object-contain rounded-lg p-2"/>
+                        <StorageImage src={formData.imageUrl} alt="Preview" className="w-full h-full object-contain rounded-lg p-2"/>
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all rounded-2xl">
                           <div className="absolute bottom-2.5 right-2.5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button title="Reemplazar desde galería" type="button" onClick={() => galleryInputRef.current?.click()} className="bg-raised/80 backdrop-blur-sm border border-line rounded-lg p-2.5 text-xs font-bold text-ink-soft shadow-sm flex items-center gap-1.5 active:scale-95 transition-transform">
