@@ -18,6 +18,7 @@
 // `users` se valida por `supabase_auth_id` (NO por `id`, que es el PK negocio).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { withCors } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,7 +50,7 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -125,7 +126,7 @@ Deno.serve(async (req: Request) => {
         email_confirm: true,
       });
     if (createErr) throw createErr;
-    authUid = createdUser.id;
+    authUid = createdUser.user.id;
 
     // ─── Paso 2: fila de negocio en users, vinculada al tenant ─────────────
     // `users.email` (desde migración 019) es el correo REAL de recuperación, no
@@ -176,4 +177,4 @@ Deno.serve(async (req: Request) => {
     }
     return json({ error: `No se pudo crear el usuario: ${err.message}` }, 500);
   }
-});
+}));

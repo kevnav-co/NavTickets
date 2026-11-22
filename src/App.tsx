@@ -15,6 +15,7 @@ import Login from './components/auth/Login';
 import ForgotPassword from './components/auth/ForgotPassword';
 import ResetPassword from './components/auth/ResetPassword';
 import { ForcePasswordChange } from './components/auth/ForcePasswordChange';
+import { CompanySuspended } from './components/auth/CompanySuspended';
 import { useOfflineStatus } from './hooks/useOfflineStatus';
 import { useBackgroundSync } from './hooks/useBackgroundSync';
 import { RefreshCw, Save } from 'lucide-react';
@@ -191,6 +192,9 @@ function AppContent({
       reg.active?.postMessage({ type: 'SET_COMPANY_NAME', name: company.name });
     }).catch(() => {});
   }, [company?.name]);
+
+  // Empresa suspendida (migración 054): la RLS ya no le da datos; solo el aviso.
+  if (currentUser?.companySuspended) return <CompanySuspended />;
 
   if (companyLoading) return <LoadingFallback />;
 

@@ -48,6 +48,10 @@ export interface CompanyConfig {
   features: CompanyFeatures;
   auth: CompanyAuth;
   tabs: TabConfig[];             // All tabs for this company
+  /** Migración 054: con 'suspended' sus usuarios pierden el acceso (RLS). */
+  status?: 'active' | 'suspended';
+  suspendedAt?: string | null;
+  suspendedReason?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }

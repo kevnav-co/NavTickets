@@ -3,7 +3,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Building2, Plus, AlertTriangle } from 'lucide-react';
-import { CompanyConfig } from '../../types/company';
 import * as adminService from '../../services/adminService';
 import CompanyCard from './CompanyCard';
 
@@ -12,23 +11,24 @@ interface CompanyListProps {
   onCreate: () => void;
   onManageUsers: (companyId: string) => void;
   onPreview: (companyId: string) => void;
+  /** Mensaje breve tras suspender, reactivar o borrar (toast del panel). */
+  onNotify: (message: string) => void;
 }
 
 type StatusFilter = 'all' | 'active' | 'suspended';
 
-const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUsers, onPreview }) => {
-  const [companies, setCompanies] = useState<(CompanyConfig & { status?: 'active' | 'suspended'; userCount?: number; lastActivityAt?: string })[]>([]);
+const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUsers, onPreview, onNotify }) => {
+  const [companies, setCompanies] = useState<adminService.CompanyWithStats[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const loadCompanies = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await adminService.listCompanies();
+      const data = await adminService.listCompaniesWithStats();
       setCompanies(data);
     } catch (err) {
       console.error('[Admin] Error loading companies:', err);
@@ -61,15 +61,23 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
     return result;
   }, [companies, searchTerm, statusFilter]);
 
-  const handleDelete = async (companyId: string) => {
-    try {
-      await adminService.deleteCompany(companyId);
-      setCompanies(prev => prev.filter(c => c.id !== companyId));
-      setDeleteConfirm(null);
-    } catch (err) {
-      console.error('[Admin] Error deleting company:', err);
-      alert('Error al eliminar la empresa.');
-    }
+  // Los errores los muestra la tarjeta (la promesa se rechaza).
+  const handleSetStatus = async (companyId: string, status: 'active' | 'suspended', reason?: string) => {
+    await adminService.setCompanyStatus(companyId, status, reason);
+    const name = companies.find(c => c.id === companyId)?.name ?? 'La empresa';
+    setCompanies(prev => prev.map(c => c.id === companyId
+      ? { ...c, status, suspendedAt: status === 'suspended' ? new Date().toISOString() : null, suspendedReason: status === 'suspended' ? (reason?.trim() || null) : null }
+      : c));
+    onNotify(status === 'suspended' ? `${name} quedó suspendida.` : `${name} está activa de nuevo.`);
+  };
+
+  const handleDelete = async (companyId: string, confirmName: string) => {
+    const result = await adminService.deleteCompany(companyId, confirmName);
+    setCompanies(prev => prev.filter(c => c.id !== companyId));
+    const pending = result.failedFiles + result.failedUsers;
+    onNotify(pending > 0
+      ? `${confirmName} se borró, pero quedaron ${pending} elementos por limpiar a mano (ver Auditoría).`
+      : `${confirmName} se borró con ${result.usersDeleted} cuentas y ${result.filesDeleted} archivos.`);
   };
 
   if (loading) {
@@ -158,9 +166,8 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onCreate, onManageUse
               onEdit={onEdit}
               onManageUsers={onManageUsers}
               onPreview={onPreview}
+              onSetStatus={handleSetStatus}
               onDelete={handleDelete}
-              deleteConfirm={deleteConfirm}
-              setDeleteConfirm={setDeleteConfirm}
             />
           ))
         )}

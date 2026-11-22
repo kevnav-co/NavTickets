@@ -105,10 +105,11 @@ const CONVERSATION_COLUMNS = "id, company_id, status, turn_count, input_tokens, 
 
 async function loadCompany(slug: unknown): Promise<Company> {
   if (typeof slug !== "string" || !SLUG_RE.test(slug)) throw new HttpError(400, "Enlace no válido");
-  const { data, error } = await db.from("companies").select("id, name, theme, features").eq("slug", slug).maybeSingle();
+  const { data, error } = await db.from("companies").select("id, name, theme, features, status").eq("slug", slug).maybeSingle();
   if (error) throw error;
-  // Mismo mensaje si no existe o si no tiene el asistente: no revela qué empresas existen.
-  if (!data || data.features?.aiAssistant !== true) throw new HttpError(404, "El asistente no está disponible");
+  // Mismo mensaje si no existe, si no tiene el asistente o si está suspendida:
+  // no revela qué empresas existen.
+  if (!data || data.features?.aiAssistant !== true || data.status === "suspended") throw new HttpError(404, "El asistente no está disponible");
   return data as Company;
 }
 

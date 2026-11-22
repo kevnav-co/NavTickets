@@ -11,6 +11,7 @@
 // que el username tiene `users.email`.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { withCors } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -28,7 +29,7 @@ async function sha256Hex(input: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   let body: { token?: string; newPassword?: string };
@@ -103,4 +104,4 @@ Deno.serve(async (req: Request) => {
     console.error("[ResetToken] Error:", err?.message ?? err);
     return json({ error: "No se pudo restablecer la contraseña. Inténtalo de nuevo." }, 500);
   }
-});
+}));

@@ -152,6 +152,8 @@ export interface User {
   fcmToken?: string;
   onesignalPlayerId?: string;
   mustResetPassword?: boolean;
+  /** La empresa del usuario está suspendida (migración 054): la app muestra solo el aviso. */
+  companySuspended?: boolean;
   signature?: string;
   /**
    * SOLO campo de formulario/payload (UserForm, CompanyUserManager, create-user).

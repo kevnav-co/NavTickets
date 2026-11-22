@@ -12,6 +12,7 @@
 // fila `users` por `supabase_auth_id` (NO por `id`, que es el PK de negocio).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { withCors } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -25,7 +26,11 @@ interface BootstrapPayload {
   password?: string;
   displayName?: string;
   role?: string;
+  slug?: string;
 }
+
+// Mismo formato que valida el chat público del asistente (/#/asistente/<slug>).
+const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,79}$/;
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -34,7 +39,7 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
   }
@@ -80,6 +85,11 @@ Deno.serve(async (req: Request) => {
     return json({ error: "La contraseña debe tener al menos 6 caracteres" }, 400);
   }
 
+  const slug = body.slug?.trim().toLowerCase() || null;
+  if (slug && !SLUG_RE.test(slug)) {
+    return json({ error: "El slug solo admite minúsculas, números y guiones" }, 400);
+  }
+
   const displayName = body.displayName?.trim() || "Administrador";
   const role = body.role?.trim() || "admin";
   const email = `${username}@${EMAIL_DOMAIN}`;
@@ -95,7 +105,7 @@ Deno.serve(async (req: Request) => {
     // ─── Paso 1: empresa ──────────────────────────────────────────────────────
     const { data: company, error: companyErr } = await supabase
       .from("companies")
-      .insert({ name: companyName })
+      .insert({ name: companyName, slug })
       .select("id")
       .single();
     if (companyErr) throw companyErr;
@@ -109,7 +119,7 @@ Deno.serve(async (req: Request) => {
         email_confirm: true,
       });
     if (createErr) throw createErr;
-    authUid = createdUser.id;
+    authUid = createdUser.user.id;
 
     // ─── Paso 3: fila de negocio en users, vinculada al tenant ───────────────
     const { data: userRow, error: userRowErr } = await supabase
@@ -124,6 +134,14 @@ Deno.serve(async (req: Request) => {
       .select("id")
       .single();
     if (userRowErr) throw userRowErr;
+
+    const { error: logErr } = await supabase.rpc("admin_log_action", {
+      p_actor_auth_id: user.user.id,
+      p_action: "company_created",
+      p_company: companyId,
+      p_details: { slug, admin_username: username },
+    });
+    if (logErr) console.error("[CreateCompany] No se pudo registrar en auditoría:", logErr.message);
 
     return json({
       ok: true,
@@ -147,4 +165,4 @@ Deno.serve(async (req: Request) => {
     }
     return json({ error: `No se pudo crear la empresa: ${err.message}` }, 500);
   }
-});
+}));
