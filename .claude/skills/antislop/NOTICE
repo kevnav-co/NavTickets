@@ -1,0 +1,7 @@
+Skill de terceros incluida en NavTickets.
+
+Origen: https://github.com/miqdadbadjuber/anti-slop/tree/7f6a03df2931c12cb244dc4ab14ee4866b0ac2ba/skills/antislop
+Commit: 7f6a03df2931c12cb244dc4ab14ee4866b0ac2ba
+Licencia: MIT (archivo LICENSE de esta carpeta)
+Revisada el 22/11/2026 antes de incluirla: sin comandos de red, ejecución de scripts remotos ni acceso a secretos.
+No se modificó el contenido original.
