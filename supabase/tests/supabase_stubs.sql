@@ -14,6 +14,6 @@ CREATE SCHEMA extensions; CREATE SCHEMA net;
 CREATE OR REPLACE FUNCTION net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 1000) RETURNS bigint LANGUAGE sql AS $$ SELECT 1::bigint $$;
 CREATE OR REPLACE FUNCTION net.http_post(url text, headers jsonb, body text, timeout_milliseconds int default 1000) RETURNS bigint LANGUAGE sql AS $$ SELECT 1::bigint $$;
 CREATE PUBLICATION supabase_realtime;
-CREATE SCHEMA storage; CREATE TABLE storage.buckets (id text primary key, name text, public boolean); CREATE TABLE storage.objects (id uuid default gen_random_uuid() primary key, bucket_id text, name text, owner uuid);
+CREATE SCHEMA storage; CREATE TABLE storage.buckets (id text primary key, name text, public boolean, file_size_limit bigint, allowed_mime_types text[]); CREATE TABLE storage.objects (id uuid default gen_random_uuid() primary key, bucket_id text, name text, owner uuid, owner_id text);
 ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 CREATE OR REPLACE FUNCTION storage.foldername(name text) RETURNS text[] LANGUAGE sql AS $$ SELECT string_to_array(name,'/') $$;

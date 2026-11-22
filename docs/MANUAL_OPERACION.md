@@ -466,6 +466,43 @@ Para enviar correos de verdad: guardar `GMAIL_USER` y `GMAIL_APP_PASSWORD` (cont
 Google) como secretos de Supabase. Sirven también para la recuperación de clave y los códigos del chat.
 No hace falta redesplegar: las funciones leen los secretos en cada arranque.
 
+## 10.8 Fotos y archivos: acotados a la empresa (migración 052, paso 1 de 2)
+
+**Hallazgo (22/11/2026).** En producción, `order-photos` y `equipment-photos` tenían una política de
+lectura para el rol `public`: cualquiera con la clave anónima de la app (que va en el navegador) podía
+**listar y descargar las fotos de todas las empresas**. Las políticas de subida solo comprobaban el dueño,
+no la empresa. Esas políticas venían de la 034 local, que nunca llegó al repositorio.
+
+**Qué cambia**
+
+- **Buckets.** La 052 los crea o ajusta:
+  - fotos, públicas por enlace, hasta 10 MB, solo JPEG/PNG/WebP/GIF;
+  - `company-assets`, público por enlace (los logos se ven antes de iniciar sesión), hasta 5 MB, solo PNG/JPEG/WebP;
+  - ningún bucket admite SVG ni PDF.
+- **Sin listado.** Se quitan las políticas `public`. La URL pública de cada archivo sigue funcionando (incluida la caché sin conexión), pero ya nadie puede listar ni leer por la API los objetos de otra empresa.
+- **Rutas por empresa.** Las fotos nuevas se guardan como `{company_id}/orders/…` o `{company_id}/equipment/…`; el prefijo lo pone `useSupabaseStorage` con `companyScopedPath` (`src/utils/storagePath.ts`). Los logos van en `companies/{company_id}/…`.
+- **Rutas antiguas sin empresa** (`orders/{id}/…`, `equipment/{id}/…`, `equipment_photos/{id}/…`). Se aceptan solo si la orden o el equipo es de la empresa de quien llama. Así no se rompen las fotos existentes ni las subidas que quedaron pendientes sin conexión.
+- **Permisos.**
+  - Leer, subir y reemplazar: solo dentro de la propia empresa.
+  - Borrar: el dueño del archivo o un admin/developer/super_admin, también dentro de su empresa.
+  - Logos: solo admin/developer/super_admin.
+- **Validación en la app.** Antes de subir se comprueba el tipo real del archivo (sin SVG). La extensión del logo sale del tipo, no del nombre del archivo.
+
+**Despliegue, en este orden**
+
+1. Desplegar el frontend: las rutas nuevas ya las aceptan las políticas viejas.
+2. Aplicar la 052 con su registro en `schema_migrations`.
+3. Verificar:
+   - con la clave anónima, `GET /storage/v1/object/list/order-photos` no devuelve objetos;
+   - una foto antigua sigue abriendo por su URL pública;
+   - subir una foto nueva la deja en `{company_id}/…`.
+
+Una PWA instalada que aún no se haya actualizado sigue usando rutas sin empresa. Esas rutas se aceptan para órdenes ya guardadas, pero no para una orden nueva creada sin conexión: hay que actualizar la app (el aviso «Nueva versión» de la PWA).
+
+**Paso 2 (pendiente).** Buckets privados con URLs firmadas. Afecta a unos 13 componentes, al PDF y a la caché sin conexión, porque los enlaces firmados caducan.
+
+Prueba SQL: `supabase/tests/storage_rls.sql` (20 comprobaciones).
+
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
 `supabase_migrations.schema_migrations` no es una fuente fiable del esquema real: varias migraciones

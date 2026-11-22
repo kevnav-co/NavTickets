@@ -1,3 +1,4 @@
+import { ALLOWED_COMPANY_IMAGE_TYPES, extensionForImageType, isAllowedImageType } from '../utils/storagePath';
 import { supabase } from './supabase';
 import { CompanyConfig } from '../types/company';
 import { User } from '../types';
@@ -135,9 +136,13 @@ export async function deleteCompany(companyId: string): Promise<void> {
 
 // ─── Image Upload ───
 export async function uploadCompanyImage(file: File, companyId: string, type: 'logo' | 'icon' | 'logoWhite' | 'favicon'): Promise<string> {
-  const ext = file.name.split('.').pop();
-  const storagePath = `companies/${companyId}/${type}_${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('company-assets').upload(storagePath, file, { upsert: true });
+  // Sin SVG (puede llevar scripts): solo PNG, JPEG o WebP, y la extensión sale del tipo real.
+  if (!isAllowedImageType(file.type || '', ALLOWED_COMPANY_IMAGE_TYPES)) {
+    throw new Error('El logo debe ser una imagen PNG, JPEG o WebP');
+  }
+  if (file.size > 5 * 1024 * 1024) throw new Error('La imagen supera 5 MB');
+  const storagePath = `companies/${companyId}/${type}_${Date.now()}.${extensionForImageType(file.type)}`;
+  const { error } = await supabase.storage.from('company-assets').upload(storagePath, file, { upsert: true, contentType: file.type });
   if (error) throw new Error(error.message);
   const { data } = supabase.storage.from('company-assets').getPublicUrl(storagePath);
   return data.publicUrl;
