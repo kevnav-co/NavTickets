@@ -1,0 +1,7 @@
+Skill de terceros incluida en NavTickets.
+
+Origen: https://github.com/vercel-labs/agent-skills/tree/5a37a6329fbad3666c3207392a6a7c0110e92efb/skills/web-design-guidelines
+Commit: 5a37a6329fbad3666c3207392a6a7c0110e92efb
+Licencia: MIT (declarada en el README del repositorio) (archivo LICENSE de esta carpeta)
+Revisada el 22/11/2026 antes de incluirla: sin comandos de red, ejecución de scripts remotos ni acceso a secretos.
+No se modificó el contenido original.

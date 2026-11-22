@@ -1,0 +1,7 @@
+Skill de terceros incluida en NavTickets.
+
+Origen: https://github.com/anthropics/skills/tree/e4bb5d960d87126ff3b3a8af1a104b7db67560ba/skills/canvas-design
+Commit: e4bb5d960d87126ff3b3a8af1a104b7db67560ba
+Licencia: Apache 2.0 (archivo LICENSE de esta carpeta)
+Revisada el 22/11/2026 antes de incluirla: sin comandos de red, ejecución de scripts remotos ni acceso a secretos.
+No se modificó el contenido original.

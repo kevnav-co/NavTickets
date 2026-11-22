@@ -1,0 +1,7 @@
+Skill de terceros incluida en NavTickets.
+
+Origen: https://github.com/mattpocock/skills/tree/abeeaf95660ba9e8b7c753eb38f441ca707a8823/skills/productivity/grill-me
+Commit: abeeaf95660ba9e8b7c753eb38f441ca707a8823
+Licencia: MIT (archivo LICENSE de esta carpeta)
+Revisada el 22/11/2026 antes de incluirla: sin comandos de red, ejecución de scripts remotos ni acceso a secretos.
+No se modificó el contenido original.

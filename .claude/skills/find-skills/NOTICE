@@ -1,0 +1,7 @@
+Skill de terceros incluida en NavTickets.
+
+Origen: https://github.com/vercel-labs/skills/tree/57217cf86ba38148a57af9e90d14a4c049558330/skills/find-skills
+Commit: 57217cf86ba38148a57af9e90d14a4c049558330
+Licencia: MIT (archivo LICENSE de esta carpeta)
+Revisada el 22/11/2026 antes de incluirla: sin comandos de red, ejecución de scripts remotos ni acceso a secretos.
+No se modificó el contenido original.
