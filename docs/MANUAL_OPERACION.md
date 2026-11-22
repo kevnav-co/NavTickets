@@ -503,6 +503,17 @@ Una PWA instalada que aún no se haya actualizado sigue usando rutas sin empresa
 
 Prueba SQL: `supabase/tests/storage_rls.sql` (20 comprobaciones).
 
+**Aplicada en producción el 22/11/2026.** Se publicó primero el frontend (`dpl_3Gsf87FdCogfQhxWdKZ1cYitRQWq`) y después la 052, en una transacción con su registro en `schema_migrations`. Verificación:
+
+| Prueba | Antes | Después |
+|---|---|---|
+| Listar `order-photos` con la clave anónima | Devolvía las carpetas `orders` y `equipment_photos` | `[]` (también en `equipment-photos` y `company-assets`) |
+| Foto antigua por su URL pública | 200 | 200 |
+| `pl_tec1` sube un JPEG en `{company_id}/…` | — | 200; se listó y se borró |
+| `pl_tec1` sube en la carpeta de otra empresa | — | Rechazado por RLS (403) |
+| Subir un SVG | — | Rechazado por el bucket (415) |
+| Políticas de `storage.objects` | 6, dos para el rol `public` | 5 `nt_storage_*`, solo para `authenticated` |
+
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
 `supabase_migrations.schema_migrations` no es una fuente fiable del esquema real: varias migraciones
