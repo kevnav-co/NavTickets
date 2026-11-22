@@ -94,7 +94,7 @@ export default defineConfig(({ mode }) => {
           // la entrada, y Vite le añade entonces un <link rel="modulepreload">:
           // así jspdf y browser-image-compression se descargaban enteros en la
           // pantalla de inicio de sesión, antes de que existiera un PDF o una
-          // foto que procesar. Las que se usan bajo demanda (jspdf, xlsx,
+          // foto que procesar. Las que se usan bajo demanda (jspdf, read-excel-file,
           // recharts, leaflet, la compresión de imágenes) se dejan fuera para
           // que Rollup las separe a partir de sus importaciones dinámicas y
           // viajen solo con la pantalla que de verdad las usa.

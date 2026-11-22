@@ -10,6 +10,7 @@ import {
   AnalyzedProduct, AnalyzedClient, ClientDiff, AnalysisType
 } from '../../types/intelligence';
 import { mapExcelToProduct } from '../../utils/productUtils';
+import { readFirstSheet } from '../../utils/excelImport';
 import { useData } from '../../context/DataContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -17,7 +18,6 @@ interface IntelligenceEngineProps {
   clients: Client[] | null;
 }
 
-const MAX_IMPORT_BYTES = 5 * 1024 * 1024;
 
 const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
   const { addItem, updateItem } = useData();
@@ -40,31 +40,20 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
     }
     const file = e.target.files?.[0];
     if (!file) return;
-    // xlsx 0.18 tiene CVEs al parsear archivos manipulados (ReDoS/prototype pollution): limitar tamaño.
-    if (file.size > MAX_IMPORT_BYTES) {
-      alert('El archivo supera el límite de 5 MB para importación.');
-      if (e.target) e.target.value = '';
-      return;
-    }
     setProcessingStatus('reading');
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-        try {
-            const XLSX = await import('xlsx');
-            const bstr = evt.target?.result;
-            const workbook = XLSX.read(bstr, { type: 'binary' });
-            const firstSheetName = workbook.SheetNames[0];
-            const workbookWorksheet = workbook.Sheets[firstSheetName];
-            const jsonData = XLSX.utils.sheet_to_json(workbookWorksheet);
-            if (jsonData.length === 0) { alert("El archivo está vacío."); setProcessingStatus('idle'); return; }
-            analyzeData(jsonData);
-        } catch (error) {
-            console.error("Error leyendo Excel:", error);
-            alert("Error al procesar el archivo. Asegúrate de que sea un Excel válido.");
-            setProcessingStatus('idle');
-        }
-    };
-    reader.readAsBinaryString(file);
+    readFirstSheet(file)
+      .then((jsonData) => {
+        if (jsonData.length === 0) { alert("El archivo está vacío."); setProcessingStatus('idle'); return; }
+        analyzeData(jsonData);
+      })
+      .catch((error: unknown) => {
+        console.error("Error leyendo Excel:", error);
+        const msg = error instanceof Error && /5 MB|\.xlsx/.test(error.message)
+          ? error.message
+          : "Error al procesar el archivo. Asegúrate de que sea un Excel .xlsx válido.";
+        alert(msg);
+        setProcessingStatus('idle');
+      });
     if(e.target) e.target.value = ''; 
   };
 
@@ -279,7 +268,7 @@ const IntelligenceEngine: React.FC<IntelligenceEngineProps> = ({ clients }) => {
                 {isProcessing ? <Loader2 size={20} className="animate-spin" /> : <FileSpreadsheet size={20} className="text-primary group-hover:scale-110 transition-transform" />}
                 <span className="font-bold text-sm uppercase tracking-wide">{isProcessing ? 'Procesando...' : 'Subida de datos (Excel)'}</span>
               </button>
-              <input type="file" ref={fileInputRef} onChange={handleExcelUpload} className="hidden" accept=".xlsx, .xls" />
+              <input type="file" ref={fileInputRef} onChange={handleExcelUpload} className="hidden" accept=".xlsx" />
           </div>
       )
   }
