@@ -1,5 +1,6 @@
 
 import { X } from 'lucide-react';
+import StorageImage from './StorageImage';
 
 interface ImageModalProps {
   imageUrl: string;
@@ -25,7 +26,7 @@ const ImageModal = ({ imageUrl, onClose }: ImageModalProps) => {
       role="dialog"
     >
       <div className="relative w-full max-w-4xl h-full max-h-[90vh] flex items-center justify-center">
-        <img 
+        <StorageImage 
           src={imageUrl} 
           alt="Vista ampliada" 
           className="block max-w-full max-h-full object-contain rounded-lg shadow-2xl"

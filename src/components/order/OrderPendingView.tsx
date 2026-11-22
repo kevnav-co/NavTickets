@@ -9,6 +9,7 @@ import { useValidatedActions } from '../../hooks/useValidatedActions';
 import { ServiceOrderSchema } from '../../schemas/order.schema';
 import AvailabilityModal from './AvailabilityModal';
 import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
+import StorageImage from '../ui/StorageImage';
 
 interface Props {
   order: ServiceOrder;
@@ -255,7 +256,7 @@ const OrderPendingView: React.FC<Props> = ({
                       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 w-full">
                           {initialPhotos.map((img, index) => (
                               <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-line-soft shadow-sm" onClick={() => onSelectImage(getEvidenceUrl(img))}>
-                                  <img src={getEvidenceUrl(img)} alt={`evidence-${index}`} className="w-full h-full object-cover" />
+                                  <StorageImage src={getEvidenceUrl(img)} alt={`evidence-${index}`} className="w-full h-full object-cover" />
                                   {canUpdate && !isDeleting && <button onClick={(e) => {e.stopPropagation(); onRemove(index, 'initialPhotos')}} className="absolute top-1 right-1 bg-red-600/95 text-white rounded-xl p-2.5 shadow-xl active:scale-95 transition-all"><X size={14} strokeWidth={3} /></button>}
                               </div>
                           ))}

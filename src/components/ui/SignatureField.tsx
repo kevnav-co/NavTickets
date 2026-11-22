@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { PenTool, X, Maximize2, FileCheck } from 'lucide-react';
 import SignatureModal from './SignatureModal';
+import StorageImage from './StorageImage';
 
 interface SignatureFieldProps {
   title: string;
@@ -38,7 +39,7 @@ const SignatureField: React.FC<SignatureFieldProps> = ({ title, onSave, savedSig
         </button>
       ) : (
         <div onClick={() => !disabled && setIsModalOpen(true)} className={`relative h-32 bg-raised border border-line rounded-[1.8rem] overflow-hidden shadow-inner transition-all ${!disabled ? 'cursor-pointer hover:border-primary' : ''}`}>
-          <img src={savedSignature} className="w-full h-full object-contain p-2" alt="Firma" />
+          <StorageImage src={savedSignature} className="w-full h-full object-contain p-2" alt="Firma" />
           {!disabled && (<div className="absolute inset-0 bg-black/0 hover:bg-black/5 flex items-center justify-center opacity-0 hover:opacity-100 transition-all"> <div className="bg-raised/90 backdrop-blur-sm p-2 rounded-xl shadow-md text-primary"><Maximize2 size={16} /></div> </div>)}
         </div>
       )}

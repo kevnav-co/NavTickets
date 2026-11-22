@@ -17,6 +17,7 @@ import {
 import { compressImage, validateFile } from '../../utils/index';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
+import StorageImage from '../ui/StorageImage';
 
 const EquipmentDetail: React.FC = () => {
   const { equipment, clients, deleteItem } = useData();
@@ -172,7 +173,7 @@ const EquipmentDetail: React.FC = () => {
               {isUploading ? (
                 <div className="w-full h-full flex items-center justify-center"><Loader2 className="text-ink-faint animate-spin" size={40} /></div>
               ) : item?.imageUrl ? (
-                <img src={item.imageUrl} alt={item.name} className="w-full h-full object-contain cursor-pointer" />
+                <StorageImage src={item.imageUrl} alt={item.name} className="w-full h-full object-contain cursor-pointer" />
               ) : (
                 <div className="w-full h-full border-4 border-dashed border-line rounded-t-3xl flex flex-col items-center justify-center p-4">
                   <ImageIcon size={40} className="text-ink-faint mb-2"/>

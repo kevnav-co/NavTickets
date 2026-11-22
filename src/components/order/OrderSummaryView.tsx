@@ -7,6 +7,7 @@ import DeleteConfirmationModal from '../shared/DeleteConfirmationModal';
 import PERMISSIONS, { hasPermission } from '../../permissions';
 import { useValidatedActions } from '../../hooks/useValidatedActions';
 import { ServiceOrderSchema } from '../../schemas/order.schema';
+import StorageImage from '../ui/StorageImage';
 
 const ConfirmationModal = ({ isOpen, onConfirm, onCancel, title, message }: { isOpen: boolean, onConfirm: () => void, onCancel: () => void, title: string, message: string }) => {
   if (!isOpen) return null;
@@ -80,7 +81,7 @@ const WarrantyJobCard: React.FC<WarrantyJobCardProps> = ({ job, index, users, on
           <div><label className={infoLabelClass}>Procedimientos</label><div className="space-y-2 mt-2">{job.tasksPerformed.map((t, i) => (<div key={i} className="flex items-start gap-3 p-3 bg-green-50/30 rounded-2xl border border-green-100/50"><CheckCircle2 size={14} className="text-green-500 mt-0.5 flex-shrink-0" /><p className="text-xs font-medium text-ink-soft leading-snug">{t}</p></div>))}</div></div>
         )}
         {job.evidenceImages && job.evidenceImages.length > 0 && (
-          <div><label className={infoLabelClass}>Fotos de Evidencia</label><div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">{job.evidenceImages.map((src, i) => (<div key={`warranty-${index}-evidence-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border group cursor-pointer" onClick={() => onSelectImage(getImageUrl(src))}><img src={getImageUrl(src)} className="w-full h-full object-cover"/><div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center"><Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" /></div></div>))}</div></div>
+          <div><label className={infoLabelClass}>Fotos de Evidencia</label><div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2">{job.evidenceImages.map((src, i) => (<div key={`warranty-${index}-evidence-${i}`} className="relative aspect-square rounded-2xl overflow-hidden border group cursor-pointer" onClick={() => onSelectImage(getImageUrl(src))}><StorageImage src={getImageUrl(src)} className="w-full h-full object-cover"/><div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center"><Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" /></div></div>))}</div></div>
         )}
         {job.additionalComments && (<div className="pt-6 border-t mt-6"><label className={infoLabelClass}>Observaciones</label><p className="text-sm font-medium text-ink-soft whitespace-pre-wrap bg-sunken p-4 rounded-2xl border">{job.additionalComments}</p></div>)}
       </div>
@@ -432,7 +433,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
 
                 {isEditMode || (order.initialEvidence && order.initialEvidence.length > 0) ? (
                     <div><label className={infoLabelClass}>Evidencias (Antes)</label><div className={`grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2 ${isEditMode ? 'p-4 border-2 border-dashed rounded-2xl' : ''}`}>
-                        {(order.initialEvidence || []).map((src, index) => (<div key={index} className="relative aspect-square rounded-2xl overflow-hidden border group"><img src={getImageUrl(src)} className="w-full h-full object-cover" onClick={() => onSelectImage(getImageUrl(src))} /><div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                        {(order.initialEvidence || []).map((src, index) => (<div key={index} className="relative aspect-square rounded-2xl overflow-hidden border group"><StorageImage src={getImageUrl(src)} className="w-full h-full object-cover" onClick={() => onSelectImage(getImageUrl(src))} /><div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                             {isEditMode ? <button onClick={() => onRemove(index, 'initialEvidence', true)} className="absolute top-1 right-1 bg-red-500/80 text-white rounded-full p-1 shadow-lg"><X size={12}/></button> : <Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={() => onSelectImage(getImageUrl(src))} />}
                         </div></div>))}
                          {isEditMode && (<button onClick={() => initialEvidenceInputRef.current?.click()} disabled={isUploading} className="aspect-square bg-sunken rounded-2xl flex flex-col items-center justify-center text-ink-faint hover:bg-sunken disabled:opacity-50">{isUploading ? <Loader2 className="animate-spin" /> : <ImageUp size={24}/>}<span className="text-[9px] font-bold mt-1">Subir</span></button>)}
@@ -441,7 +442,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
 
                 {isEditMode || (order.finalEvidence && order.finalEvidence.length > 0) ? (
                     <div><label className={infoLabelClass}>Evidencias (Después)</label><div className={`grid grid-cols-3 sm:grid-cols-4 gap-3 mt-2 ${isEditMode ? 'p-4 border-2 border-dashed rounded-2xl' : ''}`}>
-                        {(order.finalEvidence || []).map((src, index) => (<div key={index} className="relative aspect-square rounded-2xl overflow-hidden border group"><img src={getImageUrl(src)} className="w-full h-full object-cover" onClick={() => onSelectImage(getImageUrl(src))} /><div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                        {(order.finalEvidence || []).map((src, index) => (<div key={index} className="relative aspect-square rounded-2xl overflow-hidden border group"><StorageImage src={getImageUrl(src)} className="w-full h-full object-cover" onClick={() => onSelectImage(getImageUrl(src))} /><div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                             {isEditMode ? <button onClick={() => onRemove(index, 'finalEvidence', true)} className="absolute top-1 right-1 bg-red-500/80 text-white rounded-full p-1 shadow-lg"><X size={12}/></button> : <Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer" onClick={() => onSelectImage(getImageUrl(src))} />}
                         </div></div>))}
                         {isEditMode && (<button onClick={() => finalEvidenceInputRef.current?.click()} disabled={isUploading} className="aspect-square bg-sunken rounded-2xl flex flex-col items-center justify-center text-ink-faint hover:bg-sunken disabled:opacity-50">{isUploading ? <Loader2 className="animate-spin" /> : <ImageUp size={24}/>}<span className="text-[9px] font-bold mt-1">Subir</span></button>)}
@@ -479,7 +480,7 @@ const OrderSummaryView: React.FC<OrderSummaryViewProps> = ({
                     <div className="flex flex-col items-center gap-2">
                         <label className="text-[9px] font-black text-ink-faint uppercase tracking-[0.2em]">Firma</label>
                         <div className="w-40 h-20 bg-sunken rounded-2xl border p-2 shadow-inner">
-                        {order.closingData?.clientSignature && <img src={order.closingData.clientSignature} className="w-full h-full object-contain" alt="Firma" />}
+                        {order.closingData?.clientSignature && <StorageImage src={order.closingData.clientSignature} className="w-full h-full object-contain" alt="Firma" />}
                         </div>
                     </div>
                 </div>

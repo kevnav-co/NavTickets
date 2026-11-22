@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Equipment } from '../../types';
 import { X, Search, Plus, Cog } from 'lucide-react';
+import StorageImage from '../ui/StorageImage';
 
 interface EquipmentSelectorModalProps {
   isOpen: boolean;
@@ -75,7 +76,7 @@ const EquipmentSelectorModal: React.FC<EquipmentSelectorModalProps> = ({
                   }`}
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-primary text-white' : 'bg-sunken text-ink-faint'}`}>
-                    {eq.imageUrl ? <img src={eq.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Cog size={20} />}
+                    {eq.imageUrl ? <StorageImage src={eq.imageUrl} className="w-full h-full object-cover rounded-xl" /> : <Cog size={20} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-bold text-sm truncate ${isSelected ? 'text-primary' : 'text-ink'}`}>{eq.name}</p>

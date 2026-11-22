@@ -7,6 +7,7 @@ import {
   UserCheck, Maximize2, ListChecks, Building2, 
   Mic, Pencil, Wrench, ChevronRight, Cog
 } from 'lucide-react';
+import StorageImage from '../ui/StorageImage';
 
 interface OrderWarrantyViewProps {
   order: ServiceOrder;
@@ -163,7 +164,7 @@ const OrderWarrantyView: React.FC<OrderWarrantyViewProps> = (
                     <div onClick={() => navigate(`/equipment/${e.id}`)} className="flex items-center gap-3 cursor-pointer flex-grow min-w-0">
                         <div className="bg-raised w-12 h-12 flex-shrink-0 rounded-lg shadow-sm overflow-hidden flex items-center justify-center">
                             {e.imageUrl ? 
-                                <img src={e.imageUrl} alt={e.name} className="w-full h-full object-cover"/> 
+                                <StorageImage src={e.imageUrl} alt={e.name} className="w-full h-full object-cover"/> 
                                 : <Cog size={24} className="text-ink-faint" />
                             }
                         </div>
@@ -200,7 +201,7 @@ const OrderWarrantyView: React.FC<OrderWarrantyViewProps> = (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
                     {currentWarrantyEvidence.map((src, i) => (
                         <div key={`warranty-evidence-${i}`} className="relative aspect-square rounded-2xl group cursor-pointer" onClick={() => onSelectImage(getEvidenceUrl(src))}>
-                            <img src={getEvidenceUrl(src)} className="w-full h-full object-cover" alt={`Evidencia de garantía ${i+1}`}/>
+                            <StorageImage src={getEvidenceUrl(src)} className="w-full h-full object-cover" alt={`Evidencia de garantía ${i+1}`}/>
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 flex items-center justify-center"><Maximize2 size={24} className="text-white opacity-0 group-hover:opacity-100" /></div>
                             {canUpdate && !isDeleting && (
                               <button onClick={(e) => { e.stopPropagation(); onRemove(i, 'warrantyJobs', true); }} className="absolute top-1.5 right-1.5 bg-red-600/90 text-white p-1.5 rounded-xl z-10 opacity-0 group-hover:opacity-100"><X size={12} strokeWidth={4} /></button>
