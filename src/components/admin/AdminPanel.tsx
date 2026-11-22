@@ -9,7 +9,7 @@
 
 import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Shield, ArrowLeft, Building2, Bot } from 'lucide-react';
+import { Shield, ArrowLeft, Building2, Bot, History } from 'lucide-react';
 import CompanyList from './CompanyList';
 import CompanyForm from './CompanyForm';
 import CompanyUserManager from './CompanyUserManager';
@@ -19,9 +19,12 @@ import { useCompany } from '../../context/CompanyContext';
 
 // Solo lo cargan las empresas con el asistente activado.
 const AssistantSettingsSection = lazy(() => import('./assistant/AssistantSettingsSection'));
+// Solo el super_admin.
+const AuditLog = lazy(() => import('./AuditLog'));
 
 type AdminView = 'list' | 'form' | 'users';
 type SelfSection = 'empresa' | 'asistente';
+type SuperSection = 'empresas' | 'auditoria';
 
 const AdminPanel: React.FC = () => {
   const { currentUser, startImpersonation } = useAuth();
@@ -39,6 +42,11 @@ const AdminPanel: React.FC = () => {
   useEffect(() => {
     if (selfSection === 'asistente') setAssistantVisited(true);
   }, [selfSection]);
+
+  // Super_admin: pestañas Empresas / Auditoría (/admin?seccion=auditoria).
+  const superSection: SuperSection = isSuperAdmin && searchParams.get('seccion') === 'auditoria' ? 'auditoria' : 'empresas';
+  const setSuperSection = (s: SuperSection) =>
+    setSearchParams(s === 'auditoria' ? { seccion: 'auditoria' } : {}, { replace: true });
 
   const [view, setView] = useState<AdminView>('list');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
@@ -140,15 +148,44 @@ const AdminPanel: React.FC = () => {
         </div>
       )}
 
+      {isSuperAdmin && view === 'list' && (
+        <div className="mb-5 flex gap-1 p-1 bg-sunken rounded-xl w-fit" role="tablist" aria-label="Secciones del panel">
+          {([
+            { id: 'empresas', label: 'Empresas', icon: Building2 },
+            { id: 'auditoria', label: 'Auditoría', icon: History },
+          ] as const).map(t => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={superSection === t.id}
+              onClick={() => setSuperSection(t.id)}
+              className={`inline-flex items-center gap-1.5 px-4 h-9 rounded-lg text-sm font-bold transition-colors ${
+                superSection === t.id ? 'bg-raised text-ink shadow-sm' : 'text-ink-soft hover:text-ink'
+              }`}
+            >
+              <t.icon size={15} /> {t.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isSuperAdmin ? (
         <>
-          {view === 'list' && (
+          {view === 'list' && superSection === 'empresas' && (
             <CompanyList
               onEdit={handleEdit}
               onCreate={handleCreate}
               onManageUsers={handleManageUsers}
               onPreview={handlePreview}
+              onNotify={setToast}
             />
+          )}
+
+          {view === 'list' && superSection === 'auditoria' && (
+            <Suspense fallback={<div className="py-20 text-center text-sm text-ink-faint">Cargando…</div>}>
+              <AuditLog />
+            </Suspense>
           )}
 
           {view === 'form' && (

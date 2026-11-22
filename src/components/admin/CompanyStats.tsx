@@ -1,18 +1,16 @@
 // src/components/admin/CompanyStats.tsx
-// Estadísticas multi-empresa para super_admin: gráficas de tiquetes/órdenes
-// de servicio agregadas por empresa (todas las empresas, sin filtro de company).
-// Los datos se derivan de `orders` (real); RLS `FOR ALL` de la migración 005
-// cubre SELECT, así que super_admin lee todo con el cliente anon.
+// Estadísticas multi-empresa para super_admin. Los datos salen de las RPC
+// `admin_company_overview` y `admin_orders_by_month` (migración 054), que
+// cuentan en la base sin abrir la RLS de `orders` al super_admin.
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   Legend, PieChart, Pie, Cell, CartesianGrid, LineChart, Line,
 } from 'recharts';
-import { useCollection } from '../../hooks/useCollection';
-import { ServiceOrder, OrderStatus } from '../../types';
-import { CompanyConfig } from '../../types/company';
+import * as adminService from '../../services/adminService';
+import { summarizeOverview } from '../../utils/adminStats';
 
 // ─── Colores por status (consistente con el resto de la app) ────────────────
 const STATUS_COLORS: Record<string, string> = {
@@ -21,114 +19,31 @@ const STATUS_COLORS: Record<string, string> = {
   Cerrado: '#22c55e',        // green-500
 };
 
-interface PerCompanyStats {
-  companyId: string;
-  name: string;
-  total: number;
-  pendiente: number;
-  enProgreso: number;
-  cerrado: number;
-  correctivo: number;
-  preventivo: number;
-  esteMes: number;
-  ultimos30d: number;
-}
-
-interface StatusDatum { name: string; value: number; }
-
-const statusLabel = (s: OrderStatus): string =>
-  s === OrderStatus.PENDING ? 'Pendiente' : s === OrderStatus.OPEN ? 'En Progreso' : 'Cerrado';
-
-const companyName = (id: string, companies: CompanyConfig[]): string =>
-  companies.find(c => c.id === id)?.name || 'Sin nombre';
-
 const CompanyStats: React.FC = () => {
-  const { data: orders, loading: ordersLoading, error: ordersError } = useCollection<ServiceOrder>('orders');
-  const { data: companies, loading: companiesLoading, error: companiesError } =
-    useCollection<CompanyConfig>('companies');
+  const [companies, setCompanies] = useState<adminService.CompanyWithStats[] | null>(null);
+  const [monthlyRows, setMonthlyRows] = useState<{ month: string; total: number }[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const stats = useMemo(() => {
-    const list = orders || [];
-    const now = new Date();
-    const isThisMonth = (iso?: string) => {
-      if (!iso) return false;
-      const d = new Date(iso);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    };
-    const isLast30Days = (iso?: string) => {
-      if (!iso) return false;
-      return now.getTime() - new Date(iso).getTime() <= 30 * 24 * 60 * 60 * 1000;
-    };
+  useEffect(() => {
+    let alive = true;
+    Promise.all([adminService.listCompaniesWithStats(), adminService.getOrdersByMonth(6)])
+      .then(([c, m]) => { if (alive) { setCompanies(c); setMonthlyRows(m); } })
+      .catch(err => { if (alive) setError(err instanceof Error ? err.message : String(err)); });
+    return () => { alive = false; };
+  }, []);
 
-    // ── Por empresa ──────────────────────────────────────────────────────────
-    const byCompany = new Map<string, PerCompanyStats>();
-    let total = 0, enProgreso = 0, cerradoEsteMes = 0;
-    const statusCount: Record<string, number> = { Pendiente: 0, 'En Progreso': 0, Cerrado: 0 };
+  const stats = useMemo(() => summarizeOverview(companies ?? [], monthlyRows), [companies, monthlyRows]);
 
-    for (const o of list) {
-      const room = byCompany.get(o.companyId) || {
-        companyId: o.companyId, name: '', total: 0, pendiente: 0, enProgreso: 0,
-        cerrado: 0, correctivo: 0, preventivo: 0, esteMes: 0, ultimos30d: 0,
-      };
-      room.total++;
-      const st = statusLabel(o.status);
-      if (st === 'Pendiente') room.pendiente++;
-      else if (st === 'En Progreso') room.enProgreso++;
-      else room.cerrado++;
+  if (error) {
+    return <div className="p-10 text-center font-bold text-red-500">Error al cargar estadísticas: {error}</div>;
+  }
 
-      if (o.orderType === 'Correctivo') room.correctivo++;
-      else if (o.orderType === 'Preventivo') room.preventivo++;
-      if (isThisMonth(o.createdAt)) room.esteMes++;
-      if (isLast30Days(o.createdAt)) room.ultimos30d++;
-
-      byCompany.set(o.companyId, room);
-
-      total++;
-      if (st === 'En Progreso') enProgreso++;
-      if (st === 'Cerrado' && isThisMonth(o.createdAt)) cerradoEsteMes++;
-      statusCount[st]++;
-    }
-
-    const perCompany = Array.from(byCompany.values())
-      .map(r => ({ ...r, name: companyName(r.companyId, companies || []) }))
-      .sort((a, b) => b.total - a.total);
-
-    // ── Mensual (últimos 6 meses) ────────────────────────────────────────────
-    const monthlyLabels: { key: string; label: string }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      monthlyLabels.push({
-        key: `${d.getFullYear()}-${d.getMonth()}`,
-        label: d.toLocaleDateString('es', { month: 'short' }),
-      });
-    }
-    const monthly = monthlyLabels.map(m => {
-      let value = 0;
-      for (const o of list) {
-        if (!o.createdAt) continue;
-        const d = new Date(o.createdAt);
-        if (`${d.getFullYear()}-${d.getMonth()}` === m.key) value++;
-      }
-      return { mes: m.label, tiquetes: value };
-    });
-
-    const statusData: StatusDatum[] = (Object.entries(statusCount) as [string, number][])
-      .map(([name, value]) => ({ name, value }));
-
-    return { perCompany, statusData, monthly, total, enProgreso, cerradoEsteMes, empresas: (companies || []).length };
-  }, [orders, companies]);
-
-  if (ordersLoading || companiesLoading) {
+  if (!companies) {
     return (
       <div className="w-full h-96 flex items-center justify-center gap-3 text-ink-faint">
         <Loader2 className="animate-spin" size={40} /><span className="font-bold">Cargando estadísticas...</span>
       </div>
     );
-  }
-
-  const error = ordersError || companiesError;
-  if (error) {
-    return <div className="p-10 text-center font-bold text-red-500">Error al cargar estadísticas: {error}</div>;
   }
 
   const KpiCard: React.FC<{ label: string; value: number; accent?: string }> = ({ label, value, accent }) => (

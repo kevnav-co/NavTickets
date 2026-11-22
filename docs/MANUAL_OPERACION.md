@@ -590,6 +590,73 @@ dejó en la empresa demo. En `order-photos` queda un archivo huérfano
 (`orders/new_order_temp_id/initialPhotos/…_TVP-14-1_1.jpeg`) que ninguna orden referencia y que, por no
 tener empresa, ya solo puede leer la service role. Se puede borrar desde el panel de Storage.
 
+## 10.10 Panel del super_admin (migración 054)
+
+**Qué ofrece**, en `Configuración` del super_admin (`/admin`):
+
+- **Empresas.** Cada tarjeta muestra estado, slug, usuarios, órdenes (pendientes) y fecha de la última orden. Acciones: vista previa, usuarios, editar, **suspender/reactivar** y **borrar**.
+- **Auditoría** (`/admin?seccion=auditoria`). Altas, suspensiones, reactivaciones, borrados (con la limpieza posterior) y vistas previas, con quién y cuándo. Filtro por acción.
+- **Estadísticas** (`/admin/stats`). Ahora cuenta las órdenes de todas las empresas. Antes salía vacío: la RLS de `orders` no deja leer otras empresas al super_admin.
+
+**Suspender una empresa**
+
+- La hace solo el super_admin real (por su fila en `users`, no por el rol de la vista previa) con la RPC `admin_set_company_status`, que guarda el motivo y deja el registro. Un admin no puede cambiar el estado ni de su propia empresa (trigger de la 012 ampliado).
+- Efecto inmediato:
+  - `current_company_id()` devuelve NULL para sus usuarios, así que la RLS les corta todos los datos y archivos;
+  - la app les muestra «Empresa suspendida» con un botón para salir (`my_company_status()`);
+  - su asistente público responde 404 como si no existiera.
+- No se borra nada. Reactivar devuelve el acceso al instante.
+- No se puede suspender una empresa que tenga un super_admin.
+
+**Borrar una empresa**
+
+- Pide escribir el nombre exacto de la empresa.
+- Lo hace la Edge Function `delete-company` con la service role:
+  1. calcula qué cuentas de Auth y qué archivos tiene la empresa (`admin_company_purge_plan`: carpeta `{company_id}/…`, logos y rutas antiguas de sus órdenes y equipos);
+  2. borra las filas (`admin_delete_company_rows`): primero la contabilidad, que referencia a `users` con RESTRICT; después órdenes e inventario (que no tiene FK a `companies`); el resto cae en cascada;
+  3. borra los archivos y las cuentas de Auth;
+  4. deja dos registros: `company_deleted` y `company_delete_cleanup`, este último con lo que no se pudo borrar (para limpiarlo a mano).
+- El DELETE directo de `companies` desde el cliente ya no está permitido: dejaba cuentas de Auth y archivos huérfanos.
+- No se puede borrar la empresa propia ni una con super_admin.
+
+**Otros cambios de la 054**
+
+- Índice único de `companies.slug`, que identifica el chat público del asistente. Se comprobó antes que no había repetidos.
+- `create-company` ahora guarda el slug (antes se perdía) y registra el alta.
+
+**Correcciones en las Edge Functions que llama el navegador (mismo despliegue)**
+
+| Problema (comprobado en producción el 22/11/2026) | Efecto | Corrección |
+|---|---|---|
+| `create-company`, `create-user`, `update-user-password`, `request-password-reset` y `reset-password-with-token` respondían 405 al preflight CORS | Desde la app fallaban con «Failed to fetch»: crear empresa o usuario, cambiar la clave y «¿Olvidaste tu clave?» no funcionaban | Helper `_shared/cors.ts` (`withCors`): responde el preflight y añade las cabeceras solo para los orígenes de la app (`APP_URL`, `APP_ORIGIN`, `APP_ALLOWED_ORIGINS`) |
+| `request-password-reset` armaba el enlace del correo con la cabecera `Origin` sin validar (no hay `APP_ORIGIN`) | Cualquiera podía pedir el reseteo de otro usuario con `Origin: sitio-falso` y el token viajaba a ese sitio | `appOriginFor`: usa el origen de la petición solo si es de la app; si no, `APP_ORIGIN` o `APP_URL` |
+| `create-company` y `create-user` leían `createdUser.id` (la API devuelve `{ user }`) | La fila `users` quedaba sin `supabase_auth_id`: el usuario nuevo no podía entrar | `createdUser.user.id` |
+
+Para probar la app desde otro origen (por ejemplo `http://localhost:8080` contra producción), añadirlo al secreto
+`APP_ALLOWED_ORIGINS` (lista separada por comas).
+
+**También en este despliegue.** Al cerrar sesión la app se quedaba en el indicador de carga hasta recargar.
+`CompanyContext` dejaba `loading` en `true` cuando ya no había empresa.
+
+**Aplicada en producción el 22/11/2026.** Orden: migración 054 (con su registro en `schema_migrations`),
+después las Edge Functions `delete-company`, `create-company`, `create-user`, `update-user-password`,
+`request-password-reset`, `reset-password-with-token` y `assistant-chat`, y por último el frontend. Verificación:
+
+| Prueba | Resultado |
+|---|---|
+| Preflight CORS desde `navtickets.vercel.app` a las seis funciones | Todas responden (401/400 con datos falsos, como corresponde); antes «Failed to fetch» |
+| `admin_company_overview()` como super_admin | 9 empresas con usuarios, órdenes y última actividad reales |
+| Suspender Plásticos del Sur (demo) | `pl_admin` ve «Empresa suspendida»; el asistente de `plasticos-del-sur` responde 404 |
+| Reactivarla | `pl_admin` vuelve a entrar y ve sus fotos firmadas |
+| Borrado completo de una empresa desechable con usuario, orden e ingreso | Sin restos en la base; registro `company_deleted` con el nombre |
+| `pl_admin` llama a `delete-company`, a `admin_set_company_status`, lee la auditoría o borra su empresa con DELETE | 403, rechazado, 0 filas, 0 filas |
+| Cerrar sesión | Aparece la pantalla de entrada sin recargar |
+
+La auditoría de producción conserva esas pruebas: suspensión y reactivación de Plásticos del Sur, y el borrado
+de «Borrado Prueba 054».
+
+Prueba SQL: `supabase/tests/companies_admin_rls.sql` (37 comprobaciones).
+
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
 `supabase_migrations.schema_migrations` no es una fuente fiable del esquema real: varias migraciones

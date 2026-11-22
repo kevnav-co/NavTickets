@@ -15,6 +15,7 @@
 // `password_reset_tokens` no son consultables por el cliente anónimo.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { appOriginFor, withCors } from "../_shared/cors.ts";
 import { sendRecoveryEmail } from "../_shared/email.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -36,7 +37,7 @@ async function sha256Hex(input: string): Promise<string> {
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   let body: { username?: string };
@@ -95,12 +96,10 @@ Deno.serve(async (req: Request) => {
     return json({ error: "No se pudo generar el reseteo. Inténtalo de nuevo." }, 500);
   }
 
-  // ─── Origen del link: env APP_ORIGIN, o el Origin/Referer del navegador ─────
-  const base = Deno.env.get("APP_ORIGIN")
-    || req.headers.get("Origin")
-    || req.headers.get("Referer")
-    || "";
-  const origin = base.replace(/\/+$/, "").replace(/\/$/, "").split(/[?#]/)[0];
+  // ─── Origen del link: el de la petición solo si es un origen de la app ─────
+  // (APP_URL / APP_ORIGIN / APP_ALLOWED_ORIGINS). Nunca una cabecera sin validar:
+  // con `Origin: sitio-falso` el correo llevaría el token a ese sitio.
+  const origin = appOriginFor(req);
   const resetLink = origin
     ? `${origin}/#/reset-password?token=${rawToken}`
     : `(URL no configurada — token en logs): ${rawToken}`;
@@ -111,4 +110,4 @@ Deno.serve(async (req: Request) => {
     `[RequestReset] Reset solicitado para "${user.username}" → ${user.email} (email ${sent.ok ? "ok" : "falló"}, stub=${sent.stub})`,
   );
   return json({ ok: true });
-});
+}));

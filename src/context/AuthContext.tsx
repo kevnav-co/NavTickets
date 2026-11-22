@@ -104,6 +104,16 @@ function useUserProfile(authUserId: string | null, profileVersion: number): { pr
             fallbackToCache(new Error(dbError.message));
           } else {
             const mapped = mapUserProfile(data);
+            // Empresa suspendida (054): sin conexión o sin la función se asume activa;
+            // la RLS corta el acceso de todos modos.
+            if (mapped) {
+              try {
+                const { data: status } = await (supabase as any).rpc('my_company_status');
+                mapped.companySuspended = status === 'suspended';
+              } catch {
+                mapped.companySuspended = false;
+              }
+            }
             if (mapped) writeCachedProfile(authUserId, mapped);
             setProfile(mapped);
             setError(null);

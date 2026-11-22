@@ -26,6 +26,9 @@ function normalizeCompany(row: any): CompanyConfig {
     features: row.features || {},
     auth: row.auth || {},
     tabs: row.tabs || [],
+    status: row.status === 'suspended' ? 'suspended' : 'active',
+    suspendedAt: row.suspended_at ?? null,
+    suspendedReason: row.suspended_reason ?? null,
     createdAt: row.created_at ?? row.createdAt,
     updatedAt: row.updated_at ?? row.updatedAt,
   } as CompanyConfig;
@@ -129,9 +132,124 @@ export async function updateCompany(companyId: string, data: Partial<Omit<Compan
   if (error) throw new Error(error.message);
 }
 
-export async function deleteCompany(companyId: string): Promise<void> {
-  const { error } = await (supabase as any).from('companies').delete().eq('id', companyId);
+// ─── Panel del super_admin (migración 054) ───
+
+/** Fila de `admin_company_overview()`: estadísticas de una empresa. */
+export interface CompanyOverview {
+  companyId: string;
+  usersCount: number;
+  ordersTotal: number;
+  pending: number;
+  inProgress: number;
+  closed: number;
+  corrective: number;
+  preventive: number;
+  ordersThisMonth: number;
+  closedThisMonth: number;
+  lastActivityAt: string | null;
+}
+
+export type CompanyWithStats = CompanyConfig & { overview?: CompanyOverview; userCount?: number; lastActivityAt?: string };
+
+export async function getCompanyOverview(): Promise<CompanyOverview[]> {
+  const { data, error } = await (supabase as any).rpc('admin_company_overview');
   if (error) throw new Error(error.message);
+  return (data || []).map((r: any) => ({
+    companyId: r.company_id,
+    usersCount: r.users_count ?? 0,
+    ordersTotal: r.orders_total ?? 0,
+    pending: r.pending ?? 0,
+    inProgress: r.in_progress ?? 0,
+    closed: r.closed ?? 0,
+    corrective: r.corrective ?? 0,
+    preventive: r.preventive ?? 0,
+    ordersThisMonth: r.orders_this_month ?? 0,
+    closedThisMonth: r.closed_this_month ?? 0,
+    lastActivityAt: r.last_activity_at ?? null,
+  }));
+}
+
+/** Empresas con sus estadísticas. Si la función de estadísticas falla, se listan igual. */
+export async function listCompaniesWithStats(): Promise<CompanyWithStats[]> {
+  const [companies, overview] = await Promise.all([
+    listCompanies(),
+    getCompanyOverview().catch((err) => {
+      console.warn('[Admin] Sin estadísticas por empresa:', err);
+      return [] as CompanyOverview[];
+    }),
+  ]);
+  const byId = new Map(overview.map(o => [o.companyId, o]));
+  return companies.map(c => {
+    const o = byId.get(c.id);
+    return { ...c, overview: o, userCount: o?.usersCount, lastActivityAt: o?.lastActivityAt ?? undefined };
+  });
+}
+
+export async function getOrdersByMonth(months = 6): Promise<{ month: string; total: number }[]> {
+  const { data, error } = await (supabase as any).rpc('admin_orders_by_month', { p_months: months });
+  if (error) throw new Error(error.message);
+  return (data || []).map((r: any) => ({ month: r.month, total: r.total ?? 0 }));
+}
+
+export async function setCompanyStatus(companyId: string, status: 'active' | 'suspended', reason?: string): Promise<void> {
+  const { error } = await (supabase as any).rpc('admin_set_company_status', {
+    p_company: companyId,
+    p_status: status,
+    p_reason: reason?.trim() || null,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export interface DeleteCompanyResult {
+  filesDeleted: number;
+  usersDeleted: number;
+  failedFiles: number;
+  failedUsers: number;
+}
+
+/**
+ * Borra la empresa con sus cuentas de acceso y sus archivos (Edge Function
+ * `delete-company`). `confirmName` debe ser el nombre exacto de la empresa.
+ */
+export async function deleteCompany(companyId: string, confirmName: string): Promise<DeleteCompanyResult> {
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+  const { data: { session } } = await supabase.auth.getSession();
+  const response = await fetch(`${supabaseUrl}/functions/v1/delete-company`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token ?? ''}` },
+    body: JSON.stringify({ companyId, confirmName }),
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || 'No se pudo borrar la empresa');
+  return result as DeleteCompanyResult;
+}
+
+export interface AuditEntry {
+  id: number;
+  createdAt: string;
+  actorName: string | null;
+  action: string;
+  companyId: string | null;
+  companyName: string | null;
+  details: Record<string, unknown>;
+}
+
+export async function listAuditLog(limit = 100): Promise<AuditEntry[]> {
+  const { data, error } = await (supabase as any)
+    .from('admin_audit_log')
+    .select('id, created_at, actor_name, action, company_id, company_name, details')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    actorName: r.actor_name,
+    action: r.action,
+    companyId: r.company_id,
+    companyName: r.company_name,
+    details: r.details || {},
+  }));
 }
 
 // ─── Image Upload ───

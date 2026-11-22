@@ -19,6 +19,7 @@
 // Autorización: el `users` se valida por `supabase_auth_id` (nunca por `id`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { withCors } from "../_shared/cors.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -32,7 +33,7 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -145,4 +146,4 @@ Deno.serve(async (req: Request) => {
     .eq("id", targetRowId);
 
   return json({ ok: true, forcedReset: isAdminReset });
-});
+}));
