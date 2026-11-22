@@ -1,13 +1,19 @@
 // Selección del proveedor de modelos.
 //
-//  - Empresas reales: siempre Anthropic (SDK oficial). Modelo por LLM_MODEL
-//    (por defecto claude-haiku-5-5). Clave en el secreto ANTHROPIC_API_KEY.
-//  - Empresas de prueba (ids en LLM_TEST_COMPANY_IDS, separados por comas):
-//    pueden usar LLM_TEST_PROVIDER = mock | openai-compatible | anthropic.
-//    openai-compatible usa LLM_TEST_BASE_URL, LLM_TEST_API_KEY y LLM_TEST_MODEL.
+//  - Proveedor por defecto de TODAS las empresas: LLM_PROVIDER.
+//      anthropic (si falta): SDK oficial, modelo LLM_MODEL (por defecto
+//        claude-haiku-5-5), clave ANTHROPIC_API_KEY.
+//      openai-compatible: cualquier endpoint compatible con OpenAI (p. ej.
+//        OpenRouter con Nemotron), con LLM_BASE_URL, LLM_MODEL y la clave
+//        LLM_API_KEY (si falta, LLM_TEST_API_KEY: la misma clave de OpenRouter
+//        que ya usaban las empresas de prueba).
+//  - Empresas de prueba (ids en LLM_TEST_COMPANY_IDS): pueden usar otro
+//    proveedor con LLM_TEST_PROVIDER = mock | openai-compatible | anthropic.
 //
-// Un proveedor de pruebas nunca atiende a una empresa real: los modelos gratuitos
-// pueden registrar los mensajes (Ley 1581 de 2012) y su uso de herramientas es irregular.
+// Decisión del dueño (22/11/2026): todo el asistente usa Nemotron gratuito por
+// OpenRouter mientras la app está en pruebas. Los modelos gratuitos pueden
+// registrar o usar los mensajes para entrenar: con datos reales de clientes hay
+// que revisar la Ley 1581 de 2012 o pasar a un proveedor de pago (manual §10.6).
 import type { LlmProvider } from "./types.ts";
 import { LlmNotAllowedError, LlmUnavailableError } from "./types.ts";
 import { createMockProvider } from "./mock.ts";
@@ -41,6 +47,20 @@ export async function createProvider(env: EnvGetter, companyId: string): Promise
       return createOpenAiCompatibleProvider(baseUrl, apiKey, model);
     }
     throw new LlmNotAllowedError(`Proveedor de pruebas desconocido: ${testProvider}`);
+  }
+
+  const defaultProvider = (env("LLM_PROVIDER") ?? "").trim().toLowerCase() || "anthropic";
+  if (defaultProvider === "openai-compatible") {
+    const baseUrl = env("LLM_BASE_URL");
+    const apiKey = env("LLM_API_KEY") || env("LLM_TEST_API_KEY");
+    const model = env("LLM_MODEL");
+    if (!baseUrl || !apiKey || !model) {
+      throw new LlmUnavailableError("Faltan LLM_BASE_URL, LLM_MODEL o la clave (LLM_API_KEY / LLM_TEST_API_KEY)");
+    }
+    return createOpenAiCompatibleProvider(baseUrl, apiKey, model);
+  }
+  if (defaultProvider !== "anthropic") {
+    throw new LlmNotAllowedError(`Proveedor desconocido: ${defaultProvider}`);
   }
 
   const apiKey = env("ANTHROPIC_API_KEY");
