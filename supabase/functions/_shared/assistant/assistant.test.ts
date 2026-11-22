@@ -165,3 +165,15 @@ describe('prompt, códigos y límites', () => {
     expect(turnBlockedReason({ ...ok, input_tokens: LIMITS.maxTokensPerConversation })).toMatch(/límite/);
   });
 });
+
+describe('prompt: formato y datos internos', () => {
+  it('pide el formato que el chat muestra y prohíbe mostrar los id de servicio', () => {
+    const p = buildSystemPrompt({
+      companyName: 'ACME', today: '2026-11-19', timezone: 'America/Bogota',
+      services: [{ id: 'reparacion', name: 'Revisión y reparación', orderType: 'Correctivo', durationMinutes: 120 }],
+      verifiedEmail: false, clientName: null,
+    });
+    expect(p).toContain('negrita');
+    expect(p).toContain('nunca se los muestres al cliente');
+  });
+});

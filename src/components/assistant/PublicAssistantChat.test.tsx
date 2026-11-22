@@ -92,7 +92,7 @@ describe('PublicAssistantChat', () => {
     await act(async () => onText('Tengo disponibilidad mañana a las'));
     await act(async () => { release({ reply: 'Tengo disponibilidad mañana a las 08:00.', request: null }); });
     await flush();
-    const bubbles = Array.from(host.querySelectorAll('main div > div')).map((d) => d.textContent);
+    const bubbles = Array.from(host.querySelectorAll('main [aria-live] > div')).map((d) => d.textContent);
     expect(bubbles.filter((t) => t?.startsWith('Tengo disponibilidad'))).toEqual(['Tengo disponibilidad mañana a las 08:00.']);
   });
 
