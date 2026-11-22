@@ -100,10 +100,12 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // For now, the real-time subscription in useCollection will keep data fresh
   }, [companyId]);
 
-  // Load company config when user changes
+  // Load company config when user changes. Sin empresa (al cerrar sesión) no
+  // llega ningún dato que vuelva a poner `loading` en false: la app se quedaba
+  // en el indicador de carga en vez de mostrar la pantalla de entrada.
   useEffect(() => {
-    setLoading(true);
-  }, [refreshCompany]);
+    setLoading(!!companyId);
+  }, [refreshCompany, companyId]);
 
   const value: CompanyContextType = {
     company,
