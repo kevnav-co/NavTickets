@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { useConnectivityStatus } from './useConnectivityStatus';
+import { useAuth } from '../context/AuthContext';
+import { companyScopedPath, isAllowedImageType } from '../utils/storagePath';
 
-type BucketName = 'order-photos' | 'equipment-photos' | 'public';
+type BucketName = 'order-photos' | 'equipment-photos';
 
 interface UseSupabaseStorageOptions {
   bucket: BucketName;
@@ -22,15 +24,20 @@ interface UseSupabaseStorageResult {
  * Hook para subir/eliminar archivos en Supabase Storage.
  *
  * Buckets disponibles:
- *   - order-photos:   Fotos de órdenes de servicio
+ *   - order-photos:     Fotos de órdenes de servicio
  *   - equipment-photos: Fotos de equipos
- *   - public:         Archivos públicos (logos, etc.)
+ *
+ * Toda subida va a la carpeta de la empresa del usuario (`{companyId}/…`) y solo
+ * admite imágenes JPEG, PNG, WebP o GIF; las políticas de Storage de la migración
+ * 052 rechazan cualquier otra ruta. Borrar recibe la ruta completa del objeto.
  */
 export function useSupabaseStorage(
   options: UseSupabaseStorageOptions
 ): UseSupabaseStorageResult {
   const { bucket, maxSizeMB = 10 } = options;
   const { isOnline } = useConnectivityStatus();
+  const { currentUser } = useAuth();
+  const companyId = currentUser?.companyId ?? '';
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +68,9 @@ export function useSupabaseStorage(
       if (file.size > maxBytes) {
         return { url: null, error: `El archivo excede el límite de ${maxSizeMB}MB` };
       }
+      if (!isAllowedImageType(file.type || '')) {
+        return { url: null, error: 'Solo se admiten imágenes JPEG, PNG, WebP o GIF' };
+      }
 
       setIsUploading(true);
       setError(null);
@@ -68,10 +78,10 @@ export function useSupabaseStorage(
       try {
         const { data, error: uploadError } = await supabase.storage
           .from(bucket)
-          .upload(path, file, {
+          .upload(companyScopedPath(companyId, path), file, {
             cacheControl: '3600',
             upsert: true,
-            contentType: file.type || 'image/jpeg',
+            contentType: file.type,
           });
 
         if (uploadError) throw uploadError;
@@ -90,7 +100,7 @@ export function useSupabaseStorage(
         return { url: null, error: err.message };
       }
     },
-    [bucket, maxSizeMB, isOnline]
+    [bucket, maxSizeMB, isOnline, companyId]
   );
 
   /**
@@ -114,13 +124,16 @@ export function useSupabaseStorage(
         // Convertir base64 a Blob
         const response = await fetch(base64);
         const blob = await response.blob();
+        if (!isAllowedImageType(blob.type || '')) {
+          throw new Error('Solo se admiten imágenes JPEG, PNG, WebP o GIF');
+        }
 
         const { data, error: uploadError } = await supabase.storage
           .from(bucket)
-          .upload(path, blob, {
+          .upload(companyScopedPath(companyId, path), blob, {
             cacheControl: '3600',
             upsert: true,
-            contentType: blob.type || 'image/jpeg',
+            contentType: blob.type,
           });
 
         if (uploadError) throw uploadError;
@@ -138,7 +151,7 @@ export function useSupabaseStorage(
         return { url: null, error: err.message };
       }
     },
-    [bucket, isOnline]
+    [bucket, isOnline, companyId]
   );
 
   /**
