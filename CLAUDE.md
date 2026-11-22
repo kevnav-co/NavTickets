@@ -58,7 +58,7 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 | `supportReplyNotify` / `supportChatNotify` | pg_net trigger → Supabase Edge | Respuestas y chat de soporte (migraciones 025–028) | Push al autor / al staff (`supabase/functions/support-*-notify/`) |
 | `serviceRequestNotify` | pg_net trigger → Supabase Edge | Solicitud del asistente que pasa a `pendiente` (migración 046) | Push a admin/supervisor/aux_admin; relee la solicitud por id con la service role (`supabase/functions/service-request-notify/`) |
 | `serviceRequestCustomerNotify` | pg_net trigger → Supabase Edge | Solicitud que pasa a `confirmada`/`rechazada` (migración 051) | Correo al cliente con la cita o el motivo (plantilla pura en `_shared/assistant/customerEmail.ts`); si no sale (sin correo, sin Gmail o error), aviso en la campana a quien revisó (`supabase/functions/service-request-customer-notify/`) |
-| `assistantChat` | Supabase Edge (público) | POST desde `/#/asistente/<slug>` | Chat del asistente (fase 3): adaptador de modelos `_shared/llm/` (Anthropic `claude-haiku-5-5`; proveedores de prueba solo para `LLM_TEST_COMPANY_IDS`), lógica pura en `_shared/assistant/` (probada con Vitest), herramientas con la empresa fijada por el servidor, verificación de correo y límites. Con `stream: true` responde en NDJSON (`delta` → `done`/`error`, helper `_shared/assistant/stream.ts`; el `done` reemplaza lo transmitido); el cliente es `sendAssistantMessageStream` en `src/services/assistantChat.ts`. `docs/MANUAL_OPERACION.md` §10.6 |
+| `assistantChat` | Supabase Edge (público) | POST desde `/#/asistente/<slug>` | Chat del asistente (fase 3): adaptador de modelos `_shared/llm/` (proveedor por defecto con `LLM_PROVIDER`; hoy Nemotron gratuito por OpenRouter para todas las empresas), lógica pura en `_shared/assistant/` (probada con Vitest), herramientas con la empresa fijada por el servidor, verificación de correo y límites. Con `stream: true` responde en NDJSON (`delta` → `done`/`error`, helper `_shared/assistant/stream.ts`; el `done` reemplaza lo transmitido); el cliente es `sendAssistantMessageStream` en `src/services/assistantChat.ts`. `docs/MANUAL_OPERACION.md` §10.6 |
 | `cuentiProxy` | Vercel edge | GET `/api/cuenti/clients` (sesión: admin/supervisor/aux_admin/developer/super_admin) | Proxy al puente de clientes Cuenti (`api/edge/cuenti-proxy.ts`); `CUENTI_COMPANY_ID` restringe a la empresa dueña |
 | `deleteCompany` | Supabase Edge | POST (sesión de super_admin) | Borrado completo de una empresa: filas, cuentas de Auth y archivos de Storage, con el nombre escrito como confirmación; registra en `admin_audit_log` (`supabase/functions/delete-company/`, migración 054) |
 | `updateUserPassword` | Supabase Edge | POST | Reset/self-service de clave vía Supabase Auth (`supabase/functions/update-user-password/`) |
@@ -182,8 +182,8 @@ Por eso el flujo es propio y pasa por el correo REAL en `users.email`:
 solo uso (30 min) guardado HASHED en `password_reset_tokens` + link por Gmail SMTP
 (nodemailer, secrets `GMAIL_USER`/`GMAIL_APP_PASSWORD`; si faltan, hacen stub) →
 `/#/reset-password?token=…` → edge público `reset-password-with-token` (valida y aplica
-clave vía `auth.admin.updateUserById`, service_role). Para el link se usa el env
-`APP_ORIGIN` o el `Origin` del navegador. Además `create-user`/`UserForm`/`CompanyUserManager`
+clave vía `auth.admin.updateUserById`, service_role). Para el link se usa el origen de la
+petición solo si es de la app (`appOriginFor`); si no, `APP_ORIGIN` o `APP_URL`. Además `create-user`/`UserForm`/`CompanyUserManager`
 capturan `users.email` al crear/editar usuarios.
 
 Functions env (in `functions/.env`):
