@@ -7,13 +7,18 @@ interface FeaturesSectionProps {
   setFeatures: React.Dispatch<React.SetStateAction<CompanyFeatures>>;
 }
 
-const FEATURE_OPTIONS: { key: keyof CompanyFeatures; label: string }[] = [
+const FEATURE_OPTIONS: { key: keyof CompanyFeatures; label: string; hint?: string }[] = [
   { key: 'accounting', label: 'Contabilidad' },
   { key: 'maps', label: 'Mapas' },
   { key: 'aiAssistant', label: 'Asistente IA' },
   { key: 'equipmentManagement', label: 'Gestión Máquinas' },
   { key: 'excelUpload', label: 'Subida de datos (Excel)' },
   { key: 'cuenti', label: 'Integración Cuenti' },
+  {
+    key: 'clientReminderEmails',
+    label: 'Recordatorios por correo a clientes',
+    hint: 'Cada mañana se avisa al cliente cuando su equipo tiene mantenimiento en 7 días o su garantía vence en 5. Requiere el correo del cliente.',
+  },
 ];
 
 const FeaturesSection: React.FC<FeaturesSectionProps> = ({ features, setFeatures }) => (
@@ -26,11 +31,14 @@ const FeaturesSection: React.FC<FeaturesSectionProps> = ({ features, setFeatures
         <label key={feat.key} className="flex items-center gap-3 p-3 rounded-xl border border-line-soft cursor-pointer hover:bg-sunken transition-colors">
           <input
             type="checkbox"
-            checked={features[feat.key]}
+            checked={features[feat.key] === true}
             onChange={e => setFeatures(prev => ({ ...prev, [feat.key]: e.target.checked }))}
             className="w-4 h-4 rounded accent-primary"
           />
-          <span className="text-sm font-medium text-ink-soft">{feat.label}</span>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-ink-soft">{feat.label}</span>
+            {feat.hint && <span className="block text-xs text-ink-faint mt-0.5">{feat.hint}</span>}
+          </span>
         </label>
       ))}
     </div>

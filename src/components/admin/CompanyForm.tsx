@@ -59,6 +59,7 @@ const CompanyForm: React.FC<CompanyFormProps> = ({ companyId, onSaved, onCancel 
     equipmentManagement: true,
     excelUpload: true,
     cuenti: true,
+    clientReminderEmails: false,
   });
   const [auth, setAuth] = useState<CompanyAuth>({
     emailDomain: '@empresa.com',

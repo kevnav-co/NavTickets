@@ -657,6 +657,52 @@ de «Borrado Prueba 054».
 
 Prueba SQL: `supabase/tests/companies_admin_rls.sql` (37 comprobaciones).
 
+## 10.11 Recordatorios diarios por correo a los clientes
+
+**Qué hace.** La Edge Function `daily-expiration-check` corre cada día a las 08:00 de Colombia (pg_cron, migración 047). En cada ejecución:
+
+- busca equipos activos con mantenimiento en los próximos 7 días (o ya vencido) y órdenes cerradas cuya garantía vence en los próximos 5 días;
+- crea un aviso en la campana y un push para los administradores de la empresa (como antes);
+- **nuevo:** envía un correo al cliente, con la marca de la empresa, desde la cuenta de Gmail del proyecto (`GMAIL_USER`). La plantilla está en `_shared/reminders/reminderEmail.ts`, escapa todo el texto y usa fechas en hora de Colombia;
+- marca el equipo (`next_maintenance_notification_sent`) o la orden (`warranty_notification_sent`) para no repetir el aviso.
+
+**Cuándo se envía el correo.** Solo si se cumplen las tres condiciones:
+
+1. la empresa activó **«Recordatorios por correo a clientes»** en Configuración → Funcionalidades (`companies.features.clientReminderEmails`, apagado por defecto);
+2. la empresa no está suspendida;
+3. el cliente tiene un correo válido.
+
+Se dejó apagado por defecto porque los clientes de las empresas demo tienen correos inventados con dominios que pueden ser reales (`andina.co`, `logexpress.co`, `plasticos.co`…): enviarles sería escribir a terceros desde la cuenta de Gmail del proyecto.
+
+**Modo de prueba.** Si existe el secreto `REMINDER_EMAIL_OVERRIDE`, todos los recordatorios van a esa dirección, con el asunto `[Prueba → cli***@dominio] …`. Para salir a producción hay que borrar el secreto:
+
+```bash
+npx supabase secrets unset REMINDER_EMAIL_OVERRIDE --project-ref hvysnxvuyexacktlwsbm
+```
+
+**WhatsApp.** No está conectado: requiere una cuenta de Twilio. El código anterior solo lo simulaba y se retiró.
+
+**Ejecutarla a mano** (SQL Editor). Hace lo mismo que la ejecución programada, incluido marcar los avisos como enviados:
+
+```sql
+SELECT public.invoke_scheduled_function('daily-expiration-check');
+-- y luego, con el id que devuelve:
+SELECT status_code, content FROM net._http_response WHERE id = <id>;
+```
+
+La respuesta resume lo hecho: `maintenance`, `warranty` y `emails` (`sent`, `failed`, `stub` sin Gmail, `disabled` empresa sin la opción, `no_email`, `invalid_email`).
+
+**Puesta en marcha (25/11/2026).**
+
+- Desplegadas `daily-expiration-check` y `service-request-customer-notify`, que comparte el envío (`sendNoticeEmail` en `_shared/email.ts`).
+- `REMINDER_EMAIL_OVERRIDE` configurado con el correo de prueba del dueño.
+- Opción activada solo en Plásticos del Sur (demo). La orden #33 se dejó con la garantía a 3 días para la prueba.
+- Ejecución manual: respuesta 200 con `maintenance: 1`, `warranty: 3` y `emails: { sent: 1, disabled: 2 }`. El correo de la orden #33 llegó a la dirección de prueba. Las dos garantías de Fábricas Andinas y Logística Expresa no se enviaron porque esas empresas no tienen la opción.
+
+**Pendiente del dueño:** revisar el correo de prueba, decidir qué empresas activan la opción y borrar el secreto de prueba.
+
+Pruebas: `supabase/functions/_shared/reminders/reminderEmail.test.ts`.
+
 ## 11. Diferencias conocidas entre el repositorio y la base de producción (18/11/2026)
 
 `supabase_migrations.schema_migrations` no es una fuente fiable del esquema real: varias migraciones
