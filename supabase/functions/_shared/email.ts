@@ -126,16 +126,30 @@ export const maskEmail = (email: string) => {
  * contenido lo arma _shared/assistant/customerEmail.ts. Sin GMAIL_USER /
  * GMAIL_APP_PASSWORD queda en stub: solo registra que se habría enviado.
  */
-export async function sendCustomerNoticeEmail(
+export function sendCustomerNoticeEmail(
   to: string,
   notice: { subject: string; html: string; text: string },
   companyName: string,
+): Promise<SendResult> {
+  return sendNoticeEmail(to, notice, companyName, "aviso de solicitud");
+}
+
+/**
+ * Correo de una empresa a su cliente, con el nombre de la empresa como remitente
+ * visible. Lo usan el aviso de solicitudes y los recordatorios diarios de
+ * mantenimiento y garantía. Sin GMAIL_USER / GMAIL_APP_PASSWORD queda en stub.
+ */
+export async function sendNoticeEmail(
+  to: string,
+  notice: { subject: string; html: string; text: string },
+  companyName: string,
+  label: string,
 ): Promise<SendResult> {
   const user = Deno.env.get("GMAIL_USER");
   const pass = Deno.env.get("GMAIL_APP_PASSWORD");
 
   if (!user || !pass) {
-    console.log(`[Email] (stub) Aviso de solicitud para ${maskEmail(to)}: ${notice.subject}`);
+    console.log(`[Email] (stub) ${label} para ${maskEmail(to)}: ${notice.subject}`);
     return { ok: true, stub: true };
   }
 
@@ -151,7 +165,7 @@ export async function sendCustomerNoticeEmail(
     });
     return { ok: true, stub: false };
   } catch (err: unknown) {
-    console.error("[Email] Fallo al enviar el aviso de solicitud:", err instanceof Error ? err.message : err);
+    console.error(`[Email] Fallo al enviar ${label}:`, err instanceof Error ? err.message : err);
     return { ok: false, stub: false };
   }
 }

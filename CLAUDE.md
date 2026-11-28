@@ -52,7 +52,7 @@ Vercel `api/*` queda solo para endpoints live (webhooks de triggers y proxies), 
 | Función | Plataforma | Cadencia / Trigger | Propósito |
 |---------|-----------|--------------------|-----------|
 | `taskScheduler` | Supabase Edge | Cada 5 min (`*/5 * * * *`) | Recordatorios, vencimientos y tareas recurrentes (`supabase/functions/task-scheduler/`). Solo acepta `Bearer <service_role>` o `x-cron-secret: <CRON_SECRET>` (`_shared/cron-auth.ts`) |
-| `dailyExpirationCheck` | Supabase Edge | Diaria `0 13 * * *` UTC = 08:00 Colombia (mismo guard de cron) | Mantenimiento/garantías por vencer + notificaciones y stubs de email/WhatsApp (`supabase/functions/daily-expiration-check/`, movido desde Vercel cron) |
+| `dailyExpirationCheck` | Supabase Edge | Diaria `0 13 * * *` UTC = 08:00 Colombia (mismo guard de cron) | Mantenimiento (7 días) y garantías (5 días) por vencer: aviso y push a los admins, y correo al cliente solo si la empresa activó `features.clientReminderEmails` (plantilla pura `_shared/reminders/reminderEmail.ts`, envío `sendNoticeEmail`). El secreto `REMINDER_EMAIL_OVERRIDE` manda todo a una dirección de prueba. WhatsApp sin conectar (falta Twilio). Manual §10.11 (`supabase/functions/daily-expiration-check/`) |
 | `supportNotify` | pg_net trigger → Supabase Edge | En INSERT de `support_tickets` (migración 011) | Web Push a super_admin de consulta nueva (`supabase/functions/support-notify/`, usa `_shared/push.ts`) |
 | `onOrderAssigned` / `onTaskAssigned` | pg_net trigger → Supabase Edge | En INSERT/UPDATE de orders/tasks (migración 029) | Notificación interna + Web Push (`supabase/functions/on-order-assigned/`, `supabase/functions/on-task-assigned/`, usan `_shared/push.ts`) |
 | `supportReplyNotify` / `supportChatNotify` | pg_net trigger → Supabase Edge | Respuestas y chat de soporte (migraciones 025–028) | Push al autor / al staff (`supabase/functions/support-*-notify/`) |
@@ -94,7 +94,7 @@ Multi-tenant: every business table is scoped by `company_id`; RLS (helpers `publ
 
 ### Multi-tenant visibility (Fase 5) — single source
 
-`src/permissions.ts` is the ONLY place that decides tab visibility: `TAB_PERMISSION_MAP` (permission per built-in tab, incl. `inventory`→`VIEW_INVENTORY`, `reports`→`VIEW_REPORTS`, `accounting`→`VIEW_ACCOUNTING`), `TAB_FEATURE_MAP` (feature flag), and `isTabVisible(component, role, features)`. Both navs must use `isTabVisible`, never duplicate it. Feature flags live in `companies.features` (`accounting`, `maps`, `equipmentManagement`). New built-in tabs surface in existing tenants via `default_built_in_tabs()` + the `normalize_company_config` trigger (migrations 015/016).
+`src/permissions.ts` is the ONLY place that decides tab visibility: `TAB_PERMISSION_MAP` (permission per built-in tab, incl. `inventory`→`VIEW_INVENTORY`, `reports`→`VIEW_REPORTS`, `accounting`→`VIEW_ACCOUNTING`), `TAB_FEATURE_MAP` (feature flag), and `isTabVisible(component, role, features)`. Both navs must use `isTabVisible`, never duplicate it. Feature flags live in `companies.features` (`accounting`, `maps`, `equipmentManagement`, `aiAssistant`, `excelUpload`, `cuenti`, `clientReminderEmails`). New built-in tabs surface in existing tenants via `default_built_in_tabs()` + the `normalize_company_config` trigger (migrations 015/016).
 
 ### Order Workflow
 

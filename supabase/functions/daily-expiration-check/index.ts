@@ -5,13 +5,24 @@
 //
 // Checks equipment maintenance and order warranty expirations, then:
 //  1. Creates internal `notifications` rows for company admins of each tenant.
-//  2. Stubs WhatsApp/Email to clients (TODO: wire the real channels, same as before).
+//  2. Emails the client a reminder (maintenance or warranty) when the company turned
+//     on `features.clientReminderEmails` and the client has a valid email
+//     (`_shared/reminders/reminderEmail.ts`, sent with Gmail through `_shared/email.ts`).
+//     The secret REMINDER_EMAIL_OVERRIDE sends every reminder to one test address.
+//     WhatsApp is not wired yet (needs a Twilio account).
 //
 // The scheduler invokes this function server-to-server, so we read the service_role
 // key from secrets for full schema privileges (same pattern as `task-scheduler`).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { isAuthorizedCronCall, unauthorizedCronResponse } from "../_shared/cron-auth.ts";
+import { maskEmail, sendNoticeEmail } from "../_shared/email.ts";
+import {
+  buildReminderEmail,
+  decideRecipient,
+  formatReminderDate,
+  type ReminderInput,
+} from "../_shared/reminders/reminderEmail.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -66,25 +77,36 @@ async function sendPushToUserIds(
 
 interface CompanyBranding {
   name: string;
-  primaryColor: string;
-  logoUrl: string;
-  whatsappNumber: string;
+  primaryColor: string | null;
+  logoUrl: string | null;
+  phone: string | null;
+  /** features.clientReminderEmails: la empresa pidió avisar a sus clientes por correo. */
+  clientReminderEmails: boolean;
 }
+
+const DEFAULT_BRANDING: CompanyBranding = {
+  name: "Empresa",
+  primaryColor: null,
+  logoUrl: null,
+  phone: null,
+  clientReminderEmails: false,
+};
 
 async function loadAllCompanyBrandings(): Promise<Record<string, CompanyBranding>> {
   const brandings: Record<string, CompanyBranding> = {};
   try {
     const { data: companies, error } = await supabase
       .from("companies")
-      // whatsapp_number no es una columna de companies: el número sale de theme si existe.
-      .select("id, name, theme");
+      .select("id, name, theme, features, status");
     if (error) throw error;
     for (const company of companies || []) {
       brandings[company.id] = {
         name: company.name || "Empresa",
-        primaryColor: company.theme?.primaryColor || "#7b1113",
-        logoUrl: company.theme?.logoUrl || "/assets/logo-inicio.png",
-        whatsappNumber: company.theme?.whatsappNumber || "573117142337",
+        primaryColor: company.theme?.primaryColor ?? null,
+        logoUrl: company.theme?.logoUrl ?? null,
+        phone: company.theme?.whatsappNumber ?? company.theme?.phone ?? null,
+        // Una empresa suspendida (migración 054) no escribe a sus clientes.
+        clientReminderEmails: company.features?.clientReminderEmails === true && company.status !== "suspended",
       };
     }
   } catch (e) {
@@ -93,57 +115,39 @@ async function loadAllCompanyBrandings(): Promise<Record<string, CompanyBranding
   return brandings;
 }
 
-function getMaintenanceEmailHtml(
-  data: { clientName: string; machineName: string; serialNumber: string; location: string; dueDate: string },
-  branding: CompanyBranding,
-): string {
-  return `
-    <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
-      <div style="background:${branding.primaryColor};color:white;padding:30px;text-align:center;border-radius:12px 12px 0 0;">
-        ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="max-height:60px;margin-bottom:15px;">` : ""}
-        <h1 style="margin:0;font-size:24px;">Recordatorio de Mantenimiento</h1>
-      </div>
-      <div style="background:#f9f9f9;padding:30px;border-radius:0 0 12px 12px;border:1px solid #eee;border-top:none;">
-        <p style="font-size:16px;">Hola <strong>${data.clientName}</strong>,</p>
-        <p style="font-size:16px;">Le recordamos que su equipo <strong>${data.machineName}</strong> tiene un mantenimiento programado para el <strong>${data.dueDate}</strong>. Por favor contáctenos para agendar.</p>
-        <div style="background:white;padding:20px;border-radius:8px;margin:20px 0;border-left:4px solid ${branding.primaryColor};">
-          <p style="margin:5px 0;"><strong>Equipo:</strong> ${data.machineName}</p>
-          <p style="margin:5px 0;"><strong>Número de serie:</strong> ${data.serialNumber}</p>
-          <p style="margin:5px 0;"><strong>Ubicación:</strong> ${data.location}</p>
-          <p style="margin:5px 0;"><strong>Fecha de vencimiento:</strong> ${data.dueDate}</p>
-        </div>
-        <p style="font-size:14px;color:#666;">Para agendar su mantenimiento, contáctenos al WhatsApp: ${branding.whatsappNumber}</p>
-        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-        <p style="font-size:12px;color:#999;text-align:center;">${branding.name} - Sistema de Gestión de Mantenimiento</p>
-      </div>
-    </body></html>`;
-}
+type EmailOutcome = "sent" | "failed" | "stub" | "disabled" | "no_email" | "invalid_email";
 
-function getWarrantyEmailHtml(
-  data: { clientName: string; orderNumber: string; machineName: string; expirationDate: string },
+/**
+ * Recordatorio por correo al cliente, si la empresa lo activó y el cliente tiene
+ * correo. Con el secreto REMINDER_EMAIL_OVERRIDE (pruebas) todo va a esa dirección.
+ */
+async function emailClient(
   branding: CompanyBranding,
-): string {
-  return `
-    <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-    <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px;">
-      <div style="background:${branding.primaryColor};color:white;padding:30px;text-align:center;border-radius:12px 12px 0 0;">
-        ${branding.logoUrl ? `<img src="${branding.logoUrl}" alt="${branding.name}" style="max-height:60px;margin-bottom:15px;">` : ""}
-        <h1 style="margin:0;font-size:24px;">Aviso de Garantía</h1>
-      </div>
-      <div style="background:#f9f9f9;padding:30px;border-radius:0 0 12px 12px;border:1px solid #eee;border-top:none;">
-        <p style="font-size:16px;">Hola <strong>${data.clientName}</strong>,</p>
-        <p style="font-size:16px;">Te informamos que la garantía de tu servicio <strong>#${data.orderNumber}</strong> (${data.machineName}) vence el <strong>${data.expirationDate}</strong>.</p>
-        <div style="background:white;padding:20px;border-radius:8px;margin:20px 0;border-left:4px solid ${branding.primaryColor};">
-          <p style="margin:5px 0;"><strong>Orden:</strong> #${data.orderNumber}</p>
-          <p style="margin:5px 0;"><strong>Equipo:</strong> ${data.machineName}</p>
-          <p style="margin:5px 0;"><strong>Fecha de vencimiento:</strong> ${data.expirationDate}</p>
-        </div>
-        <p style="font-size:14px;color:#666;">Si tienes alguna consulta, contáctenos al WhatsApp: ${branding.whatsappNumber}</p>
-        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-        <p style="font-size:12px;color:#999;text-align:center;">${branding.name} - Sistema de Gestión de Mantenimiento</p>
-      </div>
-    </body></html>`;
+  clientEmail: string | null | undefined,
+  input: Omit<ReminderInput, "companyName" | "primaryColor" | "logoUrl" | "companyPhone" | "now">,
+  now: Date,
+): Promise<EmailOutcome> {
+  const decision = decideRecipient({
+    enabled: branding.clientReminderEmails,
+    clientEmail,
+    override: Deno.env.get("REMINDER_EMAIL_OVERRIDE"),
+  });
+  if (!decision.send) return decision.reason;
+
+  const email = buildReminderEmail({
+    ...input,
+    companyName: branding.name,
+    primaryColor: branding.primaryColor,
+    logoUrl: branding.logoUrl,
+    companyPhone: branding.phone,
+    now,
+  });
+  if (decision.redirectedFrom) {
+    email.subject = `[Prueba → ${maskEmail(decision.redirectedFrom)}] ${email.subject}`;
+  }
+  const res = await sendNoticeEmail(decision.to, email, branding.name, "recordatorio a cliente");
+  if (res.stub) return "stub";
+  return res.ok ? "sent" : "failed";
 }
 
 async function sendPushNotification(userId: string, companyId: string, title: string, body: string, path: string) {
@@ -165,18 +169,6 @@ async function sendPushNotification(userId: string, companyId: string, title: st
   }
 }
 
-async function sendEmail(_to: string, subject: string, _html: string): Promise<boolean> {
-  // TODO: wire a real channel (Resend/SendGrid). Kept as a stub to preserve prior behavior.
-  console.log(`[Expiration Check] Would send email "${subject}"`);
-  return false;
-}
-
-async function sendWhatsApp(_to: string, message: string): Promise<boolean> {
-  // TODO: wire Twilio. Kept as a stub to preserve prior behavior.
-  console.log(`[Expiration Check] Would send WhatsApp: ${message}`);
-  return false;
-}
-
 Deno.serve(async (req: Request) => {
   if (!isAuthorizedCronCall(req)) return unauthorizedCronResponse();
 
@@ -188,7 +180,12 @@ Deno.serve(async (req: Request) => {
   warningBuffer.setDate(now.getDate() + 5);
 
   const brandings = await loadAllCompanyBrandings();
-  const results = { maintenance: 0, warranty: 0, errors: [] as string[] };
+  const results = {
+    maintenance: 0,
+    warranty: 0,
+    emails: { sent: 0, failed: 0, stub: 0, disabled: 0, no_email: 0, invalid_email: 0 } as Record<EmailOutcome, number>,
+    errors: [] as string[],
+  };
 
   try {
     console.log("[Expiration Check] Starting multi-tenant expiration scan...");
@@ -208,9 +205,7 @@ Deno.serve(async (req: Request) => {
       if (!eq.last_maintenance_date || !eq.maintenance_frequency) continue;
 
       const companyId = eq.company_id;
-      const branding =
-        brandings[companyId] ||
-        ({ name: "Empresa", primaryColor: "#7b1113", logoUrl: "/assets/logo-inicio.png", whatsappNumber: "573117142337" } as CompanyBranding);
+      const branding = brandings[companyId] ?? DEFAULT_BRANDING;
 
       const lastDate = new Date(eq.last_maintenance_date);
       const dueDate = new Date(lastDate);
@@ -218,7 +213,7 @@ Deno.serve(async (req: Request) => {
 
       if (dueDate <= nextWeek) {
         const title = "Mantenimiento Próximo";
-        const body = `El equipo ${eq.name} (${eq.brand}) necesita mantenimiento el ${dueDate.toLocaleDateString()}.`;
+        const body = `El equipo ${eq.name}${eq.brand ? ` (${eq.brand})` : ""} necesita mantenimiento el ${formatReminderDate(dueDate)}.`;
         const path = `/equipment/${eq.id}`;
 
         const { data: admins, error: adminError } = await supabase
@@ -240,20 +235,19 @@ Deno.serve(async (req: Request) => {
         if (eq.client_id) {
           const { data: client } = await supabase
             .from("clients")
-            .select("name, contact, email")
+            .select("name, email")
             .eq("id", eq.client_id)
             .single();
           if (client) {
-            const dueDateStr = dueDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
-            const clientBody = `Hola ${client.name},\n\nLe recordamos que su equipo ${eq.name} tiene un mantenimiento programado para el ${dueDateStr}. Por favor contáctenos para agendar.`;
-            const clientHtmlBody = getMaintenanceEmailHtml(
-              { clientName: client.name, machineName: eq.name, serialNumber: eq.serial_number || "N/A", location: eq.location || "N/A", dueDate: dueDateStr },
-              branding,
-            );
-
-            let notified = false;
-            if (client.contact) notified = await sendWhatsApp(client.contact, clientBody);
-            if (!notified && client.email) notified = await sendEmail(client.email, `Aviso: Mantenimiento Preventivo - ${eq.name}`, clientHtmlBody);
+            const outcome = await emailClient(branding, client.email, {
+              kind: "maintenance",
+              clientName: client.name,
+              itemName: eq.name,
+              serialNumber: eq.serial_number,
+              location: eq.location,
+              dueDate,
+            }, now);
+            results.emails[outcome]++;
           }
         }
 
@@ -277,15 +271,13 @@ Deno.serve(async (req: Request) => {
       if (!order.warranty_expiration) continue;
 
       const companyId = order.company_id;
-      const branding =
-        brandings[companyId] ||
-        ({ name: "Empresa", primaryColor: "#7b1113", logoUrl: "/assets/logo-inicio.png", whatsappNumber: "573117142337" } as CompanyBranding);
+      const branding = brandings[companyId] ?? DEFAULT_BRANDING;
 
       const expirationDate = new Date(order.warranty_expiration);
 
       if (expirationDate <= warningBuffer) {
         const title = "Garantía por Vencer";
-        const body = `La garantía de la orden #${order.order_number} vence el ${expirationDate.toLocaleDateString()}.`;
+        const body = `La garantía de la orden #${order.order_number} vence el ${formatReminderDate(expirationDate)}.`;
         const path = `/orders/${order.id}`;
 
         const { data: admins, error: adminError } = await supabase
@@ -307,20 +299,18 @@ Deno.serve(async (req: Request) => {
         if (order.client_id) {
           const { data: client } = await supabase
             .from("clients")
-            .select("name, contact, email")
+            .select("name, email")
             .eq("id", order.client_id)
             .single();
           if (client) {
-            const expDateStr = expirationDate.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" });
-            const clientBody = `Hola ${client.name}, te informamos que la garantía de tu servicio #${order.order_number} vence el ${expDateStr}.`;
-            const clientHtmlBody = getWarrantyEmailHtml(
-              { clientName: client.name, orderNumber: order.order_number, machineName: order.name || "el equipo atendido", expirationDate: expDateStr },
-              branding,
-            );
-
-            let notified = false;
-            if (client.contact) notified = await sendWhatsApp(client.contact, clientBody);
-            if (!notified && client.email) notified = await sendEmail(client.email, `Aviso de Garantía - Orden #${order.order_number}`, clientHtmlBody);
+            const outcome = await emailClient(branding, client.email, {
+              kind: "warranty",
+              clientName: client.name,
+              itemName: order.name,
+              orderNumber: order.order_number,
+              dueDate: expirationDate,
+            }, now);
+            results.emails[outcome]++;
           }
         }
 

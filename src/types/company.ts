@@ -19,6 +19,8 @@ export interface CompanyFeatures {
   equipmentManagement: boolean;
   excelUpload: boolean; // "Subida de datos (Excel)" en la sección de inicio (Dashboard)
   cuenti: boolean;      // Botón "Cuenti" (importar clientes desde Cuenti ERP) en la sección Clientes
+  /** Correo diario a los clientes con mantenimiento próximo o garantía por vencer (daily-expiration-check). */
+  clientReminderEmails?: boolean;
 }
 
 export interface CompanyAuth {
@@ -75,6 +77,7 @@ export const DEFAULT_COMPANY_CONFIG: CompanyConfig = {
     equipmentManagement: true,
     excelUpload: true,
     cuenti: true,
+    clientReminderEmails: false,
   },
   auth: {
     emailDomain: '@navas.com',
