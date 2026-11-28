@@ -699,7 +699,12 @@ La respuesta resume lo hecho: `maintenance`, `warranty` y `emails` (`sent`, `fai
 - Opción activada solo en Plásticos del Sur (demo). La orden #33 se dejó con la garantía a 3 días para la prueba.
 - Ejecución manual: respuesta 200 con `maintenance: 1`, `warranty: 3` y `emails: { sent: 1, disabled: 2 }`. El correo de la orden #33 llegó a la dirección de prueba. Las dos garantías de Fábricas Andinas y Logística Expresa no se enviaron porque esas empresas no tienen la opción.
 
-**Pendiente del dueño:** revisar el correo de prueba, decidir qué empresas activan la opción y borrar el secreto de prueba.
+**Salida a producción (28/11/2026).** El dueño revisó el correo de prueba.
+
+- Se borró `REMINDER_EMAIL_OVERRIDE`: los recordatorios ya van al cliente.
+- La opción quedó activa solo en **Hoteles Caribe LTDA** y se apagó en Plásticos del Sur.
+- Ese día ninguna garantía de Hoteles Caribe vencía en 5 días. La primera vence el 06/12/2026, así que el primer correo sale hacia el 01/12/2026.
+- Sus dos clientes con correo son «Hotel Caribe Centro» (`sistemas@caribe.com`) y «Resort Playa Dorada» (`central@playadorada.co`), con 7 garantías pendientes cada uno. Son correos cargados el 25/08/2026: hay que confirmar que son reales antes de esa fecha, porque si no el aviso le llega a quien tenga ese dominio.
 
 Pruebas: `supabase/functions/_shared/reminders/reminderEmail.test.ts`.
 
